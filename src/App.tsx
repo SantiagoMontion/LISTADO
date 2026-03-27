@@ -79,6 +79,7 @@ export default function App() {
   const [loading, setLoading] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
   const pathname = window.location.pathname.toLowerCase()
   const mode: 'home' | 'creator' | 'manager' =
     pathname === '/creador' ? 'creator' : pathname === '/manejador' ? 'manager' : 'home'
@@ -302,6 +303,7 @@ export default function App() {
 
   const onImport = async () => {
     setError(null)
+    setSuccess(null)
     const { fechaIso, sections } = parseProductionReport(paste)
     if (!fechaIso) {
       setError(
@@ -325,6 +327,7 @@ export default function App() {
     try {
       await createReportWithTasks({ fecha, tasks: flat })
       setPaste('')
+      setSuccess('Lista subida correctamente')
       await refreshReports()
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e))
@@ -508,7 +511,10 @@ export default function App() {
           <textarea
             className="nm-prod-textarea"
             value={paste}
-            onChange={(e) => setPaste(e.target.value)}
+            onChange={(e) => {
+              setPaste(e.target.value)
+              if (success) setSuccess(null)
+            }}
             placeholder="### REPORTE DE PRODUCCIÓN - 25/03/2026 ###&#10;--------------------------------&#10;LISTA CLASSIC&#10;--------------------------------&#10;90x40 - 15"
             spellCheck={false}
           />
@@ -521,6 +527,11 @@ export default function App() {
           >
             {loading ? 'Guardando…' : 'Subir lista'}
           </button>
+          {success && (
+            <p className="nm-prod-success" role="status">
+              {success}
+            </p>
+          )}
         </section>
       )}
 

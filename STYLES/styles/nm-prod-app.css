@@ -621,6 +621,12 @@ a.nm-prod-btn {
   margin-top: var(--space-2);
 }
 
+.nm-prod-success {
+  color: var(--success);
+  font-size: var(--fs-sm);
+  margin-top: var(--space-2);
+}
+
 .nm-prod-modal-backdrop {
   position: fixed;
   inset: 0;
