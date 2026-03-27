@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { NmProdReport, NmProdTask } from './types'
 
 function normalizeEnv(v: string | undefined): string | undefined {
@@ -18,7 +18,16 @@ if (!url || !anon) {
   )
 }
 
-export const supabase = createClient(url ?? '', anon ?? '')
+export const supabase: SupabaseClient | null = url && anon ? createClient(url, anon) : null
+
+function requireSupabase(): SupabaseClient {
+  if (!supabase) {
+    throw new Error(
+      'Supabase no está configurado. Faltan VITE_SUPABASE_URL o VITE_SUPABASE_ANON_KEY.',
+    )
+  }
+  return supabase
+}
 
 export type NewTaskRow = {
   material_type: string
@@ -37,7 +46,8 @@ export type TaskProgressRow = {
 }
 
 export async function fetchReports(): Promise<NmProdReport[]> {
-  const { data, error } = await supabase
+  const sb = requireSupabase()
+  const { data, error } = await sb
     .from('nm_prod_reports')
     .select('id, fecha, created_at')
     .order('fecha', { ascending: false })
@@ -48,7 +58,8 @@ export async function fetchReports(): Promise<NmProdReport[]> {
 }
 
 export async function fetchTasks(reportId: string): Promise<NmProdTask[]> {
-  const { data, error } = await supabase
+  const sb = requireSupabase()
+  const { data, error } = await sb
     .from('nm_prod_tasks')
     .select(
       'id, report_id, material_type, dimensions, total_qty, current_qty, is_priority, notes, is_completed, created_at',
@@ -60,7 +71,8 @@ export async function fetchTasks(reportId: string): Promise<NmProdTask[]> {
 }
 
 export async function fetchTaskProgressRows(): Promise<TaskProgressRow[]> {
-  const { data, error } = await supabase
+  const sb = requireSupabase()
+  const { data, error } = await sb
     .from('nm_prod_tasks')
     .select('report_id, total_qty, current_qty, is_completed')
 
@@ -72,7 +84,8 @@ export async function createReportWithTasks(input: {
   fecha: string
   tasks: NewTaskRow[]
 }): Promise<{ reportId: string }> {
-  const { data: rep, error: e1 } = await supabase
+  const sb = requireSupabase()
+  const { data: rep, error: e1 } = await sb
     .from('nm_prod_reports')
     .insert({ fecha: input.fecha })
     .select('id')
@@ -91,7 +104,7 @@ export async function createReportWithTasks(input: {
     notes: t.notes ?? null,
   }))
 
-  const { error: e2 } = await supabase.from('nm_prod_tasks').insert(rows)
+  const { error: e2 } = await sb.from('nm_prod_tasks').insert(rows)
   if (e2) throw e2
 
   return { reportId }
@@ -99,7 +112,8 @@ export async function createReportWithTasks(input: {
 
 export async function incrementTaskQty(task: NmProdTask): Promise<void> {
   if (task.current_qty >= task.total_qty) return
-  const { error } = await supabase
+  const sb = requireSupabase()
+  const { error } = await sb
     .from('nm_prod_tasks')
     .update({ current_qty: task.current_qty + 1 })
     .eq('id', task.id)
@@ -109,7 +123,8 @@ export async function incrementTaskQty(task: NmProdTask): Promise<void> {
 export async function decrementTaskQty(task: NmProdTask): Promise<void> {
   if (task.current_qty <= 0) return
   const nextQty = task.current_qty - 1
-  const { error } = await supabase
+  const sb = requireSupabase()
+  const { error } = await sb
     .from('nm_prod_tasks')
     .update({
       current_qty: nextQty,
@@ -121,7 +136,8 @@ export async function decrementTaskQty(task: NmProdTask): Promise<void> {
 }
 
 export async function restoreTaskQty(task: NmProdTask): Promise<void> {
-  const { error } = await supabase
+  const sb = requireSupabase()
+  const { error } = await sb
     .from('nm_prod_tasks')
     .update({
       current_qty: 0,
@@ -132,7 +148,8 @@ export async function restoreTaskQty(task: NmProdTask): Promise<void> {
 }
 
 export async function toggleTaskPriority(task: NmProdTask): Promise<void> {
-  const { error } = await supabase
+  const sb = requireSupabase()
+  const { error } = await sb
     .from('nm_prod_tasks')
     .update({ is_priority: !task.is_priority })
     .eq('id', task.id)
@@ -141,7 +158,8 @@ export async function toggleTaskPriority(task: NmProdTask): Promise<void> {
 
 export async function toggleTaskCompleted(task: NmProdTask): Promise<void> {
   const nextCompleted = !task.is_completed
-  const { error } = await supabase
+  const sb = requireSupabase()
+  const { error } = await sb
     .from('nm_prod_tasks')
     .update({
       is_completed: nextCompleted,
@@ -152,13 +170,14 @@ export async function toggleTaskCompleted(task: NmProdTask): Promise<void> {
 }
 
 export async function deleteReportCompletely(reportId: string): Promise<void> {
-  const { error: taskError } = await supabase
+  const sb = requireSupabase()
+  const { error: taskError } = await sb
     .from('nm_prod_tasks')
     .delete()
     .eq('report_id', reportId)
   if (taskError) throw taskError
 
-  const { error: reportError } = await supabase
+  const { error: reportError } = await sb
     .from('nm_prod_reports')
     .delete()
     .eq('id', reportId)

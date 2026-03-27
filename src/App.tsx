@@ -145,7 +145,7 @@ export default function App() {
   }, [refreshReports])
 
   useEffect(() => {
-    if (!configured || !reportId) {
+    if (!configured || !reportId || !supabase) {
       setTasks([])
       setTasksLoaded(false)
       return
@@ -187,7 +187,7 @@ export default function App() {
 
     return () => {
       cancelled = true
-      void supabase.removeChannel(channel)
+      if (supabase) void supabase.removeChannel(channel)
     }
   }, [configured, reportId])
 
