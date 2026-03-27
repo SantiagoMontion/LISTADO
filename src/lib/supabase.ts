@@ -1,12 +1,20 @@
 import { createClient } from '@supabase/supabase-js'
 import type { NmProdReport, NmProdTask } from './types'
 
-const url = import.meta.env.VITE_SUPABASE_URL
-const anon = import.meta.env.VITE_SUPABASE_ANON_KEY
+function normalizeEnv(v: string | undefined): string | undefined {
+  if (!v) return undefined
+  const trimmed = v.trim()
+  if (!trimmed) return undefined
+  // En algunos paneles se pegan valores con comillas.
+  return trimmed.replace(/^['"]|['"]$/g, '')
+}
+
+const url = normalizeEnv(import.meta.env.VITE_SUPABASE_URL)
+const anon = normalizeEnv(import.meta.env.VITE_SUPABASE_ANON_KEY)
 
 if (!url || !anon) {
   console.warn(
-    '[NotMid] Faltan VITE_SUPABASE_URL o VITE_SUPABASE_ANON_KEY en .env',
+    '[NotMid] Faltan VITE_SUPABASE_URL o VITE_SUPABASE_ANON_KEY (revisar Vercel env + redeploy).',
   )
 }
 
