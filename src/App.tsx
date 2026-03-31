@@ -89,12 +89,6 @@ function areaFromDimensions(dimensions: string): number {
   return width * height
 }
 
-function taskLastUpdateTime(task: NmProdTask): number {
-  const iso = task.updated_at ?? task.created_at
-  const ms = Date.parse(iso)
-  return Number.isFinite(ms) ? ms : 0
-}
-
 export default function App() {
   const configured = Boolean(
     import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY,
@@ -121,6 +115,7 @@ export default function App() {
   const [completedSearch, setCompletedSearch] = useState('')
   const [sizeSortMode, setSizeSortMode] = useState<SizeSortMode>('default')
   const [completionFlashIds, setCompletionFlashIds] = useState<Set<string>>(new Set())
+  const [completedAtById, setCompletedAtById] = useState<Record<string, number>>({})
   const [pendingCutTask, setPendingCutTask] = useState<NmProdTask | null>(null)
   const [pendingDeleteReportId, setPendingDeleteReportId] = useState<string | null>(null)
   const [pendingQuickAdd, setPendingQuickAdd] = useState(false)
@@ -182,6 +177,10 @@ export default function App() {
         return next
       })
     }, 180)
+  }, [])
+
+  const markTaskCompletedNow = useCallback((taskId: string) => {
+    setCompletedAtById((prev) => ({ ...prev, [taskId]: Date.now() }))
   }, [])
 
   useEffect(() => {
@@ -303,7 +302,9 @@ export default function App() {
           const rb = rank(db)
           if (ra !== rb) return ra - rb
         }
-        const byRecentCut = taskLastUpdateTime(b) - taskLastUpdateTime(a)
+        const timeA = completedAtById[a.id] ?? Date.parse(a.created_at)
+        const timeB = completedAtById[b.id] ?? Date.parse(b.created_at)
+        const byRecentCut = (Number.isFinite(timeB) ? timeB : 0) - (Number.isFinite(timeA) ? timeA : 0)
         if (byRecentCut !== 0) return byRecentCut
         return surfaceFromDimensions(b.dimensions) - surfaceFromDimensions(a.dimensions)
       })
@@ -319,7 +320,7 @@ export default function App() {
       return sizeSortMode === 'asc' ? areaA - areaB : areaB - areaA
     })
     return withIndex.map((entry) => entry.task)
-  }, [tasksByMainFilter, activeTab, sizeSortMode, taskFilter, completedSearch])
+  }, [tasksByMainFilter, activeTab, sizeSortMode, taskFilter, completedSearch, completedAtById])
 
   const allCutInActiveTab = useMemo(() => {
     if (taskFilter !== 'all') return false
@@ -402,6 +403,7 @@ export default function App() {
     }))
     if (task.current_qty + 1 >= task.total_qty) {
       flashCompletedTask(task.id)
+      markTaskCompletedNow(task.id)
     }
     try {
       await incrementTaskQty(task)
@@ -460,9 +462,12 @@ export default function App() {
   const runToggleCompleted = async (task: NmProdTask) => {
     setBusyId(task.id)
     setError(null)
+    const nextCompleted = !task.is_completed
     patchTaskLocal(task.id, (t) => {
-      const nextCompleted = !t.is_completed
-      if (nextCompleted) flashCompletedTask(t.id)
+      if (nextCompleted) {
+        flashCompletedTask(t.id)
+        markTaskCompletedNow(t.id)
+      }
       return {
         ...t,
         is_completed: nextCompleted,

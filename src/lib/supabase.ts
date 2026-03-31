@@ -62,7 +62,7 @@ export async function fetchTasks(reportId: string): Promise<NmProdTask[]> {
   const { data, error } = await sb
     .from('nm_prod_tasks')
     .select(
-      'id, report_id, material_type, dimensions, total_qty, current_qty, is_priority, notes, is_completed, created_at, updated_at',
+      'id, report_id, material_type, dimensions, total_qty, current_qty, is_priority, notes, is_completed, created_at',
     )
     .eq('report_id', reportId)
 
