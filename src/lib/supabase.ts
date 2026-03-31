@@ -62,7 +62,7 @@ export async function fetchTasks(reportId: string): Promise<NmProdTask[]> {
   const { data, error } = await sb
     .from('nm_prod_tasks')
     .select(
-      'id, report_id, material_type, dimensions, total_qty, current_qty, is_priority, notes, is_completed, created_at',
+      'id, report_id, material_type, dimensions, total_qty, current_qty, is_priority, notes, is_completed, created_at, updated_at',
     )
     .eq('report_id', reportId)
 
@@ -108,6 +108,21 @@ export async function createReportWithTasks(input: {
   if (e2) throw e2
 
   return { reportId }
+}
+
+export async function addTaskToReport(reportId: string, task: NewTaskRow): Promise<void> {
+  const sb = requireSupabase()
+  const row = {
+    report_id: reportId,
+    material_type: task.material_type,
+    dimensions: task.dimensions,
+    total_qty: task.total_qty,
+    current_qty: task.current_qty ?? 0,
+    is_priority: task.is_priority ?? false,
+    notes: task.notes ?? null,
+  }
+  const { error } = await sb.from('nm_prod_tasks').insert(row)
+  if (error) throw error
 }
 
 export async function incrementTaskQty(task: NmProdTask): Promise<void> {

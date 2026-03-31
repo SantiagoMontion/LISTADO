@@ -98,6 +98,21 @@
   gap: var(--space-2);
 }
 
+.nm-prod-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.nm-prod-btn-home {
+  color: #fff;
+}
+
+.nm-prod-icon-home {
+  display: block;
+  flex-shrink: 0;
+}
+
 .nm-prod-title {
   font-size: var(--fs-xl);
   font-weight: var(--font-weight-bold);
@@ -435,8 +450,8 @@ a.nm-prod-btn {
 }
 
 .nm-prod-tab:active {
-  background: var(--interactive-hover);
-  border-color: var(--border-hover);
+  background: var(--surface);
+  border-color: var(--border-default);
   color: var(--foreground);
 }
 
@@ -657,6 +672,23 @@ a.nm-prod-btn {
   margin: 0 0 var(--space-3);
   font-size: var(--fs-sm);
   color: var(--foreground-secondary);
+}
+
+.nm-prod-modal-input {
+  width: 100%;
+  min-height: var(--space-12);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-input);
+  background: var(--input-background, var(--surface));
+  color: var(--foreground);
+  padding: 0 var(--space-3);
+  font-size: var(--fs-base);
+  font-family: var(--font-family);
+}
+
+.nm-prod-modal-input:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 1px;
 }
 
 /* Raíz: altura útil si el shell no envuelve el #root */

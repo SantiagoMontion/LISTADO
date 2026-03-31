@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MaterialTabs } from './components/MaterialTabs'
 import { TaskCard } from './components/TaskCard'
 import { todayIsoLocal } from './lib/date'
@@ -6,6 +6,7 @@ import { parseProductionReport } from './lib/parseReport'
 import { sortTasksForDisplay } from './lib/sortTasks'
 import { surfaceFromDimensions } from './lib/surface'
 import {
+  addTaskToReport,
   createReportWithTasks,
   decrementTaskQty,
   deleteReportCompletely,
@@ -45,6 +46,29 @@ function formatDayMonth(isoDate: string): string {
   return `${Number(day)}/${Number(month)}`
 }
 
+function parseQuickTaskInput(raw: string): { dimensions: string, materialType: MaterialTab } | null {
+  const m = raw.trim().match(/^(\d+)\s*[xX×]\s*(\d+)\s+(.+)$/)
+  if (!m) return null
+  const width = Number(m[1])
+  const height = Number(m[2])
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+    return null
+  }
+
+  const materialRaw = m[3].trim().toLowerCase()
+  let materialType: MaterialTab | null = null
+  if (materialRaw.includes('classic')) materialType = 'classic'
+  else if (/\bpro\b/.test(materialRaw)) materialType = 'pro'
+  else if (materialRaw.includes('alfombra')) materialType = 'alfombras'
+  else if (materialRaw.includes('otro')) materialType = 'otros'
+  if (!materialType) return null
+
+  return {
+    dimensions: `${width}x${height}`,
+    materialType,
+  }
+}
+
 type TaskFilter = 'all' | 'priority' | 'standard' | 'completed'
 type SizeSortMode = 'default' | 'desc' | 'asc'
 const STANDARD_DIMENSIONS = new Set(['90x40', '82x32', '50x40'])
@@ -63,6 +87,12 @@ function areaFromDimensions(dimensions: string): number {
   const height = Number(match[2].replace(',', '.'))
   if (Number.isNaN(width) || Number.isNaN(height)) return 0
   return width * height
+}
+
+function taskLastUpdateTime(task: NmProdTask): number {
+  const iso = task.updated_at ?? task.created_at
+  const ms = Date.parse(iso)
+  return Number.isFinite(ms) ? ms : 0
 }
 
 export default function App() {
@@ -93,6 +123,9 @@ export default function App() {
   const [completionFlashIds, setCompletionFlashIds] = useState<Set<string>>(new Set())
   const [pendingCutTask, setPendingCutTask] = useState<NmProdTask | null>(null)
   const [pendingDeleteReportId, setPendingDeleteReportId] = useState<string | null>(null)
+  const [pendingQuickAdd, setPendingQuickAdd] = useState(false)
+  const [quickAddInput, setQuickAddInput] = useState('')
+  const [quickAddError, setQuickAddError] = useState<string | null>(null)
   const [pendingDates, setPendingDates] = useState<Set<string>>(new Set())
 
   const refreshReports = useCallback(async () => {
@@ -113,6 +146,18 @@ export default function App() {
     }
     setPendingDates(nextPendingDates)
   }, [configured])
+
+  /** pendingDates solo se recalcula en refreshReports; tras cortar tareas hay que refrescar o el "!" queda obsoleto. */
+  const pendingReportsRefreshRef = useRef<number | null>(null)
+  const scheduleRefreshReports = useCallback(() => {
+    if (pendingReportsRefreshRef.current !== null) {
+      window.clearTimeout(pendingReportsRefreshRef.current)
+    }
+    pendingReportsRefreshRef.current = window.setTimeout(() => {
+      pendingReportsRefreshRef.current = null
+      void refreshReports().catch(() => {})
+    }, 350)
+  }, [refreshReports])
 
   const refreshCurrentTasks = useCallback(async () => {
     if (!configured || !reportId) return
@@ -181,16 +226,24 @@ export default function App() {
           filter: `report_id=eq.${reportId}`,
         },
         () => {
-          loadTasks().catch(() => {})
+          loadTasks()
+            .then(() => {
+              scheduleRefreshReports()
+            })
+            .catch(() => {})
         },
       )
       .subscribe()
 
     return () => {
       cancelled = true
+      if (pendingReportsRefreshRef.current !== null) {
+        window.clearTimeout(pendingReportsRefreshRef.current)
+        pendingReportsRefreshRef.current = null
+      }
       if (supabase) void supabase.removeChannel(channel)
     }
-  }, [configured, reportId])
+  }, [configured, reportId, scheduleRefreshReports])
 
   const tasksByMainFilter = useMemo(
     () =>
@@ -238,17 +291,20 @@ export default function App() {
         : tabbed
 
     const base = (() => {
-      if (taskFilter !== 'completed' || !q) {
+      if (taskFilter !== 'completed') {
         return sortTasksForDisplay(searched)
       }
       return [...searched].sort((a, b) => {
         const da = a.dimensions.toLowerCase()
         const db = b.dimensions.toLowerCase()
-        const rank = (d: string) => (d === q ? 0 : d.startsWith(q) ? 1 : 2)
-        const ra = rank(da)
-        const rb = rank(db)
-        if (ra !== rb) return ra - rb
-        if (a.is_priority !== b.is_priority) return a.is_priority ? -1 : 1
+        if (q) {
+          const rank = (d: string) => (d === q ? 0 : d.startsWith(q) ? 1 : 2)
+          const ra = rank(da)
+          const rb = rank(db)
+          if (ra !== rb) return ra - rb
+        }
+        const byRecentCut = taskLastUpdateTime(b) - taskLastUpdateTime(a)
+        if (byRecentCut !== 0) return byRecentCut
         return surfaceFromDimensions(b.dimensions) - surfaceFromDimensions(a.dimensions)
       })
     })()
@@ -349,6 +405,7 @@ export default function App() {
     }
     try {
       await incrementTaskQty(task)
+      await refreshReports()
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e))
       await refreshCurrentTasks()
@@ -391,6 +448,7 @@ export default function App() {
     try {
       if (done) await restoreTaskQty(task)
       else await decrementTaskQty(task)
+      await refreshReports()
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e))
       await refreshCurrentTasks()
@@ -413,6 +471,7 @@ export default function App() {
     })
     try {
       await toggleTaskCompleted(task)
+      await refreshReports()
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e))
       await refreshCurrentTasks()
@@ -468,6 +527,51 @@ export default function App() {
     await executeDeleteReport(id)
   }
 
+  const confirmQuickAdd = async () => {
+    setError(null)
+    setQuickAddError(null)
+    const parsed = parseQuickTaskInput(quickAddInput)
+    if (!parsed) {
+      setQuickAddError('Formato: 90x40 Classic, 56x40 pro, etc.')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const task = {
+        material_type: parsed.materialType,
+        dimensions: parsed.dimensions,
+        total_qty: 1,
+      }
+
+      const activeReportForDate = reportId && reportsForSelectedDate.some((r) => r.id === reportId)
+        ? reportId
+        : reportsForSelectedDate[0]?.id ?? null
+
+      let targetReportId: string
+      if (activeReportForDate) {
+        targetReportId = activeReportForDate
+        await addTaskToReport(targetReportId, task)
+      } else {
+        const { reportId: newId } = await createReportWithTasks({
+          fecha: selectedDate,
+          tasks: [task],
+        })
+        targetReportId = newId
+      }
+
+      setReportId(targetReportId)
+      setPendingQuickAdd(false)
+      setQuickAddInput('')
+      await refreshReports()
+      await refreshCurrentTasks()
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="nm-prod-app">
       {!configured && (
@@ -481,9 +585,57 @@ export default function App() {
         <div className="nm-prod-nav-minimal">
           <h1 className="nm-prod-title">NOTMID</h1>
           {mode !== 'home' && (
-            <a href="/" className="nm-prod-btn">
-              Inicio
-            </a>
+            <div className="nm-prod-header-actions">
+              {mode === 'manager' && (
+                <button
+                  type="button"
+                  className="nm-prod-btn nm-prod-btn-icon"
+                  onClick={() => {
+                    setQuickAddInput('')
+                    setQuickAddError(null)
+                    setPendingQuickAdd(true)
+                  }}
+                  disabled={!configured || loading}
+                  aria-label="Agregar medida al día seleccionado"
+                  title="Agregar medida"
+                >
+                  +
+                </button>
+              )}
+              <a href="/" className="nm-prod-btn nm-prod-btn-icon nm-prod-btn-home" aria-label="Inicio" title="Inicio">
+                <svg
+                  className="nm-prod-icon-home"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M4 10.5 12 4l8 6.5"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M7.5 10v10h9V10"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M10.5 20v-4h3v4"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </a>
+            </div>
           )}
         </div>
       </header>
@@ -632,6 +784,51 @@ export default function App() {
                 onClick={() => void confirmDeleteReport()}
               >
                 Eliminar
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {pendingQuickAdd && (
+        <div className="nm-prod-modal-backdrop" role="presentation">
+          <section className="nm-prod-modal" role="dialog" aria-modal="true">
+            <h3 className="nm-prod-modal-title">Agregar medida al día {formatDayMonth(selectedDate)}</h3>
+            <p className="nm-prod-modal-text">Ejemplo: 90x40 Classic o 56x40 pro</p>
+            <input
+              type="text"
+              className="nm-prod-modal-input"
+              value={quickAddInput}
+              onChange={(e) => {
+                setQuickAddInput(e.target.value)
+                if (quickAddError) setQuickAddError(null)
+              }}
+              placeholder="90x40 Classic"
+              autoFocus
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+            />
+            {quickAddError && (
+              <p className="nm-prod-error" role="alert">
+                {quickAddError}
+              </p>
+            )}
+            <div className="nm-prod-row">
+              <button
+                type="button"
+                className="nm-prod-btn"
+                onClick={() => setPendingQuickAdd(false)}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="nm-prod-btn nm-prod-btn-primary"
+                disabled={loading || !quickAddInput.trim()}
+                onClick={() => void confirmQuickAdd()}
+              >
+                {loading ? 'Guardando…' : 'Agregar'}
               </button>
             </div>
           </section>

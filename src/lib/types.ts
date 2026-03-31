@@ -17,6 +17,7 @@ export interface NmProdTask {
   notes: string | null
   is_completed: boolean
   created_at: string
+  updated_at?: string | null
 }
 
 export interface ParsedLineItem {
