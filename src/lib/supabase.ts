@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { normalizeCalendarDate } from './date'
 import type { NmProdReport, NmProdTask } from './types'
 
 function normalizeEnv(v: string | undefined): string | undefined {
@@ -38,11 +39,58 @@ export type NewTaskRow = {
   notes?: string | null
 }
 
-export type TaskProgressRow = {
-  report_id: string
-  total_qty: number
-  current_qty: number
-  is_completed: boolean
+function taskProgressRowDone(row: {
+  is_completed: unknown
+  current_qty: unknown
+  total_qty: unknown
+}): boolean {
+  if (row.is_completed === true) return true
+  const cq = Number(row.current_qty)
+  const tq = Number(row.total_qty)
+  return Number.isFinite(cq) && Number.isFinite(tq) && cq >= tq
+}
+
+/** Un solo round-trip: mismas fechas y tareas (evita pendingDates desfasado vs reportes). */
+export async function fetchReportsWithTasksProgress(): Promise<{
+  reports: NmProdReport[]
+  pendingFechas: string[]
+}> {
+  const sb = requireSupabase()
+  const { data, error } = await sb
+    .from('nm_prod_reports')
+    .select('id, fecha, created_at, nm_prod_tasks(current_qty, total_qty, is_completed)')
+    .order('fecha', { ascending: false })
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+
+  type Row = {
+    id: string
+    fecha: string
+    created_at: string
+    nm_prod_tasks: Array<{
+      current_qty: number
+      total_qty: number
+      is_completed: boolean
+    }> | null
+  }
+
+  const raw = (data ?? []) as Row[]
+  const reports: NmProdReport[] = []
+  const pendingSet = new Set<string>()
+
+  for (const row of raw) {
+    const fecha = normalizeCalendarDate(row.fecha)
+    reports.push({
+      id: row.id,
+      fecha,
+      created_at: row.created_at,
+    })
+    const tasks = row.nm_prod_tasks ?? []
+    if (tasks.some((t) => !taskProgressRowDone(t))) pendingSet.add(fecha)
+  }
+
+  return { reports, pendingFechas: [...pendingSet] }
 }
 
 export async function fetchReports(): Promise<NmProdReport[]> {
@@ -68,16 +116,6 @@ export async function fetchTasks(reportId: string): Promise<NmProdTask[]> {
 
   if (error) throw error
   return (data ?? []) as NmProdTask[]
-}
-
-export async function fetchTaskProgressRows(): Promise<TaskProgressRow[]> {
-  const sb = requireSupabase()
-  const { data, error } = await sb
-    .from('nm_prod_tasks')
-    .select('report_id, total_qty, current_qty, is_completed')
-
-  if (error) throw error
-  return (data ?? []) as TaskProgressRow[]
 }
 
 export async function createReportWithTasks(input: {

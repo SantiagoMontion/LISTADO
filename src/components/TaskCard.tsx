@@ -40,7 +40,16 @@ export function TaskCard({
           <h3 className="nm-prod-task-dimensions">
             <span className="nm-prod-task-measure">{task.dimensions}</span>
             <span className="nm-prod-task-separator"> - </span>
-            <span className="nm-prod-task-qty">
+            <span
+              className="nm-prod-task-qty"
+              title={
+                done
+                  ? 'Cortado'
+                  : showOnlyDecrement
+                    ? `Cortadas: ${displayedQty}`
+                    : `Falta cortar: ${displayedQty}`
+              }
+            >
               ({displayedQty})
             </span>
           </h3>

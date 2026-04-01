@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MaterialTabs } from './components/MaterialTabs'
 import { TaskCard } from './components/TaskCard'
-import { todayIsoLocal } from './lib/date'
+import { normalizeCalendarDate, todayIsoLocal } from './lib/date'
 import { parseProductionReport } from './lib/parseReport'
 import { sortTasksForDisplay } from './lib/sortTasks'
 import { surfaceFromDimensions } from './lib/surface'
@@ -10,8 +10,7 @@ import {
   createReportWithTasks,
   decrementTaskQty,
   deleteReportCompletely,
-  fetchReports,
-  fetchTaskProgressRows,
+  fetchReportsWithTasksProgress,
   fetchTasks,
   incrementTaskQty,
   restoreTaskQty,
@@ -129,26 +128,11 @@ export default function App() {
   const refreshReports = useCallback(async () => {
     if (!configured) return
     const seq = ++reportsRefreshSeqRef.current
-    const [list, progressRows] = await Promise.all([
-      fetchReports(),
-      fetchTaskProgressRows(),
-    ])
+    const { reports: list, pendingFechas } = await fetchReportsWithTasksProgress()
     if (seq !== reportsRefreshSeqRef.current) return
 
     setReports(list)
-
-    const reportDateById = new Map(list.map((r) => [r.id, r.fecha]))
-    const nextPendingDates = new Set<string>()
-    for (const row of progressRows) {
-      const cq = Number(row.current_qty)
-      const tq = Number(row.total_qty)
-      const done =
-        row.is_completed || (Number.isFinite(cq) && Number.isFinite(tq) && cq >= tq)
-      if (done) continue
-      const fecha = reportDateById.get(row.report_id)
-      if (fecha) nextPendingDates.add(fecha)
-    }
-    setPendingDates(nextPendingDates)
+    setPendingDates(new Set(pendingFechas))
   }, [configured])
 
   const pendingReportsRefreshRef = useRef<number | null>(null)
@@ -360,14 +344,15 @@ export default function App() {
     )
   }, [tasks, activeTab, taskFilter])
 
-  const reportsForSelectedDate = useMemo(
-    () => reports.filter((r) => r.fecha === selectedDate),
-    [reports, selectedDate],
-  )
+  const reportsForSelectedDate = useMemo(() => {
+    const sel = normalizeCalendarDate(selectedDate)
+    return reports.filter((r) => normalizeCalendarDate(r.fecha) === sel)
+  }, [reports, selectedDate])
 
   const hasPendingBeforeSelectedDate = useMemo(() => {
+    const sel = normalizeCalendarDate(selectedDate)
     for (const d of pendingDates) {
-      if (d < selectedDate) return true
+      if (normalizeCalendarDate(d) < sel) return true
     }
     return false
   }, [pendingDates, selectedDate])

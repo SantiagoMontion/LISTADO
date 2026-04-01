@@ -5,3 +5,8 @@ export function todayIsoLocal(): string {
   const day = d.getDate()
   return `${y}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 }
+
+/** YYYY-MM-DD para comparar con `fecha` de Postgres (a veces viene con hora o espacios). */
+export function normalizeCalendarDate(value: string): string {
+  return String(value).trim().slice(0, 10)
+}
