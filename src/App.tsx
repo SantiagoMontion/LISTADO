@@ -198,6 +198,11 @@ export default function App() {
   }, [refreshReports])
 
   useEffect(() => {
+    if (!configured || mode !== 'manager') return
+    void refreshReports().catch(() => {})
+  }, [selectedDate, configured, mode, refreshReports])
+
+  useEffect(() => {
     if (!configured || !reportId || !supabase) {
       setTasks([])
       setTasksLoaded(false)
@@ -337,6 +342,22 @@ export default function App() {
     )
     if (tabTasks.length === 0) return false
     return tabTasks.every((t) => t.is_completed || t.current_qty >= t.total_qty)
+  }, [tasks, activeTab, taskFilter])
+
+  /** Todo el reporte cargado (todas las pestañas); el aviso ! usa esto vía pendingDates. */
+  const allCutEntireReport = useMemo(() => {
+    if (taskFilter !== 'all') return false
+    if (tasks.length === 0) return false
+    return tasks.every((t) => t.is_completed || t.current_qty >= t.total_qty)
+  }, [tasks, taskFilter])
+
+  const hasPendingInOtherMaterialTab = useMemo(() => {
+    if (taskFilter !== 'all') return false
+    return tasks.some(
+      (t) =>
+        tabForMaterialType(t.material_type) !== activeTab &&
+        !(t.is_completed || t.current_qty >= t.total_qty),
+    )
   }, [tasks, activeTab, taskFilter])
 
   const reportsForSelectedDate = useMemo(
@@ -941,9 +962,15 @@ export default function App() {
               </div>
               <div className="nm-prod-task-list">
                 {visibleTasks.length === 0 ? (
-                  allCutInActiveTab ? (
+                  allCutEntireReport ? (
                     <div className="nm-prod-all-cut-state">
                       <p className="nm-prod-all-cut-text">Todo cortado! Seguí así</p>
+                    </div>
+                  ) : allCutInActiveTab && hasPendingInOtherMaterialTab ? (
+                    <div className="nm-prod-all-cut-state">
+                      <p className="nm-prod-empty-text">
+                        En esta pestaña no hay pendientes. Revisá Classic / Pro / Alfombras.
+                      </p>
                     </div>
                   ) : (
                     <div className="nm-prod-all-cut-state">
