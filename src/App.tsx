@@ -123,18 +123,27 @@ export default function App() {
   const [quickAddError, setQuickAddError] = useState<string | null>(null)
   const [pendingDates, setPendingDates] = useState<Set<string>>(new Set())
 
+  /** Solo aplica el último refresh en vuelo; si uno viejo termina después, no pisa reports/pendingDates (el "!" quedaba pegado). */
+  const reportsRefreshSeqRef = useRef(0)
+
   const refreshReports = useCallback(async () => {
     if (!configured) return
+    const seq = ++reportsRefreshSeqRef.current
     const [list, progressRows] = await Promise.all([
       fetchReports(),
       fetchTaskProgressRows(),
     ])
+    if (seq !== reportsRefreshSeqRef.current) return
+
     setReports(list)
 
     const reportDateById = new Map(list.map((r) => [r.id, r.fecha]))
     const nextPendingDates = new Set<string>()
     for (const row of progressRows) {
-      const done = row.is_completed || row.current_qty >= row.total_qty
+      const cq = Number(row.current_qty)
+      const tq = Number(row.total_qty)
+      const done =
+        row.is_completed || (Number.isFinite(cq) && Number.isFinite(tq) && cq >= tq)
       if (done) continue
       const fecha = reportDateById.get(row.report_id)
       if (fecha) nextPendingDates.add(fecha)
@@ -142,7 +151,6 @@ export default function App() {
     setPendingDates(nextPendingDates)
   }, [configured])
 
-  /** pendingDates solo se recalcula en refreshReports; tras cortar tareas hay que refrescar o el "!" queda obsoleto. */
   const pendingReportsRefreshRef = useRef<number | null>(null)
   const scheduleRefreshReports = useCallback(() => {
     if (pendingReportsRefreshRef.current !== null) {
