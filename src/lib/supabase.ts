@@ -148,13 +148,42 @@ export async function createReportWithTasks(input: {
   return { reportId }
 }
 
-export async function addTaskToReport(reportId: string, task: NewTaskRow): Promise<void> {
+/**
+ * Suma cantidad a una medida ya existente (mismo reporte + material + dimensiones);
+ * si no existe, inserta. Evita el error UNIQUE del esquema al repetir medida.
+ */
+export async function mergeTaskIntoReport(reportId: string, task: NewTaskRow): Promise<void> {
   const sb = requireSupabase()
+  const materialType = task.material_type.trim()
+  const dimensions = task.dimensions.trim()
+  const delta = Math.max(1, Number(task.total_qty) || 1)
+
+  const { data: existing, error: selErr } = await sb
+    .from('nm_prod_tasks')
+    .select('id, total_qty')
+    .eq('report_id', reportId)
+    .eq('material_type', materialType)
+    .eq('dimensions', dimensions)
+    .maybeSingle()
+
+  if (selErr) throw selErr
+
+  if (existing) {
+    const ex = existing as { id: string; total_qty: number }
+    const nextTotal = ex.total_qty + delta
+    const { error: upErr } = await sb
+      .from('nm_prod_tasks')
+      .update({ total_qty: nextTotal })
+      .eq('id', ex.id)
+    if (upErr) throw upErr
+    return
+  }
+
   const row = {
     report_id: reportId,
-    material_type: task.material_type,
-    dimensions: task.dimensions,
-    total_qty: task.total_qty,
+    material_type: materialType,
+    dimensions,
+    total_qty: delta,
     current_qty: task.current_qty ?? 0,
     is_priority: task.is_priority ?? false,
     notes: task.notes ?? null,

@@ -6,8 +6,8 @@ import { parseProductionReport } from './lib/parseReport'
 import { sortTasksForDisplay } from './lib/sortTasks'
 import { surfaceFromDimensions } from './lib/surface'
 import {
-  addTaskToReport,
   createReportWithTasks,
+  mergeTaskIntoReport,
   decrementTaskQty,
   deleteReportCompletely,
   fetchReportsWithTasksProgress,
@@ -559,21 +559,22 @@ export default function App() {
     try {
       const task = {
         material_type: parsed.materialType,
-        dimensions: parsed.dimensions,
+        dimensions: parsed.dimensions.trim(),
         total_qty: 1,
       }
 
-      const activeReportForDate = reportId && reportsForSelectedDate.some((r) => r.id === reportId)
-        ? reportId
-        : reportsForSelectedDate[0]?.id ?? null
+      const fechaDia = normalizeCalendarDate(selectedDate)
+      let targetReportId: string | null = null
+      if (reportsForSelectedDate.length > 0) {
+        const enDia = reportId && reportsForSelectedDate.some((r) => r.id === reportId)
+        targetReportId = enDia ? reportId : reportsForSelectedDate[0].id
+      }
 
-      let targetReportId: string
-      if (activeReportForDate) {
-        targetReportId = activeReportForDate
-        await addTaskToReport(targetReportId, task)
+      if (targetReportId) {
+        await mergeTaskIntoReport(targetReportId, task)
       } else {
         const { reportId: newId } = await createReportWithTasks({
-          fecha: selectedDate,
+          fecha: fechaDia,
           tasks: [task],
         })
         targetReportId = newId
