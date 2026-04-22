@@ -36,61 +36,66 @@ export type NewTaskRow = {
   total_qty: number
   current_qty?: number
   is_priority?: boolean
+  from_faltas?: boolean
   notes?: string | null
 }
 
-function taskProgressRowDone(row: {
+export function taskProgressRowDone(row: {
   is_completed: unknown
   current_qty: unknown
   total_qty: unknown
 }): boolean {
-  if (row.is_completed === true) return true
+  if (row.is_completed === true || row.is_completed === 't' || row.is_completed === 1) return true
   const cq = Number(row.current_qty)
   const tq = Number(row.total_qty)
   return Number.isFinite(cq) && Number.isFinite(tq) && cq >= tq
 }
 
-/** Un solo round-trip: mismas fechas y tareas (evita pendingDates desfasado vs reportes). */
+/**
+ * Reportes + pendientes por fecha y por reporte.
+ * Tareas en query aparte (sin embed) para no truncar filas y alinear con lo que ves en pantalla.
+ */
 export async function fetchReportsWithTasksProgress(): Promise<{
   reports: NmProdReport[]
   pendingFechas: string[]
+  reportHasPendingById: Record<string, boolean>
 }> {
   const sb = requireSupabase()
-  const { data, error } = await sb
+  const { data: repData, error: e1 } = await sb
     .from('nm_prod_reports')
-    .select('id, fecha, created_at, nm_prod_tasks(current_qty, total_qty, is_completed)')
+    .select('id, fecha, created_at')
     .order('fecha', { ascending: false })
     .order('created_at', { ascending: false })
 
-  if (error) throw error
+  if (e1) throw e1
 
-  type Row = {
-    id: string
-    fecha: string
-    created_at: string
-    nm_prod_tasks: Array<{
-      current_qty: number
-      total_qty: number
-      is_completed: boolean
-    }> | null
-  }
+  const { data: taskData, error: e2 } = await sb
+    .from('nm_prod_tasks')
+    .select('report_id, current_qty, total_qty, is_completed')
 
-  const raw = (data ?? []) as Row[]
-  const reports: NmProdReport[] = []
+  if (e2) throw e2
+
+  const reports: NmProdReport[] = (repData ?? []).map((row) => ({
+    id: row.id as string,
+    fecha: normalizeCalendarDate(row.fecha as string),
+    created_at: row.created_at as string,
+  }))
+
+  const reportDateById = new Map(reports.map((r) => [r.id, r.fecha]))
+  const reportHasPendingById: Record<string, boolean> = {}
+  for (const r of reports) reportHasPendingById[r.id] = false
+
   const pendingSet = new Set<string>()
-
-  for (const row of raw) {
-    const fecha = normalizeCalendarDate(row.fecha)
-    reports.push({
-      id: row.id,
-      fecha,
-      created_at: row.created_at,
-    })
-    const tasks = row.nm_prod_tasks ?? []
-    if (tasks.some((t) => !taskProgressRowDone(t))) pendingSet.add(fecha)
+  for (const t of taskData ?? []) {
+    const rid = t.report_id as string
+    if (!reportDateById.has(rid)) continue
+    if (taskProgressRowDone(t)) continue
+    reportHasPendingById[rid] = true
+    const fecha = reportDateById.get(rid)
+    if (fecha) pendingSet.add(fecha)
   }
 
-  return { reports, pendingFechas: [...pendingSet] }
+  return { reports, pendingFechas: [...pendingSet], reportHasPendingById }
 }
 
 export async function fetchReports(): Promise<NmProdReport[]> {
@@ -110,12 +115,15 @@ export async function fetchTasks(reportId: string): Promise<NmProdTask[]> {
   const { data, error } = await sb
     .from('nm_prod_tasks')
     .select(
-      'id, report_id, material_type, dimensions, total_qty, current_qty, is_priority, notes, is_completed, created_at',
+      'id, report_id, material_type, dimensions, total_qty, current_qty, is_priority, from_faltas, notes, is_completed, created_at',
     )
     .eq('report_id', reportId)
 
   if (error) throw error
-  return (data ?? []) as NmProdTask[]
+  return (data ?? []).map((row) => ({
+    ...(row as NmProdTask),
+    from_faltas: Boolean((row as { from_faltas?: boolean }).from_faltas),
+  }))
 }
 
 export async function createReportWithTasks(input: {
@@ -139,6 +147,7 @@ export async function createReportWithTasks(input: {
     total_qty: t.total_qty,
     current_qty: t.current_qty ?? 0,
     is_priority: t.is_priority ?? false,
+    from_faltas: t.from_faltas ?? false,
     notes: t.notes ?? null,
   }))
 
@@ -158,12 +167,14 @@ export async function mergeTaskIntoReport(reportId: string, task: NewTaskRow): P
   const dimensions = task.dimensions.trim()
   const delta = Math.max(1, Number(task.total_qty) || 1)
 
+  const fromFaltas = task.from_faltas ?? false
   const { data: existing, error: selErr } = await sb
     .from('nm_prod_tasks')
     .select('id, total_qty')
     .eq('report_id', reportId)
     .eq('material_type', materialType)
     .eq('dimensions', dimensions)
+    .eq('from_faltas', fromFaltas)
     .maybeSingle()
 
   if (selErr) throw selErr
@@ -186,6 +197,7 @@ export async function mergeTaskIntoReport(reportId: string, task: NewTaskRow): P
     total_qty: delta,
     current_qty: task.current_qty ?? 0,
     is_priority: task.is_priority ?? false,
+    from_faltas: fromFaltas,
     notes: task.notes ?? null,
   }
   const { error } = await sb.from('nm_prod_tasks').insert(row)

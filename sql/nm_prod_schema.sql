@@ -28,10 +28,11 @@ CREATE TABLE IF NOT EXISTS public.nm_prod_tasks (
   total_qty integer NOT NULL CHECK (total_qty > 0),
   current_qty integer NOT NULL DEFAULT 0 CHECK (current_qty >= 0 AND current_qty <= total_qty),
   is_priority boolean NOT NULL DEFAULT false,
+  from_faltas boolean NOT NULL DEFAULT false,
   notes text,
   is_completed boolean NOT NULL DEFAULT false,
   created_at timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT nm_prod_tasks_report_dim_unique UNIQUE (report_id, material_type, dimensions)
+  CONSTRAINT nm_prod_tasks_report_dim_faltas_unique UNIQUE (report_id, material_type, dimensions, from_faltas)
 );
 
 CREATE INDEX IF NOT EXISTS idx_nm_prod_tasks_report ON public.nm_prod_tasks (report_id);

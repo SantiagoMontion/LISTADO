@@ -4,6 +4,8 @@ import type { MaterialTab, ParsedLineItem, ParsedSection } from './types'
 const REPORT_DATE_RE =
   /REPORTE\s+DE\s+PRODUCCI[OÓ]N\s*[-–]\s*(\d{1,2})\/(\d{1,2})\/(\d{4})/i
 const DIM_LINE_RE = /^(\d+)\s*[xX×]\s*(\d+)\s*[-–]\s*(\d+)\s*$/
+/** LISTA FALTAS: `90x40 Classic - 3` / `50x40 Pro - 1` / `25x25 Alfombra - 2` */
+const FALTAS_LINE_RE = /^(\d+)\s*[xX×]\s*(\d+)\s+([A-Za-zÁÉÍÓÚáéíóú]+)\s*[-–]\s*(\d+)\s*$/
 const SEPARATOR_RE = /^[-─=]{3,}\s*$/
 /** Bloque sin piezas: `Sin produccion.` / `Sin producción` (se ignora, no es error). */
 const NO_PRODUCTION_LINE_RE = /^sin\s+producci[oó]n\.?\s*$/i
@@ -51,18 +53,59 @@ function parseDimensionLine(line: string): ParsedLineItem | null {
     totalQty,
     width,
     height,
+    from_faltas: false,
   }
 }
 
-/** Suma cantidades si la misma medida aparece más de una vez en el bloque. */
+function parseFaltasMaterialToken(raw: string): MaterialTab | null {
+  const t = raw.trim().toLowerCase()
+  if (t.includes('classic')) return 'classic'
+  if (t === 'pro' || /^pro\b/i.test(raw.trim())) return 'pro'
+  if (t.includes('alfombra')) return 'alfombras'
+  return null
+}
+
+/** Línea de LISTA FALTAS: medida + material + cantidad → prioridad al importar. */
+function parseFaltasLine(line: string): { materialType: MaterialTab; item: ParsedLineItem } | null {
+  const m = line.trim().match(FALTAS_LINE_RE)
+  if (!m) return null
+  const width = Number(m[1])
+  const height = Number(m[2])
+  const totalQty = Number(m[4])
+  if (!Number.isFinite(width) || !Number.isFinite(height) || !Number.isFinite(totalQty)) {
+    return null
+  }
+  if (width <= 0 || height <= 0 || totalQty <= 0) return null
+  const materialType = parseFaltasMaterialToken(m[3])
+  if (!materialType) return null
+  return {
+    materialType,
+    item: {
+      dimensions: `${width}x${height}`,
+      totalQty,
+      width,
+      height,
+      is_priority: true,
+      from_faltas: true,
+    },
+  }
+}
+
+function mergeKey(it: ParsedLineItem): string {
+  return `${it.dimensions}\0${it.from_faltas ? '1' : '0'}`
+}
+
+/** Suma cantidades si la misma medida aparece más de una vez en el mismo origen (lista vs faltas). */
 function mergeItemsByDimension(items: ParsedLineItem[]): ParsedLineItem[] {
   const map = new Map<string, ParsedLineItem>()
   for (const it of items) {
-    const cur = map.get(it.dimensions)
+    const key = mergeKey(it)
+    const cur = map.get(key)
     if (!cur) {
-      map.set(it.dimensions, { ...it })
+      map.set(key, { ...it })
     } else {
       cur.totalQty += it.totalQty
+      if (it.is_priority) cur.is_priority = true
     }
   }
   return [...map.values()]
@@ -101,6 +144,8 @@ export function parseProductionReport(raw: string): {
     }
     i += 1
 
+    const isFaltasBlock = /LISTA\s+FALTAS/i.test(header.trim())
+
     const blockItems: ParsedLineItem[] = []
     while (i < lines.length) {
       const l = lines[i]
@@ -114,10 +159,21 @@ export function parseProductionReport(raw: string): {
         i += 1
         continue
       }
-      const parsed = parseDimensionLine(l)
-      if (parsed) blockItems.push(parsed)
+      if (isFaltasBlock) {
+        const fp = parseFaltasLine(l)
+        if (fp) {
+          const acc = byMaterial.get(fp.materialType) ?? []
+          acc.push(fp.item)
+          byMaterial.set(fp.materialType, acc)
+        }
+      } else {
+        const parsed = parseDimensionLine(l)
+        if (parsed) blockItems.push(parsed)
+      }
       i += 1
     }
+
+    if (isFaltasBlock) continue
 
     if (blockItems.length === 0) continue
     const materialType = normalizeMaterial(header)

@@ -14,6 +14,8 @@ export interface NmProdTask {
   total_qty: number
   current_qty: number
   is_priority: boolean
+  /** True = línea cargada solo desde LISTA FALTAS (no fusionar con lista principal). */
+  from_faltas: boolean
   notes: string | null
   is_completed: boolean
   created_at: string
@@ -25,6 +27,10 @@ export interface ParsedLineItem {
   totalQty: number
   width: number
   height: number
+  /** True si viene de LISTA FALTAS (prioridad al subir). */
+  is_priority?: boolean
+  /** True = fila aparte en BD, no sumar con la misma medida de LISTA CLASSIC/PRO/… */
+  from_faltas?: boolean
 }
 
 export interface ParsedSection {

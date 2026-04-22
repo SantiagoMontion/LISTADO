@@ -39,6 +39,12 @@ export function TaskCard({
         <div className="nm-prod-task-left" aria-live="polite">
           <h3 className="nm-prod-task-dimensions">
             <span className="nm-prod-task-measure">{task.dimensions}</span>
+            {task.from_faltas ? (
+              <span className="nm-prod-task-faltas-tag" title="Cargado desde LISTA FALTAS">
+                {' '}
+                · Faltas
+              </span>
+            ) : null}
             <span className="nm-prod-task-separator"> - </span>
             <span
               className="nm-prod-task-qty"

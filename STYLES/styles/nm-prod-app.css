@@ -584,6 +584,13 @@ a.nm-prod-btn {
   font-size: calc(var(--fs-lg) + 5px);
 }
 
+.nm-prod-task-faltas-tag {
+  font-size: var(--fs-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--foreground-secondary);
+  white-space: nowrap;
+}
+
 .nm-prod-task-separator {
   color: var(--foreground);
   font-size: var(--fs-lg);

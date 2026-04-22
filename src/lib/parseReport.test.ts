@@ -74,4 +74,57 @@ Sin producción
     const { sections } = parseProductionReport(raw)
     expect(sections.some((s) => s.materialType === 'alfombras')).toBe(false)
   })
+
+  it('LISTA FALTAS sin líneas válidas no agrega secciones', () => {
+    const raw = `### REPORTE DE PRODUCCIÓN - 26/03/2026 ###
+--------------------------------
+LISTA FALTAS
+--------------------------------
+Sin produccion.
+`
+    const { sections } = parseProductionReport(raw)
+    expect(sections.length).toBe(0)
+  })
+
+  it('LISTA FALTAS enruta a Classic/Pro y marca prioridad', () => {
+    const raw = `### REPORTE DE PRODUCCIÓN - 26/03/2026 ###
+--------------------------------
+LISTA FALTAS
+--------------------------------
+90x40 Classic - 2
+50x40 Pro - 1
+30x30 Alfombra - 1
+`
+    const { sections } = parseProductionReport(raw)
+    const classic = sections.find((s) => s.materialType === 'classic')
+    const pro = sections.find((s) => s.materialType === 'pro')
+    const alf = sections.find((s) => s.materialType === 'alfombras')
+    expect(classic?.items.find((i) => i.dimensions === '90x40')?.totalQty).toBe(2)
+    expect(classic?.items.find((i) => i.dimensions === '90x40')?.is_priority).toBe(true)
+    expect(pro?.items.find((i) => i.dimensions === '50x40')?.is_priority).toBe(true)
+    expect(alf?.items.find((i) => i.dimensions === '30x30')?.is_priority).toBe(true)
+  })
+
+  it('LISTA FALTAS no fusiona cantidad con LISTA CLASSIC (dos filas 90x40)', () => {
+    const raw = `### REPORTE DE PRODUCCIÓN - 26/03/2026 ###
+--------------------------------
+LISTA CLASSIC
+--------------------------------
+90x40 - 5
+--------------------------------
+LISTA FALTAS
+--------------------------------
+90x40 Classic - 2
+`
+    const { sections } = parseProductionReport(raw)
+    const classic = sections.find((s) => s.materialType === 'classic')
+    const rows90 = classic?.items.filter((i) => i.dimensions === '90x40') ?? []
+    expect(rows90.length).toBe(2)
+    const principal = rows90.find((i) => !i.from_faltas)
+    const faltas = rows90.find((i) => i.from_faltas)
+    expect(principal?.totalQty).toBe(5)
+    expect(principal?.is_priority).toBeFalsy()
+    expect(faltas?.totalQty).toBe(2)
+    expect(faltas?.is_priority).toBe(true)
+  })
 })

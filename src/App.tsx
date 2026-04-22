@@ -20,7 +20,7 @@ import {
 } from './lib/supabase'
 import type { MaterialTab, NmProdReport, NmProdTask } from './lib/types'
 
-const TAB_ORDER: MaterialTab[] = ['classic', 'pro', 'alfombras']
+const TAB_ORDER: MaterialTab[] = ['classic', 'pro', 'alfombras', 'otros']
 
 function isMaterialTab(v: string): v is MaterialTab {
   return (TAB_ORDER as string[]).includes(v)
@@ -121,6 +121,7 @@ export default function App() {
   const [quickAddInput, setQuickAddInput] = useState('')
   const [quickAddError, setQuickAddError] = useState<string | null>(null)
   const [pendingDates, setPendingDates] = useState<Set<string>>(new Set())
+  const [reportHasPendingById, setReportHasPendingById] = useState<Record<string, boolean>>({})
 
   /** Solo aplica el último refresh en vuelo; si uno viejo termina después, no pisa reports/pendingDates (el "!" quedaba pegado). */
   const reportsRefreshSeqRef = useRef(0)
@@ -128,11 +129,13 @@ export default function App() {
   const refreshReports = useCallback(async () => {
     if (!configured) return
     const seq = ++reportsRefreshSeqRef.current
-    const { reports: list, pendingFechas } = await fetchReportsWithTasksProgress()
+    const { reports: list, pendingFechas, reportHasPendingById: openByReport } =
+      await fetchReportsWithTasksProgress()
     if (seq !== reportsRefreshSeqRef.current) return
 
     setReports(list)
     setPendingDates(new Set(pendingFechas))
+    setReportHasPendingById(openByReport)
   }, [configured])
 
   const pendingReportsRefreshRef = useRef<number | null>(null)
@@ -368,9 +371,22 @@ export default function App() {
       setReportId(null)
       return
     }
-    if (reportId && reportsForSelectedDate.some((r) => r.id === reportId)) return
-    setReportId(reportsForSelectedDate[0].id)
-  }, [mode, reportsForSelectedDate, reportId])
+    const idInDay = Boolean(reportId && reportsForSelectedDate.some((r) => r.id === reportId))
+    if (idInDay && reportId) {
+      const openHere = reportHasPendingById[reportId] === true
+      const anyOpen = reportsForSelectedDate.some((r) => reportHasPendingById[r.id] === true)
+      if (!openHere && anyOpen) {
+        const next = reportsForSelectedDate.find((r) => reportHasPendingById[r.id] === true)
+        if (next) {
+          setReportId(next.id)
+          return
+        }
+      }
+      return
+    }
+    const withPending = reportsForSelectedDate.find((r) => reportHasPendingById[r.id] === true)
+    setReportId((withPending ?? reportsForSelectedDate[0]).id)
+  }, [mode, reportsForSelectedDate, reportId, reportHasPendingById])
 
   const onImport = async () => {
     setError(null)
@@ -388,6 +404,8 @@ export default function App() {
         material_type: s.materialType,
         dimensions: it.dimensions,
         total_qty: it.totalQty,
+        is_priority: it.is_priority ?? false,
+        from_faltas: it.from_faltas ?? false,
       })),
     )
     if (flat.length === 0) {
@@ -687,7 +705,7 @@ export default function App() {
               setPaste(e.target.value)
               if (success) setSuccess(null)
             }}
-            placeholder="### REPORTE DE PRODUCCIÓN - 25/03/2026 ###&#10;--------------------------------&#10;LISTA CLASSIC&#10;--------------------------------&#10;90x40 - 15"
+            placeholder="### REPORTE DE PRODUCCIÓN - 25/03/2026 ###&#10;--------------------------------&#10;LISTA CLASSIC&#10;--------------------------------&#10;90x40 - 15&#10;--------------------------------&#10;LISTA FALTAS&#10;--------------------------------&#10;90x40 Classic - 2&#10;50x40 Pro - 1"
             spellCheck={false}
           />
           <button
