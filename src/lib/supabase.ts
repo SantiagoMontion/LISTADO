@@ -40,6 +40,40 @@ export type NewTaskRow = {
   notes?: string | null
 }
 
+function isMissingFromFaltasColumn(e: unknown): boolean {
+  const msg = String((e as { message?: string })?.message ?? '').toLowerCase()
+  const details = String((e as { details?: string })?.details ?? '').toLowerCase()
+  const code = String((e as { code?: string })?.code ?? '')
+  return (
+    msg.includes('from_faltas') ||
+    details.includes('from_faltas') ||
+    code === '42703'
+  )
+}
+
+/** Sin columna `from_faltas`: una sola fila por material+medida (suma cantidades, prioridad si alguna era faltas). */
+export function collapseTasksForLegacySchema(tasks: NewTaskRow[]): NewTaskRow[] {
+  const map = new Map<string, NewTaskRow>()
+  for (const t of tasks) {
+    const key = `${t.material_type.trim()}\0${t.dimensions.trim()}`
+    const cur = map.get(key)
+    if (!cur) {
+      map.set(key, {
+        material_type: t.material_type.trim(),
+        dimensions: t.dimensions.trim(),
+        total_qty: t.total_qty,
+        current_qty: t.current_qty ?? 0,
+        is_priority: Boolean(t.is_priority),
+        notes: t.notes ?? null,
+      })
+    } else {
+      cur.total_qty += t.total_qty
+      if (t.is_priority) cur.is_priority = true
+    }
+  }
+  return [...map.values()]
+}
+
 export function taskProgressRowDone(row: {
   is_completed: unknown
   current_qty: unknown
@@ -156,18 +190,28 @@ export async function createReportWithTasks(input: {
   if (e1) throw e1
   const reportId = rep.id as string
 
-  const rows = input.tasks.map((t) => ({
-    report_id: reportId,
-    material_type: t.material_type,
-    dimensions: t.dimensions,
-    total_qty: t.total_qty,
-    current_qty: t.current_qty ?? 0,
-    is_priority: t.is_priority ?? false,
-    from_faltas: t.from_faltas ?? false,
-    notes: t.notes ?? null,
-  }))
+  const rowPayload = (tasks: NewTaskRow[], includeFromFaltas: boolean) =>
+    tasks.map((t) => {
+      const base = {
+        report_id: reportId,
+        material_type: t.material_type,
+        dimensions: t.dimensions,
+        total_qty: t.total_qty,
+        current_qty: t.current_qty ?? 0,
+        is_priority: t.is_priority ?? false,
+        notes: t.notes ?? null,
+      }
+      return includeFromFaltas
+        ? { ...base, from_faltas: t.from_faltas ?? false }
+        : base
+    })
 
-  const { error: e2 } = await sb.from('nm_prod_tasks').insert(rows)
+  let rows = rowPayload(input.tasks, true)
+  let { error: e2 } = await sb.from('nm_prod_tasks').insert(rows)
+  if (e2 && isMissingFromFaltasColumn(e2)) {
+    rows = rowPayload(collapseTasksForLegacySchema(input.tasks), false)
+    e2 = (await sb.from('nm_prod_tasks').insert(rows)).error
+  }
   if (e2) throw e2
 
   return { reportId }
@@ -184,7 +228,7 @@ export async function mergeTaskIntoReport(reportId: string, task: NewTaskRow): P
   const delta = Math.max(1, Number(task.total_qty) || 1)
 
   const fromFaltas = task.from_faltas ?? false
-  const { data: existing, error: selErr } = await sb
+  let existingRes = await sb
     .from('nm_prod_tasks')
     .select('id, total_qty')
     .eq('report_id', reportId)
@@ -193,7 +237,17 @@ export async function mergeTaskIntoReport(reportId: string, task: NewTaskRow): P
     .eq('from_faltas', fromFaltas)
     .maybeSingle()
 
-  if (selErr) throw selErr
+  if (existingRes.error && isMissingFromFaltasColumn(existingRes.error)) {
+    existingRes = await sb
+      .from('nm_prod_tasks')
+      .select('id, total_qty')
+      .eq('report_id', reportId)
+      .eq('material_type', materialType)
+      .eq('dimensions', dimensions)
+      .maybeSingle()
+  }
+  if (existingRes.error) throw existingRes.error
+  const existing = existingRes.data
 
   if (existing) {
     const ex = existing as { id: string; total_qty: number }
@@ -206,7 +260,7 @@ export async function mergeTaskIntoReport(reportId: string, task: NewTaskRow): P
     return
   }
 
-  const row = {
+  const rowWithFaltas = {
     report_id: reportId,
     material_type: materialType,
     dimensions,
@@ -216,8 +270,12 @@ export async function mergeTaskIntoReport(reportId: string, task: NewTaskRow): P
     from_faltas: fromFaltas,
     notes: task.notes ?? null,
   }
-  const { error } = await sb.from('nm_prod_tasks').insert(row)
-  if (error) throw error
+  let ins = await sb.from('nm_prod_tasks').insert(rowWithFaltas)
+  if (ins.error && isMissingFromFaltasColumn(ins.error)) {
+    const { from_faltas: _omit, ...legacyRow } = rowWithFaltas
+    ins = await sb.from('nm_prod_tasks').insert(legacyRow)
+  }
+  if (ins.error) throw ins.error
 }
 
 export async function incrementTaskQty(task: NmProdTask): Promise<void> {
