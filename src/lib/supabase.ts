@@ -75,11 +75,17 @@ export async function fetchReportsWithTasksProgress(): Promise<{
 
   if (e2) throw e2
 
-  const reports: NmProdReport[] = (repData ?? []).map((row) => ({
-    id: row.id as string,
-    fecha: normalizeCalendarDate(row.fecha as string),
-    created_at: row.created_at as string,
-  }))
+  const reports: NmProdReport[] = (repData ?? []).map((row) => {
+    let fecha = normalizeCalendarDate(row.fecha)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+      fecha = normalizeCalendarDate(row.created_at)
+    }
+    return {
+      id: row.id as string,
+      fecha,
+      created_at: String(row.created_at ?? ''),
+    }
+  })
 
   const reportDateById = new Map(reports.map((r) => [r.id, r.fecha]))
   const reportHasPendingById: Record<string, boolean> = {}
@@ -110,20 +116,30 @@ export async function fetchReports(): Promise<NmProdReport[]> {
   return (data ?? []) as NmProdReport[]
 }
 
+const TASK_SELECT_WITH_FALTAS =
+  'id, report_id, material_type, dimensions, total_qty, current_qty, is_priority, from_faltas, notes, is_completed, created_at'
+const TASK_SELECT_LEGACY =
+  'id, report_id, material_type, dimensions, total_qty, current_qty, is_priority, notes, is_completed, created_at'
+
 export async function fetchTasks(reportId: string): Promise<NmProdTask[]> {
   const sb = requireSupabase()
-  const { data, error } = await sb
-    .from('nm_prod_tasks')
-    .select(
-      'id, report_id, material_type, dimensions, total_qty, current_qty, is_priority, from_faltas, notes, is_completed, created_at',
-    )
-    .eq('report_id', reportId)
+  const mapRows = (rows: unknown[] | null) =>
+    (rows ?? []).map((row) => ({
+      ...(row as NmProdTask),
+      from_faltas: Boolean((row as { from_faltas?: boolean }).from_faltas),
+    }))
 
-  if (error) throw error
-  return (data ?? []).map((row) => ({
-    ...(row as NmProdTask),
-    from_faltas: Boolean((row as { from_faltas?: boolean }).from_faltas),
-  }))
+  const first = await sb.from('nm_prod_tasks').select(TASK_SELECT_WITH_FALTAS).eq('report_id', reportId)
+  if (!first.error) return mapRows(first.data)
+
+  const msg = String((first.error as { message?: string }).message ?? '')
+  const code = String((first.error as { code?: string }).code ?? '')
+  if (msg.includes('from_faltas') || code === '42703') {
+    const second = await sb.from('nm_prod_tasks').select(TASK_SELECT_LEGACY).eq('report_id', reportId)
+    if (second.error) throw second.error
+    return mapRows(second.data)
+  }
+  throw first.error
 }
 
 export async function createReportWithTasks(input: {

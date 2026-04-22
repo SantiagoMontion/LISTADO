@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MaterialTabs } from './components/MaterialTabs'
 import { TaskCard } from './components/TaskCard'
 import { normalizeCalendarDate, todayIsoLocal } from './lib/date'
+import { formatSupabaseOrError } from './lib/errors'
 import { parseProductionReport } from './lib/parseReport'
 import { sortTasksForDisplay } from './lib/sortTasks'
 import { surfaceFromDimensions } from './lib/surface'
@@ -145,7 +146,9 @@ export default function App() {
     }
     pendingReportsRefreshRef.current = window.setTimeout(() => {
       pendingReportsRefreshRef.current = null
-      void refreshReports().catch(() => {})
+      void refreshReports().catch((e: unknown) => {
+        setError(formatSupabaseOrError(e))
+      })
     }, 350)
   }, [refreshReports])
 
@@ -180,13 +183,15 @@ export default function App() {
 
   useEffect(() => {
     refreshReports().catch((e: unknown) => {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(formatSupabaseOrError(e))
     })
   }, [refreshReports])
 
   useEffect(() => {
     if (!configured || mode !== 'manager') return
-    void refreshReports().catch(() => {})
+    void refreshReports().catch((e: unknown) => {
+      setError(formatSupabaseOrError(e))
+    })
   }, [selectedDate, configured, mode, refreshReports])
 
   useEffect(() => {
@@ -209,7 +214,7 @@ export default function App() {
 
     loadTasks().catch((e: unknown) => {
       if (!cancelled) {
-        setError(e instanceof Error ? e.message : String(e))
+        setError(formatSupabaseOrError(e))
         setTasksLoaded(true)
       }
     })
@@ -419,7 +424,7 @@ export default function App() {
       setSuccess('Lista subida correctamente')
       await refreshReports()
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(formatSupabaseOrError(e))
     } finally {
       setLoading(false)
     }
@@ -441,7 +446,7 @@ export default function App() {
       await incrementTaskQty(task)
       await refreshReports()
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(formatSupabaseOrError(e))
       await refreshCurrentTasks()
     } finally {
       setBusyId(null)
@@ -455,7 +460,7 @@ export default function App() {
     try {
       await toggleTaskPriority(task)
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(formatSupabaseOrError(e))
       await refreshCurrentTasks()
     } finally {
       setBusyId(null)
@@ -484,7 +489,7 @@ export default function App() {
       else await decrementTaskQty(task)
       await refreshReports()
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(formatSupabaseOrError(e))
       await refreshCurrentTasks()
     } finally {
       setBusyId(null)
@@ -510,7 +515,7 @@ export default function App() {
       await toggleTaskCompleted(task)
       await refreshReports()
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(formatSupabaseOrError(e))
       await refreshCurrentTasks()
     } finally {
       setBusyId(null)
@@ -551,7 +556,7 @@ export default function App() {
       }
       await refreshReports()
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(formatSupabaseOrError(e))
     } finally {
       setLoading(false)
     }
@@ -604,7 +609,7 @@ export default function App() {
       await refreshReports()
       await refreshCurrentTasks()
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(formatSupabaseOrError(e))
     } finally {
       setLoading(false)
     }
