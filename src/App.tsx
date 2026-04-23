@@ -21,7 +21,7 @@ import {
 } from './lib/supabase'
 import type { MaterialTab, NmProdReport, NmProdTask } from './lib/types'
 
-const TAB_ORDER: MaterialTab[] = ['classic', 'pro', 'alfombras', 'otros']
+const TAB_ORDER: MaterialTab[] = ['classic', 'pro', 'alfombras', 'bordes_rectos', 'otros']
 
 function isMaterialTab(v: string): v is MaterialTab {
   return (TAB_ORDER as string[]).includes(v)
@@ -60,6 +60,7 @@ function parseQuickTaskInput(raw: string): { dimensions: string, materialType: M
   if (materialRaw.includes('classic')) materialType = 'classic'
   else if (/\bpro\b/.test(materialRaw)) materialType = 'pro'
   else if (materialRaw.includes('alfombra')) materialType = 'alfombras'
+  else if (materialRaw.includes('borde') && materialRaw.includes('rect')) materialType = 'bordes_rectos'
   else if (materialRaw.includes('otro')) materialType = 'otros'
   if (!materialType) return null
 
@@ -276,6 +277,7 @@ export default function App() {
       classic: 0,
       pro: 0,
       alfombras: 0,
+      bordes_rectos: 0,
       otros: 0,
     }
     for (const t of tasksByMainFilter) {
@@ -710,7 +712,7 @@ export default function App() {
               setPaste(e.target.value)
               if (success) setSuccess(null)
             }}
-            placeholder="### REPORTE DE PRODUCCIÓN - 25/03/2026 ###&#10;--------------------------------&#10;LISTA CLASSIC&#10;--------------------------------&#10;90x40 - 15&#10;--------------------------------&#10;LISTA FALTAS&#10;--------------------------------&#10;90x40 Classic - 2&#10;50x40 Pro - 1"
+            placeholder="### REPORTE DE PRODUCCIÓN - 25/03/2026 ###&#10;--------------------------------&#10;LISTA CLASSIC&#10;--------------------------------&#10;90x40 - 15&#10;--------------------------------&#10;BORDES RECTOS&#10;--------------------------------&#10;90x40 Classic - 2&#10;--------------------------------&#10;LISTA FALTAS&#10;--------------------------------&#10;90x40 Classic - 2&#10;50x40 Pro - 1"
             spellCheck={false}
           />
           <button
@@ -978,7 +980,7 @@ export default function App() {
                   ) : allCutInActiveTab && hasPendingInOtherMaterialTab ? (
                     <div className="nm-prod-all-cut-state">
                       <p className="nm-prod-empty-text">
-                        En esta pestaña no hay pendientes. Revisá Classic / Pro / Alfombras.
+                        En esta pestaña no hay pendientes. Revisá Classic / Pro / Alfombras / Bordes rectos.
                       </p>
                     </div>
                   ) : (

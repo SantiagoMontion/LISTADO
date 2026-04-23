@@ -127,4 +127,39 @@ LISTA FALTAS
     expect(faltas?.totalQty).toBe(2)
     expect(faltas?.is_priority).toBe(true)
   })
+
+  it('parsea BORDES RECTOS en sección separada y no lo mezcla con CLASSIC/PRO', () => {
+    const raw = `### REPORTE DE PRODUCCIÓN - 23/04/2026 ###
+--------------------------------
+LISTA CLASSIC
+--------------------------------
+90x40 - 5
+--------------------------------
+LISTA PRO
+--------------------------------
+77x44 - 1
+--------------------------------
+BORDES RECTOS
+--------------------------------
+77x44 PRO - 1
+90x40 Classic - 2
+100x60 Classic - 1
+`
+    const { sections } = parseProductionReport(raw)
+    const classic = sections.find((s) => s.materialType === 'classic')
+    const pro = sections.find((s) => s.materialType === 'pro')
+    const bordes = sections.find((s) => s.materialType === 'bordes_rectos')
+
+    expect(classic?.items.find((i) => i.dimensions === '90x40')?.totalQty).toBe(5)
+    expect(pro?.items.find((i) => i.dimensions === '77x44')?.totalQty).toBe(1)
+
+    expect(bordes?.items.length).toBe(3)
+    expect(bordes?.items.find((i) => i.dimensions === '77x44')?.totalQty).toBe(1)
+    expect(bordes?.items.find((i) => i.dimensions === '90x40')?.totalQty).toBe(2)
+    expect(bordes?.items.find((i) => i.dimensions === '100x60')?.totalQty).toBe(1)
+
+    const bordes90 = bordes?.items.find((i) => i.dimensions === '90x40')
+    expect(bordes90?.from_faltas).toBe(false)
+    expect(bordes90?.is_priority).toBeFalsy()
+  })
 })

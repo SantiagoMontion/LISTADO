@@ -6,6 +6,9 @@ const REPORT_DATE_RE =
 const DIM_LINE_RE = /^(\d+)\s*[xX×]\s*(\d+)\s*[-–]\s*(\d+)\s*$/
 /** LISTA FALTAS: `90x40 Classic - 3` / `50x40 Pro - 1` / `25x25 Alfombra - 2` */
 const FALTAS_LINE_RE = /^(\d+)\s*[xX×]\s*(\d+)\s+([A-Za-zÁÉÍÓÚáéíóú]+)\s*[-–]\s*(\d+)\s*$/
+/** BORDES RECTOS: `90x40 Classic - 3` / `77x44 Pro - 1` / `30x30 Alfombra - 1` */
+const BORDES_RECTOS_LINE_RE =
+  /^(\d+)\s*[xX×]\s*(\d+)\s+([A-Za-zÁÉÍÓÚáéíóú]+)\s*[-–]\s*(\d+)\s*$/
 const SEPARATOR_RE = /^[-─=]{3,}\s*$/
 /** Bloque sin piezas: `Sin produccion.` / `Sin producción` (se ignora, no es error). */
 const NO_PRODUCTION_LINE_RE = /^sin\s+producci[oó]n\.?\s*$/i
@@ -35,6 +38,7 @@ function normalizeMaterial(header: string): MaterialTab {
   if (cleaned.includes('CLASSIC')) return 'classic'
   if (cleaned === 'PRO' || cleaned.startsWith('PRO ')) return 'pro'
   if (cleaned.includes('ALFOMBRA')) return 'alfombras'
+  if (cleaned.includes('BORDES RECTOS')) return 'bordes_rectos'
   return 'otros'
 }
 
@@ -91,6 +95,27 @@ function parseFaltasLine(line: string): { materialType: MaterialTab; item: Parse
   }
 }
 
+/** Línea de BORDES RECTOS: medida + material + cantidad (se guarda en tab independiente). */
+function parseBordesRectosLine(line: string): ParsedLineItem | null {
+  const m = line.trim().match(BORDES_RECTOS_LINE_RE)
+  if (!m) return null
+  const width = Number(m[1])
+  const height = Number(m[2])
+  const totalQty = Number(m[4])
+  if (!Number.isFinite(width) || !Number.isFinite(height) || !Number.isFinite(totalQty)) {
+    return null
+  }
+  if (width <= 0 || height <= 0 || totalQty <= 0) return null
+  if (!parseFaltasMaterialToken(m[3])) return null
+  return {
+    dimensions: `${width}x${height}`,
+    totalQty,
+    width,
+    height,
+    from_faltas: false,
+  }
+}
+
 function mergeKey(it: ParsedLineItem): string {
   return `${it.dimensions}\0${it.from_faltas ? '1' : '0'}`
 }
@@ -144,7 +169,9 @@ export function parseProductionReport(raw: string): {
     }
     i += 1
 
-    const isFaltasBlock = /LISTA\s+FALTAS/i.test(header.trim())
+    const normalizedHeader = header.trim().toUpperCase().replace(/\s+/g, ' ')
+    const isFaltasBlock = /LISTA\s+FALTAS/i.test(normalizedHeader)
+    const isBordesRectosBlock = normalizedHeader.includes('BORDES RECTOS')
 
     const blockItems: ParsedLineItem[] = []
     while (i < lines.length) {
@@ -166,6 +193,9 @@ export function parseProductionReport(raw: string): {
           acc.push(fp.item)
           byMaterial.set(fp.materialType, acc)
         }
+      } else if (isBordesRectosBlock) {
+        const parsed = parseBordesRectosLine(l)
+        if (parsed) blockItems.push(parsed)
       } else {
         const parsed = parseDimensionLine(l)
         if (parsed) blockItems.push(parsed)
@@ -182,7 +212,7 @@ export function parseProductionReport(raw: string): {
     byMaterial.set(materialType, acc)
   }
 
-  const tabOrder: MaterialTab[] = ['classic', 'pro', 'alfombras', 'otros']
+  const tabOrder: MaterialTab[] = ['classic', 'pro', 'alfombras', 'bordes_rectos', 'otros']
   const sections: ParsedSection[] = []
   for (const materialType of tabOrder) {
     const items = byMaterial.get(materialType)

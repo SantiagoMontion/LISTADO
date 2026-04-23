@@ -1,4 +1,4 @@
-export type MaterialTab = 'classic' | 'pro' | 'alfombras' | 'otros'
+export type MaterialTab = 'classic' | 'pro' | 'alfombras' | 'bordes_rectos' | 'otros'
 
 export interface NmProdReport {
   id: string
