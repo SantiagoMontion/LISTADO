@@ -143,6 +143,7 @@ BORDES RECTOS
 --------------------------------
 77x44 PRO - 1
 90x40 Classic - 2
+90x40 PRO - 1
 100x60 Classic - 1
 `
     const { sections } = parseProductionReport(raw)
@@ -153,13 +154,14 @@ BORDES RECTOS
     expect(classic?.items.find((i) => i.dimensions === '90x40')?.totalQty).toBe(5)
     expect(pro?.items.find((i) => i.dimensions === '77x44')?.totalQty).toBe(1)
 
-    expect(bordes?.items.length).toBe(3)
-    expect(bordes?.items.find((i) => i.dimensions === '77x44')?.totalQty).toBe(1)
-    expect(bordes?.items.find((i) => i.dimensions === '90x40')?.totalQty).toBe(2)
-    expect(bordes?.items.find((i) => i.dimensions === '100x60')?.totalQty).toBe(1)
+    expect(bordes?.items.length).toBe(4)
+    expect(bordes?.items.find((i) => i.dimensions === '77x44 - PRO')?.totalQty).toBe(1)
+    expect(bordes?.items.find((i) => i.dimensions === '90x40 - CLASSIC')?.totalQty).toBe(2)
+    expect(bordes?.items.find((i) => i.dimensions === '90x40 - PRO')?.totalQty).toBe(1)
+    expect(bordes?.items.find((i) => i.dimensions === '100x60 - CLASSIC')?.totalQty).toBe(1)
 
-    const bordes90 = bordes?.items.find((i) => i.dimensions === '90x40')
-    expect(bordes90?.from_faltas).toBe(false)
-    expect(bordes90?.is_priority).toBeFalsy()
+    const bordes90Classic = bordes?.items.find((i) => i.dimensions === '90x40 - CLASSIC')
+    expect(bordes90Classic?.from_faltas).toBe(false)
+    expect(bordes90Classic?.is_priority).toBeFalsy()
   })
 })

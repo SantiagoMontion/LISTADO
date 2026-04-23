@@ -69,6 +69,14 @@ function parseFaltasMaterialToken(raw: string): MaterialTab | null {
   return null
 }
 
+function parseBordesRectosMaterialLabel(raw: string): string | null {
+  const t = raw.trim().toLowerCase()
+  if (t.includes('classic')) return 'CLASSIC'
+  if (t === 'pro' || /^pro\b/i.test(raw.trim())) return 'PRO'
+  if (t.includes('alfombra')) return 'ALFOMBRA'
+  return null
+}
+
 /** Línea de LISTA FALTAS: medida + material + cantidad → prioridad al importar. */
 function parseFaltasLine(line: string): { materialType: MaterialTab; item: ParsedLineItem } | null {
   const m = line.trim().match(FALTAS_LINE_RE)
@@ -106,9 +114,10 @@ function parseBordesRectosLine(line: string): ParsedLineItem | null {
     return null
   }
   if (width <= 0 || height <= 0 || totalQty <= 0) return null
-  if (!parseFaltasMaterialToken(m[3])) return null
+  const materialLabel = parseBordesRectosMaterialLabel(m[3])
+  if (!materialLabel) return null
   return {
-    dimensions: `${width}x${height}`,
+    dimensions: `${width}x${height} - ${materialLabel}`,
     totalQty,
     width,
     height,

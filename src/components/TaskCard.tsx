@@ -22,6 +22,7 @@ export function TaskCard({
   showOnlyDecrement = false,
 }: TaskCardProps) {
   const done = task.is_completed || task.current_qty >= task.total_qty
+  const isRectos = task.material_type.trim().toLowerCase() === 'bordes_rectos'
   const showBulkCut = task.total_qty > 1
   const remainingQty = Math.max(task.total_qty - task.current_qty, 0)
   const displayedQty = showOnlyDecrement ? task.current_qty : remainingQty
@@ -45,7 +46,7 @@ export function TaskCard({
                 · Faltas
               </span>
             ) : null}
-            <span className="nm-prod-task-separator"> - </span>
+            <span className="nm-prod-task-separator">{isRectos ? ' ' : ' - '}</span>
             <span
               className="nm-prod-task-qty"
               title={

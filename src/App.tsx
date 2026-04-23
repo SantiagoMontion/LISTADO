@@ -980,7 +980,7 @@ export default function App() {
                   ) : allCutInActiveTab && hasPendingInOtherMaterialTab ? (
                     <div className="nm-prod-all-cut-state">
                       <p className="nm-prod-empty-text">
-                        En esta pestaña no hay pendientes. Revisá Classic / Pro / Alfombras / Bordes rectos.
+                        En esta pestaña no hay pendientes. Revisá Classic / Pro / Alfombras / Rectos.
                       </p>
                     </div>
                   ) : (

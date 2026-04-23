@@ -259,6 +259,12 @@ a.nm-prod-btn {
   border-color: var(--border-hover);
 }
 
+.nm-prod-btn:active:not(:disabled) {
+  background: var(--surface);
+  border-color: var(--border-strong);
+  color: var(--foreground);
+}
+
 .nm-prod-btn:focus-visible {
   outline: 2px solid var(--border-focus);
   outline-offset: 2px;
@@ -447,6 +453,7 @@ a.nm-prod-btn {
 .nm-prod-tab:hover {
   background: var(--interactive-hover);
   border-color: var(--border-hover);
+  color: var(--foreground);
 }
 
 .nm-prod-tab:active {
@@ -461,6 +468,14 @@ a.nm-prod-btn {
 }
 
 .nm-prod-tab--active {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
+}
+
+.nm-prod-tab--active:hover,
+.nm-prod-tab--active:active,
+.nm-prod-tab--active:focus-visible {
   background: var(--primary);
   color: var(--primary-foreground);
   border-color: var(--primary);
