@@ -127,6 +127,9 @@ export default function App() {
 
   /** Solo aplica el último refresh en vuelo; si uno viejo termina después, no pisa reports/pendingDates (el "!" quedaba pegado). */
   const reportsRefreshSeqRef = useRef(0)
+  /** Evita aplicar `fetchTasks` viejo si el usuario ya cambió de lista o de día (race async). */
+  const reportIdForTasksRef = useRef<string | null>(null)
+  reportIdForTasksRef.current = reportId
 
   const refreshReports = useCallback(async () => {
     if (!configured) return
@@ -155,7 +158,9 @@ export default function App() {
 
   const refreshCurrentTasks = useCallback(async () => {
     if (!configured || !reportId) return
-    const rows = await fetchTasks(reportId)
+    const rid = reportId
+    const rows = await fetchTasks(rid)
+    if (reportIdForTasksRef.current !== rid) return
     setTasks(rows)
   }, [configured, reportId])
 
@@ -195,8 +200,30 @@ export default function App() {
     })
   }, [selectedDate, configured, mode, refreshReports])
 
+  const reportsForSelectedDate = useMemo(() => {
+    const sel = normalizeCalendarDate(selectedDate)
+    return reports
+      .filter((r) => normalizeCalendarDate(r.fecha) === sel)
+      .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
+  }, [reports, selectedDate])
+
+  const hasPendingBeforeSelectedDate = useMemo(() => {
+    const sel = normalizeCalendarDate(selectedDate)
+    for (const d of pendingDates) {
+      if (normalizeCalendarDate(d) < sel) return true
+    }
+    return false
+  }, [pendingDates, selectedDate])
+
   useEffect(() => {
     if (!configured || !reportId || !supabase) {
+      setTasks([])
+      setTasksLoaded(false)
+      return
+    }
+
+    const allowedIds = new Set(reportsForSelectedDate.map((r) => r.id))
+    if (reportsForSelectedDate.length > 0 && !allowedIds.has(reportId)) {
       setTasks([])
       setTasksLoaded(false)
       return
@@ -205,16 +232,18 @@ export default function App() {
     let cancelled = false
     setTasksLoaded(false)
 
-    const loadTasks = () =>
-      fetchTasks(reportId).then((rows) => {
-        if (!cancelled) {
-          setTasks(rows)
-          setTasksLoaded(true)
-        }
+    const loadTasks = () => {
+      const rid = reportId
+      return fetchTasks(rid).then((rows) => {
+        if (cancelled) return
+        if (reportIdForTasksRef.current !== rid) return
+        setTasks(rows)
+        setTasksLoaded(true)
       })
+    }
 
     loadTasks().catch((e: unknown) => {
-      if (!cancelled) {
+      if (!cancelled && reportIdForTasksRef.current === reportId) {
         setError(formatSupabaseOrError(e))
         setTasksLoaded(true)
       }
@@ -248,7 +277,7 @@ export default function App() {
       }
       if (supabase) void supabase.removeChannel(channel)
     }
-  }, [configured, reportId, scheduleRefreshReports])
+  }, [configured, reportId, supabase, reportsForSelectedDate, scheduleRefreshReports])
 
   const tasksByMainFilter = useMemo(
     () =>
@@ -353,19 +382,6 @@ export default function App() {
         !(t.is_completed || t.current_qty >= t.total_qty),
     )
   }, [tasks, activeTab, taskFilter])
-
-  const reportsForSelectedDate = useMemo(() => {
-    const sel = normalizeCalendarDate(selectedDate)
-    return reports.filter((r) => normalizeCalendarDate(r.fecha) === sel)
-  }, [reports, selectedDate])
-
-  const hasPendingBeforeSelectedDate = useMemo(() => {
-    const sel = normalizeCalendarDate(selectedDate)
-    for (const d of pendingDates) {
-      if (normalizeCalendarDate(d) < sel) return true
-    }
-    return false
-  }, [pendingDates, selectedDate])
 
   useEffect(() => {
     if (mode !== 'creator') return
