@@ -5,6 +5,7 @@ import {
   canShowHomeCrearMenu,
   canUseCreadorList,
   canUseManejador,
+  canViewPrintedMaterialFiles,
   canWriteHubTasks,
 } from '../lib/hubRoles'
 import { onHubLinkClick } from '../lib/hubNavigate'
@@ -46,7 +47,10 @@ export function HubHome({ user, profile, profileError = null, guestMode = false 
   })()
 
   const verDesc = (() => {
-    if (guestMode || noProfileRow || canUseManejador(r)) return 'Lista de corte y tareas'
+    if (guestMode || noProfileRow || canUseManejador(r)) {
+      if (canViewPrintedMaterialFiles(r)) return 'Lista de corte, archivos impresos y tareas'
+      return 'Lista de corte y tareas'
+    }
     if (canOpenHubTasks(r)) return 'Ver tareas del equipo'
     return ''
   })()
@@ -54,6 +58,7 @@ export function HubHome({ user, profile, profileError = null, guestMode = false 
   const crearTareasHref = `/tareas?d=${encodeURIComponent(todayIsoLocal())}&hub=crear#nm-hub-tareas-nueva`
   const verTareasHref = `/tareas?d=${encodeURIComponent(todayIsoLocal())}#nm-hub-tareas-lista`
   const verCompletadasHref = `/tareas?d=${encodeURIComponent(todayIsoLocal())}&hub=completadas#nm-hub-tareas-lista`
+  const verArchivosImpresosHref = `/archivos-impresos?d=${encodeURIComponent(todayIsoLocal())}`
 
   return (
     <div className="nm-hub-app">
@@ -170,6 +175,19 @@ export function HubHome({ user, profile, profileError = null, guestMode = false 
                 </span>
                 <span className="nm-hub-tile-title">Lista de corte</span>
                 <span className="nm-hub-tile-desc">Ver y marcar cortes del día</span>
+              </a>
+            ) : null}
+            {!guestMode && canViewPrintedMaterialFiles(r) ? (
+              <a
+                href={verArchivosImpresosHref}
+                className="nm-hub-tile"
+                onClick={(e) => onHubLinkClick(e, verArchivosImpresosHref)}
+              >
+                <span className="nm-hub-tile-icon" aria-hidden="true">
+                  ▣
+                </span>
+                <span className="nm-hub-tile-title">Archivos impresos</span>
+                <span className="nm-hub-tile-desc">Imágenes Classic, PRO, Ultra y Alfombra por día</span>
               </a>
             ) : null}
             {guestMode || canOpenHubTasks(r) ? (

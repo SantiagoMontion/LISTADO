@@ -683,6 +683,87 @@ a.nm-prod-btn {
   outline-offset: 1px;
 }
 
+.nm-prod-modal--wide {
+  width: min(100%, 26rem);
+  max-height: min(90dvh, 36rem);
+  overflow: auto;
+}
+
+.nm-prod-material-img-modal-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.nm-prod-material-img-preview-list {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 14rem;
+  overflow: auto;
+}
+
+.nm-prod-material-img-preview-item {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  padding: var(--space-2);
+  border-radius: var(--radius-input);
+  border: 1px solid var(--border-default);
+  background: color-mix(in srgb, var(--surface) 92%, #000 8%);
+}
+
+.nm-prod-material-img-preview-thumb-wrap {
+  flex-shrink: 0;
+  width: 4.25rem;
+  height: 4.25rem;
+  border-radius: var(--radius-input);
+  overflow: hidden;
+  border: 1px solid var(--border-default);
+  background: #111;
+}
+
+.nm-prod-material-img-preview-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.nm-prod-material-img-preview-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.nm-prod-material-img-preview-name {
+  font-size: var(--fs-sm);
+  color: var(--foreground-secondary);
+  word-break: break-all;
+  line-height: 1.25;
+}
+
+.nm-prod-material-img-preview-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: var(--fs-sm);
+  color: var(--foreground-secondary);
+}
+
+.nm-prod-material-img-remove {
+  align-self: flex-start;
+  margin-top: 0.15rem;
+  font-size: var(--fs-sm);
+  min-height: 2rem;
+  padding: 0.25rem 0.5rem;
+}
+
 /* Raíz: altura útil si el shell no envuelve el #root */
 #root {
   min-height: 100dvh;

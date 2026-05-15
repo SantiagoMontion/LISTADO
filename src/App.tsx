@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { CreadorMaterialImagesModal } from './components/CreadorMaterialImagesModal'
+import { HubPrintedFilesApp } from './components/HubPrintedFilesApp'
 import { MaterialTabs } from './components/MaterialTabs'
 import { TaskCard } from './components/TaskCard'
 import { hubTasksReadOnly, canEditManejadorList } from './lib/hubRoles'
@@ -125,6 +127,7 @@ export default function App() {
   }, [navTick])
   const isLogin = path === '/entrar'
   const isHubTasks = path === '/tareas'
+  const isHubPrintedFiles = path === '/archivos-impresos'
   const isHubHome = path === '/' || path === ''
 
   const [reports, setReports] = useState<NmProdReport[]>([])
@@ -145,6 +148,12 @@ export default function App() {
   const canImportReports =
     mode === 'creator' &&
     (!authEnabled || !profileReady || !profile || profile.role === 'creador_lista')
+  const showCreadorMaterialImages =
+    configured &&
+    authEnabled &&
+    profileReady &&
+    profile?.role === 'creador_lista' &&
+    mode === 'creator'
   const canDeleteReports =
     mode === 'manager' &&
     (!authEnabled || !profileReady || !profile || profile.role === 'taller_1')
@@ -161,6 +170,7 @@ export default function App() {
   const [quickAddError, setQuickAddError] = useState<string | null>(null)
   const [pendingDates, setPendingDates] = useState<Set<string>>(new Set())
   const [reportHasPendingById, setReportHasPendingById] = useState<Record<string, boolean>>({})
+  const [materialImgModalOpen, setMaterialImgModalOpen] = useState(false)
 
   /** Solo aplica el último refresh en vuelo; si uno viejo termina después, no pisa reports/pendingDates (el "!" quedaba pegado). */
   const reportsRefreshSeqRef = useRef(0)
@@ -726,15 +736,31 @@ export default function App() {
         />
       )
     }
+    if (path === '/archivos-impresos' && profile.role !== 'taller_1') {
+      return (
+        <HubRoleBlocked
+          title="Archivos impresos"
+          message="Solo el perfil «Taller 1» puede ver archivos impresos por día."
+        />
+      )
+    }
   }
 
   if (authEnabled && authReady && session && isHubTasks && !profileReady) {
     return <HubLoadingScreen label="Cargando perfil…" />
   }
 
+  if (authEnabled && authReady && session && isHubPrintedFiles && !profileReady) {
+    return <HubLoadingScreen label="Cargando perfil…" />
+  }
+
   if (authEnabled && authReady && session && isHubTasks) {
     const hubReadOnly = !profile || hubTasksReadOnly(profile.role)
     return <HubTasksApp readOnly={hubReadOnly} />
+  }
+
+  if (authEnabled && authReady && session && isHubPrintedFiles && profileReady && profile?.role === 'taller_1') {
+    return <HubPrintedFilesApp configured={configured} />
   }
 
   if (!authEnabled && isHubHome) {
@@ -745,6 +771,22 @@ export default function App() {
     return (
       <div className="nm-hub-app">
         <p className="nm-hub-muted">Configurá Supabase en <code>.env</code> para usar tareas.</p>
+        <a
+          href="/"
+          className="nm-hub-back"
+          style={{ display: 'inline-block', marginTop: '1rem' }}
+          onClick={(e) => onHubLinkClick(e, '/')}
+        >
+          ← Inicio
+        </a>
+      </div>
+    )
+  }
+
+  if (!authEnabled && isHubPrintedFiles) {
+    return (
+      <div className="nm-hub-app">
+        <p className="nm-hub-muted">Configurá Supabase en <code>.env</code> para ver archivos impresos.</p>
         <a
           href="/"
           className="nm-hub-back"
@@ -829,6 +871,20 @@ export default function App() {
           >
             {loading ? 'Guardando…' : 'Subir lista'}
           </button>
+          {showCreadorMaterialImages ? (
+            <button
+              type="button"
+              className="nm-prod-btn"
+              style={{ width: '100%', marginTop: '0.65rem' }}
+              disabled={!configured}
+              onClick={() => {
+                setMaterialImgModalOpen(true)
+                if (success) setSuccess(null)
+              }}
+            >
+              Subir imágenes
+            </button>
+          ) : null}
           {success && (
             <p className="nm-prod-success" role="status">
               {success}
@@ -939,6 +995,15 @@ export default function App() {
           </section>
         </div>
       )}
+
+      {showCreadorMaterialImages ? (
+        <CreadorMaterialImagesModal
+          open={materialImgModalOpen}
+          configured={configured}
+          onClose={() => setMaterialImgModalOpen(false)}
+          onDone={(msg) => setSuccess(msg)}
+        />
+      ) : null}
 
       {pendingQuickAdd && (
         <div className="nm-prod-modal-backdrop" role="presentation">

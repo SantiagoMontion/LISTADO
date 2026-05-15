@@ -21,6 +21,11 @@ export function canUseManejador(role: HubUserRole | null | undefined): boolean {
   return role === 'taller_1' || role === 'taller_2'
 }
 
+/** Ver imágenes de materiales subidas por día (/archivos-impresos). */
+export function canViewPrintedMaterialFiles(role: HubUserRole | null | undefined): boolean {
+  return role === 'taller_1'
+}
+
 /** Marcar cortes, prioridad y cantidades en /manejador (misma lista que ven Taller 1 y Taller 2). */
 export function canEditManejadorList(role: HubUserRole | null | undefined): boolean {
   return role === 'taller_1' || role === 'taller_2'
