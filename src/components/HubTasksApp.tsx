@@ -647,26 +647,47 @@ export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
               aria-labelledby="nm-hub-t-files-legend"
               onChange={appendTaskFilesFromInput}
             />
-            <div className="nm-hub-image-picker" role="group" aria-labelledby="nm-hub-t-files-legend" aria-describedby="nm-hub-t-files-hint">
+            <div className="nm-hub-image-picker" role="group" aria-labelledby="nm-hub-t-files-legend nm-hub-t-files-title">
+              <p className="nm-hub-image-picker-title" id="nm-hub-t-files-title">
+                Cargar imagen
+              </p>
               <div className="nm-hub-image-picker-split">
                 <button
                   type="button"
                   className="nm-hub-image-picker-split__btn"
+                  aria-label="Elegir desde la galería"
                   onClick={() => taskGalleryInputRef.current?.click()}
                 >
-                  Galería
+                  <svg className="nm-hub-image-picker-icon" viewBox="0 0 24 24" width="28" height="28" fill="none" aria-hidden="true">
+                    <rect x="3" y="5" width="14" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+                    <path
+                      d="M7 19h12a2 2 0 002-2V9"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <circle cx="8.5" cy="10" r="1.25" fill="currentColor" />
+                    <path d="M4 15l3.5-3.5a1 1 0 011.4 0L12 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
                 </button>
                 <button
                   type="button"
                   className="nm-hub-image-picker-split__btn"
+                  aria-label="Sacar foto con la cámara"
                   onClick={() => taskCameraInputRef.current?.click()}
                 >
-                  Cámara
+                  <svg className="nm-hub-image-picker-icon" viewBox="0 0 24 24" width="28" height="28" fill="none" aria-hidden="true">
+                    <path
+                      d="M4 9h2.5l1.8-2.2h7.4L16.5 9H20a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2v-8a2 2 0 012-2z"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinejoin="round"
+                    />
+                    <circle cx="12" cy="14" r="2.75" stroke="currentColor" strokeWidth="1.5" />
+                  </svg>
                 </button>
               </div>
-              <p className="nm-hub-image-picker-hint" id="nm-hub-t-files-hint">
-                Galería: varias a la vez. Cámara: una foto al instante (podés repetir).
-              </p>
             </div>
             {files.length > 0 ? (
               <ul className="nm-hub-create-file-list" aria-label="Imágenes seleccionadas">

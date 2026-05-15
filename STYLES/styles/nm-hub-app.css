@@ -262,33 +262,51 @@ button.nm-hub-tile {
 
 .nm-hub-image-picker {
   margin-top: 0.35rem;
-  padding: 1rem;
+  padding: 1rem 1rem 1.05rem;
   border-radius: 0.85rem;
   border: 2px dashed rgba(255, 255, 255, 0.22);
   background: rgba(30, 34, 44, 0.55);
+}
+
+.nm-hub-image-picker-title {
+  margin: 0 0 0.75rem;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: rgba(248, 250, 252, 0.92);
+  letter-spacing: 0.02em;
 }
 
 .nm-hub-image-picker-split {
   display: flex;
   gap: 0.65rem;
   align-items: stretch;
+  justify-content: center;
 }
 
 .nm-hub-image-picker-split__btn {
   flex: 1;
+  max-width: 8rem;
   min-height: 3.25rem;
-  padding: 0.6rem 0.75rem;
+  padding: 0.55rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 0.65rem;
   border: 1px solid rgba(255, 255, 255, 0.22);
   background: rgba(40, 48, 62, 0.65);
-  color: rgba(248, 250, 252, 0.95);
+  color: rgba(147, 197, 253, 0.98);
   font-family: inherit;
-  font-size: 0.88rem;
-  font-weight: 700;
   cursor: pointer;
   transition:
     background 0.15s ease,
-    border-color 0.15s ease;
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.nm-hub-image-picker-icon {
+  display: block;
+  flex-shrink: 0;
 }
 
 .nm-hub-image-picker-split__btn:hover {
@@ -299,15 +317,6 @@ button.nm-hub-tile {
 .nm-hub-image-picker-split__btn:focus-visible {
   outline: 2px solid rgba(96, 165, 250, 0.85);
   outline-offset: 2px;
-}
-
-.nm-hub-image-picker-hint {
-  margin: 0.75rem 0 0;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: rgba(248, 250, 252, 0.65);
-  line-height: 1.35;
-  text-align: center;
 }
 
 .nm-hub-image-count {
