@@ -11,6 +11,7 @@ import {
 } from '../lib/hubTasksApi'
 import { formatSupabaseOrError } from '../lib/errors'
 import { addDaysToIsoDate, formatDayMonthShort, normalizeCalendarDate, todayIsoLocal } from '../lib/date'
+import { supabase } from '../lib/supabase'
 import type { HubImportance, NmHubTask } from '../lib/types'
 import { HubBrandBar } from './HubBrandBar'
 import { HUB_NAV_EVENT } from '../lib/hubNavigate'
@@ -299,6 +300,9 @@ export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
   const [files, setFiles] = useState<File[]>([])
   const taskGalleryInputRef = useRef<HTMLInputElement>(null)
   const taskCameraInputRef = useRef<HTMLInputElement>(null)
+  /** Evita que un fetch viejo pise tareas nuevas (realtime + mutación simultánea). */
+  const tasksLoadSeqRef = useRef(0)
+  const hubTasksRealtimeDebounceRef = useRef<number | null>(null)
 
   const appendTaskFilesFromInput = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     const picked = e.target.files ? Array.from(e.target.files) : []
@@ -306,16 +310,29 @@ export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
     e.target.value = ''
   }, [])
 
+  const refreshOlderPending = useCallback(async () => {
+    try {
+      const v = await fetchHasPendingHubTasksBefore(taskDay)
+      setHasOlderPending(v)
+    } catch {
+      setHasOlderPending(false)
+    }
+  }, [taskDay])
+
   const load = useCallback(async () => {
+    const day = taskDay
+    const seq = ++tasksLoadSeqRef.current
     setError(null)
     const mode = readHubListMode()
-    setListMode(mode)
     const rows =
-      mode === 'completadas' ? await fetchHubTasksCompleted(taskDay) : await fetchHubTasksPending(taskDay)
+      mode === 'completadas' ? await fetchHubTasksCompleted(day) : await fetchHubTasksPending(day)
+    if (seq !== tasksLoadSeqRef.current) return
+    setListMode(mode)
     setTasks(rows)
     if (mode === 'completadas') {
       const ids = rows.map((t) => t.executed_by).filter((x): x is string => Boolean(x))
       const names = await fetchHubProfileDisplayNames(ids)
+      if (seq !== tasksLoadSeqRef.current) return
       setExecutorNames(names)
     } else {
       setExecutorNames({})
@@ -341,22 +358,52 @@ export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
   }, [load, readOnly])
 
   useEffect(() => {
+    const sb = supabase
+    if (!sb) return
+    const day = normalizeCalendarDate(taskDay)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return
+
+    const scheduleSyncFromServer = () => {
+      if (hubTasksRealtimeDebounceRef.current !== null) {
+        window.clearTimeout(hubTasksRealtimeDebounceRef.current)
+      }
+      hubTasksRealtimeDebounceRef.current = window.setTimeout(() => {
+        hubTasksRealtimeDebounceRef.current = null
+        void load().catch(() => {})
+        if (panel !== 'create') void refreshOlderPending()
+      }, 150)
+    }
+
+    const channel = sb
+      .channel(`nm_hub_tasks:${day}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'nm_hub_tasks',
+          filter: `for_date=eq.${day}`,
+        },
+        scheduleSyncFromServer,
+      )
+      .subscribe()
+
+    return () => {
+      if (hubTasksRealtimeDebounceRef.current !== null) {
+        window.clearTimeout(hubTasksRealtimeDebounceRef.current)
+        hubTasksRealtimeDebounceRef.current = null
+      }
+      void sb.removeChannel(channel)
+    }
+  }, [taskDay, load, panel, refreshOlderPending])
+
+  useEffect(() => {
     if (panel === 'create') {
       setHasOlderPending(false)
       return
     }
-    let cancelled = false
-    fetchHasPendingHubTasksBefore(taskDay)
-      .then((v) => {
-        if (!cancelled) setHasOlderPending(v)
-      })
-      .catch(() => {
-        if (!cancelled) setHasOlderPending(false)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [taskDay, tasks, panel])
+    void refreshOlderPending()
+  }, [taskDay, tasks, panel, refreshOlderPending])
 
   useEffect(() => {
     const u = new URL(window.location.href)

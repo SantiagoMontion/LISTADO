@@ -185,7 +185,6 @@ export default function App() {
   const [taskFilter, setTaskFilter] = useState<TaskFilter>('all')
   const [completedSearch, setCompletedSearch] = useState('')
   const [sizeSortMode, setSizeSortMode] = useState<SizeSortMode>('default')
-  const [completionFlashIds, setCompletionFlashIds] = useState<Set<string>>(new Set())
   const [completedAtById, setCompletedAtById] = useState<Record<string, number>>({})
   const [pendingCutTask, setPendingCutTask] = useState<NmProdTask | null>(null)
   const [pendingDeleteReportId, setPendingDeleteReportId] = useState<string | null>(null)
@@ -215,6 +214,8 @@ export default function App() {
   /** Realtime + mutaciones pueden solapar fetchTasks; el que termina último no debe pisar datos nuevos. */
   const tasksLoadSeqRef = useRef(0)
   const loadTasksDebounceRef = useRef<number | null>(null)
+  /** Tras un corte propio, ignorar realtime breve (ya está el patch local). */
+  const suppressRealtimeUntilRef = useRef(0)
 
   const refreshReports = useCallback(async () => {
     if (!configured) return
@@ -256,21 +257,6 @@ export default function App() {
     setTasks((prev) => prev.map((t) => (t.id === taskId ? updater(t) : t)))
   }, [])
 
-  const flashCompletedTask = useCallback((taskId: string) => {
-    setCompletionFlashIds((prev) => {
-      const next = new Set(prev)
-      next.add(taskId)
-      return next
-    })
-    window.setTimeout(() => {
-      setCompletionFlashIds((prev) => {
-        const next = new Set(prev)
-        next.delete(taskId)
-        return next
-      })
-    }, 180)
-  }, [])
-
   const markTaskCompletedNow = useCallback((taskId: string) => {
     setCompletedAtById((prev) => ({ ...prev, [taskId]: Date.now() }))
   }, [])
@@ -304,14 +290,16 @@ export default function App() {
   }, [pendingDates, selectedDate])
 
   useEffect(() => {
-    if (!configured || !reportId || !supabase) {
+    if (!reportId || reportsForSelectedDate.length === 0) return
+    if (!reportsForSelectedDate.some((r) => r.id === reportId)) {
       setTasks([])
       setTasksLoaded(false)
-      return
     }
+  }, [reportsForSelectedDate, reportId])
 
-    const allowedIds = new Set(reportsForSelectedDate.map((r) => r.id))
-    if (reportsForSelectedDate.length > 0 && !allowedIds.has(reportId)) {
+  useEffect(() => {
+    const sb = supabase
+    if (!configured || !reportId || !sb) {
       setTasks([])
       setTasksLoaded(false)
       return
@@ -320,40 +308,42 @@ export default function App() {
     let cancelled = false
     setTasksLoaded(false)
 
-    const loadTasks = () => {
+    const syncTasksFromServer = (opts?: { showLoading?: boolean }) => {
       const rid = reportId
       const seq = ++tasksLoadSeqRef.current
-      return fetchTasks(rid).then((rows) => {
-        if (cancelled) return
-        if (reportIdForTasksRef.current !== rid) return
-        if (seq !== tasksLoadSeqRef.current) return
-        setTasks(rows)
-        setTasksLoaded(true)
-      })
+      if (opts?.showLoading) setTasksLoaded(false)
+      return fetchTasks(rid)
+        .then((rows) => {
+          if (cancelled) return
+          if (reportIdForTasksRef.current !== rid) return
+          if (seq !== tasksLoadSeqRef.current) return
+          setTasks(rows)
+          setTasksLoaded(true)
+        })
+        .catch((e: unknown) => {
+          if (cancelled || reportIdForTasksRef.current !== rid) return
+          if (seq !== tasksLoadSeqRef.current) return
+          setError(formatSupabaseOrError(e))
+          setTasksLoaded(true)
+        })
     }
 
-    const scheduleLoadTasks = () => {
+    const scheduleSilentSync = () => {
+      if (Date.now() < suppressRealtimeUntilRef.current) return
       if (loadTasksDebounceRef.current !== null) {
         window.clearTimeout(loadTasksDebounceRef.current)
       }
       loadTasksDebounceRef.current = window.setTimeout(() => {
         loadTasksDebounceRef.current = null
-        void loadTasks()
-          .then(() => {
-            scheduleRefreshReports()
-          })
-          .catch(() => {})
-      }, 120)
+        void syncTasksFromServer().then(() => {
+          scheduleRefreshReports()
+        })
+      }, 200)
     }
 
-    loadTasks().catch((e: unknown) => {
-      if (!cancelled && reportIdForTasksRef.current === reportId) {
-        setError(formatSupabaseOrError(e))
-        setTasksLoaded(true)
-      }
-    })
+    void syncTasksFromServer({ showLoading: true })
 
-    const channel = supabase
+    const channel = sb
       .channel(`nm_prod_tasks:${reportId}`)
       .on(
         'postgres_changes',
@@ -363,9 +353,7 @@ export default function App() {
           table: 'nm_prod_tasks',
           filter: `report_id=eq.${reportId}`,
         },
-        () => {
-          scheduleLoadTasks()
-        },
+        scheduleSilentSync,
       )
       .subscribe()
 
@@ -375,21 +363,13 @@ export default function App() {
         window.clearTimeout(loadTasksDebounceRef.current)
         loadTasksDebounceRef.current = null
       }
-      if (pendingReportsRefreshRef.current !== null) {
-        window.clearTimeout(pendingReportsRefreshRef.current)
-        pendingReportsRefreshRef.current = null
-      }
-      if (supabase) void supabase.removeChannel(channel)
+      void sb.removeChannel(channel)
     }
-  }, [configured, reportId, supabase, reportsForSelectedDate, scheduleRefreshReports])
+  }, [configured, reportId, supabase, scheduleRefreshReports])
 
   const tasksByMainFilter = useMemo(
-    () =>
-      tasks.filter((t) => {
-        if (matchesTaskFilter(t, taskFilter)) return true
-        return taskFilter !== 'completed' && completionFlashIds.has(t.id)
-      }),
-    [tasks, taskFilter, completionFlashIds],
+    () => tasks.filter((t) => matchesTaskFilter(t, taskFilter)),
+    [tasks, taskFilter],
   )
 
   const materialsAvailable = useMemo(() => {
@@ -397,13 +377,6 @@ export default function App() {
     for (const t of tasksByMainFilter) present.add(tabForMaterialType(t.material_type))
     return TAB_ORDER.filter((m) => present.has(m))
   }, [tasksByMainFilter])
-
-  useEffect(() => {
-    if (materialsAvailable.length === 0) return
-    if (!materialsAvailable.includes(activeTab)) {
-      setActiveTab(materialsAvailable[0])
-    }
-  }, [materialsAvailable, activeTab])
 
   const counts = useMemo(() => {
     const c: Record<MaterialTab, number> = {
@@ -573,21 +546,24 @@ export default function App() {
     }
   }
 
+  const markLocalListMutation = useCallback(() => {
+    suppressRealtimeUntilRef.current = Date.now() + 900
+  }, [])
+
   const onIncrement = async (task: NmProdTask) => {
     setBusyId(task.id)
     setError(null)
+    markLocalListMutation()
     patchTaskLocal(task.id, (t) => ({
       ...t,
       current_qty: Math.min(t.current_qty + 1, t.total_qty),
       is_completed: t.current_qty + 1 >= t.total_qty ? true : t.is_completed,
     }))
     if (task.current_qty + 1 >= task.total_qty) {
-      flashCompletedTask(task.id)
       markTaskCompletedNow(task.id)
     }
     try {
       await incrementTaskQty(task)
-      await refreshCurrentTasks()
       scheduleRefreshReports()
     } catch (e: unknown) {
       setError(formatSupabaseOrError(e))
@@ -600,6 +576,7 @@ export default function App() {
   const onTogglePriority = async (task: NmProdTask) => {
     setBusyId(task.id)
     setError(null)
+    markLocalListMutation()
     patchTaskLocal(task.id, (t) => ({ ...t, is_priority: !t.is_priority }))
     try {
       await toggleTaskPriority(task)
@@ -614,6 +591,7 @@ export default function App() {
   const onDecrement = async (task: NmProdTask) => {
     setBusyId(task.id)
     setError(null)
+    markLocalListMutation()
     const done = task.is_completed || task.current_qty >= task.total_qty
     patchTaskLocal(task.id, (t) =>
       done
@@ -631,7 +609,6 @@ export default function App() {
     try {
       if (done) await restoreTaskQty(task)
       else await decrementTaskQty(task)
-      await refreshCurrentTasks()
       scheduleRefreshReports()
     } catch (e: unknown) {
       setError(formatSupabaseOrError(e))
@@ -644,12 +621,10 @@ export default function App() {
   const runToggleCompleted = async (task: NmProdTask) => {
     setBusyId(task.id)
     setError(null)
+    markLocalListMutation()
     const nextCompleted = !task.is_completed
     patchTaskLocal(task.id, (t) => {
-      if (nextCompleted) {
-        flashCompletedTask(t.id)
-        markTaskCompletedNow(t.id)
-      }
+      if (nextCompleted) markTaskCompletedNow(t.id)
       return {
         ...t,
         is_completed: nextCompleted,
@@ -658,7 +633,6 @@ export default function App() {
     })
     try {
       await toggleTaskCompleted(task)
-      await refreshCurrentTasks()
       scheduleRefreshReports()
     } catch (e: unknown) {
       setError(formatSupabaseOrError(e))
@@ -1110,35 +1084,27 @@ export default function App() {
 
       {mode === 'manager' && reportId && (
         <section className="nm-prod-section" aria-labelledby="nm-prod-tasks-heading">
-          {!tasksLoaded ? (
-            <p className="nm-prod-task-meta">Cargando tareas…</p>
-          ) : tasks.length === 0 ? (
-            <p className="nm-prod-task-meta">Este reporte no tiene tareas.</p>
-          ) : (
-            <>
-              {mode === 'manager' && (
-                <div className="nm-prod-row">
-                  <select
-                    id="nm-prod-task-filter"
-                    className="nm-prod-select nm-prod-select-filter"
-                    value={taskFilter}
-                    onChange={(e) => {
-                      const next = e.target.value
-                      if (next === 'all') {
-                        setTaskFilter('all')
-                        return
-                      }
-                      setTaskFilter(next as Exclude<TaskFilter, 'all'>)
-                    }}
-                  >
-                    <option value="all">Todas</option>
-                    <option value="priority">Prioridad</option>
-                    <option value="standard">Standar</option>
-                    <option value="completed">Cortados</option>
-                  </select>
-                </div>
-              )}
-              <div className="nm-prod-tabs-wrap">
+          <div className="nm-prod-row">
+            <select
+              id="nm-prod-task-filter"
+              className="nm-prod-select nm-prod-select-filter"
+              value={taskFilter}
+              onChange={(e) => {
+                const next = e.target.value
+                if (next === 'all') {
+                  setTaskFilter('all')
+                  return
+                }
+                setTaskFilter(next as Exclude<TaskFilter, 'all'>)
+              }}
+            >
+              <option value="all">Todas</option>
+              <option value="priority">Prioridad</option>
+              <option value="standard">Standar</option>
+              <option value="completed">Cortados</option>
+            </select>
+          </div>
+          <div className="nm-prod-tabs-wrap">
                 <div className="nm-prod-tabs-row">
                   <MaterialTabs
                     available={
@@ -1199,8 +1165,12 @@ export default function App() {
                   )}
                 </div>
               </div>
-              <div className="nm-prod-task-list">
-                {visibleTasks.length === 0 ? (
+          <div className="nm-prod-task-list">
+            {!tasksLoaded && tasks.length === 0 ? (
+              <p className="nm-prod-task-meta">Cargando tareas…</p>
+            ) : tasks.length === 0 ? (
+              <p className="nm-prod-task-meta">Este reporte no tiene tareas.</p>
+            ) : visibleTasks.length === 0 ? (
                   allCutEntireReport ? (
                     <div className="nm-prod-all-cut-state">
                       <p className="nm-prod-all-cut-text">Todo cortado! Seguí así</p>
@@ -1230,21 +1200,19 @@ export default function App() {
                       showOnlyDecrement={taskFilter === 'completed'}
                     />
                   ))
-                )}
-              </div>
-              {canDeleteReports && taskFilter === 'completed' && reportId && (
-                <div className="nm-prod-delete-list-wrap">
-                  <button
-                    type="button"
-                    className="nm-prod-btn nm-prod-btn-danger"
-                    disabled={loading}
-                    onClick={() => setPendingDeleteReportId(reportId)}
-                  >
-                    Eliminar lista seleccionada
-                  </button>
-                </div>
-              )}
-            </>
+            )}
+          </div>
+          {canDeleteReports && taskFilter === 'completed' && reportId && (
+            <div className="nm-prod-delete-list-wrap">
+              <button
+                type="button"
+                className="nm-prod-btn nm-prod-btn-danger"
+                disabled={loading}
+                onClick={() => setPendingDeleteReportId(reportId)}
+              >
+                Eliminar lista seleccionada
+              </button>
+            </div>
           )}
         </section>
       )}
