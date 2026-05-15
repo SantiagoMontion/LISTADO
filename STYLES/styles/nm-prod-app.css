@@ -695,6 +695,11 @@ a.nm-prod-btn {
   flex-wrap: wrap;
 }
 
+.nm-prod-material-img-examinar {
+  width: 100%;
+  justify-content: center;
+}
+
 .nm-prod-material-img-preview-list {
   list-style: none;
   margin: var(--space-3) 0 0;
@@ -748,12 +753,10 @@ a.nm-prod-btn {
   line-height: 1.25;
 }
 
-.nm-prod-material-img-preview-label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
+.nm-prod-material-img-preview-family {
   font-size: var(--fs-sm);
-  color: var(--foreground-secondary);
+  font-weight: 700;
+  color: var(--foreground);
 }
 
 .nm-prod-material-img-remove {

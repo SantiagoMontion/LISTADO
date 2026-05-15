@@ -1,28 +1,42 @@
 import { useCallback, useEffect, useId, useRef, useState, type ChangeEvent, type Dispatch, type SetStateAction } from 'react'
 import { normalizeCalendarDate, todayIsoLocal } from '../lib/date'
 import { formatSupabaseOrError } from '../lib/errors'
-import {
-  NM_PROD_MATERIAL_FAMILIES,
-  NM_PROD_MATERIAL_FAMILY_LABEL,
-  parseMaterialFamilyFromFilename,
-  uploadMaterialDayImages,
-} from '../lib/nmProdMaterialImages'
+import { NM_PROD_MATERIAL_FAMILY_LABEL, parseMaterialFamilyFromFilename, uploadMaterialDayImages } from '../lib/nmProdMaterialImages'
 import type { NmProdMaterialFamily } from '../lib/types'
 
-type PendingRow = { localId: string; file: File; family: NmProdMaterialFamily | null; objectUrl: string }
+type PendingRow = { localId: string; file: File; family: NmProdMaterialFamily; objectUrl: string }
 
-function appendFilesToRows(files: File[], setRows: Dispatch<SetStateAction<PendingRow[]>>) {
+function appendFilesToRows(
+  files: File[],
+  setRows: Dispatch<SetStateAction<PendingRow[]>>,
+  setError: Dispatch<SetStateAction<string | null>>,
+) {
   const picked = files.filter((f) => f.type.startsWith('image/'))
   if (picked.length === 0) return
-  setRows((prev) => [
-    ...prev,
-    ...picked.map((file) => ({
-      localId: `${file.name}-${file.size}-${file.lastModified}-${crypto.randomUUID()}`,
-      file,
-      family: parseMaterialFamilyFromFilename(file.name),
-      objectUrl: URL.createObjectURL(file),
-    })),
-  ])
+  const invalid: string[] = []
+  const toAdd: PendingRow[] = []
+  for (const file of picked) {
+    const fam = parseMaterialFamilyFromFilename(file.name)
+    if (!fam) invalid.push(file.name)
+    else {
+      toAdd.push({
+        localId: `${file.name}-${file.size}-${file.lastModified}-${crypto.randomUUID()}`,
+        file,
+        family: fam,
+        objectUrl: URL.createObjectURL(file),
+      })
+    }
+  }
+  if (invalid.length > 0) {
+    setError(
+      invalid.length === 1
+        ? `No se reconoce el material en «${invalid[0]}». El nombre debe empezar con Classic, PRO, Ultra o Alfombra (ej. Classic1, PRO2).`
+        : `No se reconoce el material en ${invalid.length} archivos. Ejemplos: Classic1, PRO1, Ultra1, Alfombra1.`,
+    )
+  } else {
+    setError(null)
+  }
+  if (toAdd.length > 0) setRows((prev) => [...prev, ...toAdd])
 }
 
 interface CreadorMaterialImagesModalProps {
@@ -38,8 +52,7 @@ export function CreadorMaterialImagesModal({ open, configured, onClose, onDone }
   const [rows, setRows] = useState<PendingRow[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const galleryRef = useRef<HTMLInputElement>(null)
-  const cameraRef = useRef<HTMLInputElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleClose = useCallback(() => {
     setRows((prev) => {
@@ -62,12 +75,8 @@ export function CreadorMaterialImagesModal({ open, configured, onClose, onDone }
 
   const onFileInput = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     const list = e.target.files ? Array.from(e.target.files) : []
-    appendFilesToRows(list, setRows)
+    appendFilesToRows(list, setRows, setError)
     e.target.value = ''
-  }, [])
-
-  const setFamily = useCallback((localId: string, family: NmProdMaterialFamily | null) => {
-    setRows((prev) => prev.map((r) => (r.localId === localId ? { ...r, family } : r)))
   }, [])
 
   const removeRow = useCallback((localId: string) => {
@@ -86,21 +95,14 @@ export function CreadorMaterialImagesModal({ open, configured, onClose, onDone }
       return
     }
     if (rows.length === 0) {
-      setError('Agregá al menos una imagen.')
-      return
-    }
-    const missing = rows.filter((r) => !r.family)
-    if (missing.length > 0) {
-      setError(
-        `En ${missing.length} archivo(s) no se detectó el material por nombre. Elegí Classic, PRO, Ultra o Alfombra en la lista de cada uno.`,
-      )
+      setError('Agregá al menos una imagen con Examinar.')
       return
     }
     setBusy(true)
     try {
       await uploadMaterialDayImages(
         day,
-        rows.map((r) => ({ file: r.file, family: r.family as NmProdMaterialFamily })),
+        rows.map((r) => ({ file: r.file, family: r.family })),
       )
       onDone(`Se subieron ${rows.length} imagen(es) para el ${day}.`)
       for (const r of rows) URL.revokeObjectURL(r.objectUrl)
@@ -126,9 +128,6 @@ export function CreadorMaterialImagesModal({ open, configured, onClose, onDone }
         <h3 className="nm-prod-modal-title" id={titleId}>
           Subir imágenes
         </h3>
-        <p className="nm-prod-modal-text" style={{ marginBottom: '0.65rem' }}>
-          Todas se guardan para el día elegido. El nombre debe empezar con Classic, PRO, Ultra o Alfombra (el número no importa), o podés elegir el tipo abajo.
-        </p>
         <label className="nm-prod-label" htmlFor="nm-prod-material-img-date" style={{ display: 'block', marginBottom: '0.35rem' }}>
           Día
         </label>
@@ -143,7 +142,7 @@ export function CreadorMaterialImagesModal({ open, configured, onClose, onDone }
         />
 
         <input
-          ref={galleryRef}
+          ref={fileInputRef}
           type="file"
           className="nm-hub-sr-only"
           accept="image/*"
@@ -151,26 +150,14 @@ export function CreadorMaterialImagesModal({ open, configured, onClose, onDone }
           disabled={!configured || busy}
           onChange={onFileInput}
         />
-        <input
-          ref={cameraRef}
-          type="file"
-          className="nm-hub-sr-only"
-          accept="image/*"
-          capture="environment"
-          disabled={!configured || busy}
-          onChange={onFileInput}
-        />
-        <div className="nm-prod-material-img-modal-actions" role="group" aria-label="Agregar imágenes">
+        <div className="nm-prod-material-img-modal-actions">
           <button
             type="button"
-            className="nm-prod-btn nm-prod-btn-primary"
+            className="nm-prod-btn nm-prod-btn-primary nm-prod-material-img-examinar"
             disabled={!configured || busy}
-            onClick={() => galleryRef.current?.click()}
+            onClick={() => fileInputRef.current?.click()}
           >
-            Galería
-          </button>
-          <button type="button" className="nm-prod-btn" disabled={!configured || busy} onClick={() => cameraRef.current?.click()}>
-            Cámara
+            Examinar
           </button>
         </div>
 
@@ -185,25 +172,7 @@ export function CreadorMaterialImagesModal({ open, configured, onClose, onDone }
                   <span className="nm-prod-material-img-preview-name" title={r.file.name}>
                     {r.file.name}
                   </span>
-                  <label className="nm-prod-material-img-preview-label">
-                    Material
-                    <select
-                      className="nm-prod-select"
-                      value={r.family ?? ''}
-                      disabled={busy}
-                      onChange={(e) => {
-                        const v = e.target.value
-                        setFamily(r.localId, v ? (v as NmProdMaterialFamily) : null)
-                      }}
-                    >
-                      <option value="">Detectar por nombre / elegir</option>
-                      {NM_PROD_MATERIAL_FAMILIES.map((f) => (
-                        <option key={f} value={f}>
-                          {NM_PROD_MATERIAL_FAMILY_LABEL[f]}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  <span className="nm-prod-material-img-preview-family">{NM_PROD_MATERIAL_FAMILY_LABEL[r.family]}</span>
                   <button
                     type="button"
                     className="nm-prod-btn nm-prod-material-img-remove"

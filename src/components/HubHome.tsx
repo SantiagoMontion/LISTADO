@@ -56,6 +56,7 @@ export function HubHome({ user, profile, profileError = null, guestMode = false 
   })()
 
   const crearTareasHref = `/tareas?d=${encodeURIComponent(todayIsoLocal())}&hub=crear#nm-hub-tareas-nueva`
+  const subirImagenesCreadorHref = `/creador?subir=imagenes`
   const verTareasHref = `/tareas?d=${encodeURIComponent(todayIsoLocal())}#nm-hub-tareas-lista`
   const verCompletadasHref = `/tareas?d=${encodeURIComponent(todayIsoLocal())}&hub=completadas#nm-hub-tareas-lista`
   const verArchivosImpresosHref = `/archivos-impresos?d=${encodeURIComponent(todayIsoLocal())}`
@@ -140,6 +141,19 @@ export function HubHome({ user, profile, profileError = null, guestMode = false 
                 </span>
                 <span className="nm-hub-tile-title">Subir lista</span>
                 <span className="nm-hub-tile-desc">Pegar reporte y guardar en el día</span>
+              </a>
+            ) : null}
+            {guestMode || canUseCreadorList(r) ? (
+              <a
+                href={subirImagenesCreadorHref}
+                className="nm-hub-tile"
+                onClick={(e) => onHubLinkClick(e, subirImagenesCreadorHref)}
+              >
+                <span className="nm-hub-tile-icon" aria-hidden="true">
+                  ▣
+                </span>
+                <span className="nm-hub-tile-title">Subir imágenes</span>
+                <span className="nm-hub-tile-desc">Imágenes por día (Classic, PRO, Ultra, Alfombra)</span>
               </a>
             ) : null}
             {guestMode || canWriteHubTasks(r) ? (

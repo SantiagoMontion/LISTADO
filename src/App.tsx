@@ -172,6 +172,17 @@ export default function App() {
   const [reportHasPendingById, setReportHasPendingById] = useState<Record<string, boolean>>({})
   const [materialImgModalOpen, setMaterialImgModalOpen] = useState(false)
 
+  useEffect(() => {
+    if (!showCreadorMaterialImages || path !== '/creador') return
+    const u = new URL(window.location.href)
+    if (u.searchParams.get('subir') !== 'imagenes') return
+    setMaterialImgModalOpen(true)
+    u.searchParams.delete('subir')
+    const q = u.searchParams.toString()
+    window.history.replaceState(null, '', `${u.pathname}${q ? `?${q}` : ''}${u.hash}`)
+    window.dispatchEvent(new CustomEvent(HUB_NAV_EVENT))
+  }, [navTick, path, showCreadorMaterialImages])
+
   /** Solo aplica el último refresh en vuelo; si uno viejo termina después, no pisa reports/pendingDates (el "!" quedaba pegado). */
   const reportsRefreshSeqRef = useRef(0)
   /** Evita aplicar `fetchTasks` viejo si el usuario ya cambió de lista o de día (race async). */
