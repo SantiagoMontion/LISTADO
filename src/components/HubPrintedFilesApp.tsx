@@ -165,15 +165,17 @@ export function HubPrintedFilesApp({ configured }: HubPrintedFilesAppProps) {
 
       <section className="nm-hub-date-strip" aria-label="Día de los archivos">
         <div className="nm-hub-date-nav">
-          <button
-            type="button"
-            className="nm-hub-btn nm-hub-btn-ghost"
-            onClick={() => applyDay(addDaysToIsoDate(day, -1))}
-            disabled={!configured}
-            aria-label="Día anterior"
-          >
-            ←
-          </button>
+          <div className="nm-hub-date-nav-prev-wrap">
+            <button
+              type="button"
+              className="nm-hub-btn nm-hub-btn-ghost"
+              onClick={() => applyDay(addDaysToIsoDate(day, -1))}
+              disabled={!configured}
+              aria-label="Día anterior"
+            >
+              ←
+            </button>
+          </div>
           <div className="nm-hub-date-picker">
             <span className="nm-hub-date-display">{formatDayMonthShort(day)}</span>
             <input
