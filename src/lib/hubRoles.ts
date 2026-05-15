@@ -26,9 +26,14 @@ export function canViewPrintedMaterialFiles(role: HubUserRole | null | undefined
   return role === 'taller_1'
 }
 
-/** Marcar cortes, prioridad y cantidades en /manejador (misma lista que ven Taller 1 y Taller 2). */
+/** Marcar cortes, prioridad, agregar medidas y borrar listas en /manejador (Taller 1 y Taller 2). */
 export function canEditManejadorList(role: HubUserRole | null | undefined): boolean {
   return role === 'taller_1' || role === 'taller_2'
+}
+
+/** Alias explícito: eliminar reporte del día en /manejador. */
+export function canDeleteManejadorReport(role: HubUserRole | null | undefined): boolean {
+  return canEditManejadorList(role)
 }
 
 /** Ver pantalla de tareas del hub (lista; escritura según canWriteHubTasks). */

@@ -3,7 +3,7 @@ import { CreadorMaterialImagesModal } from './components/CreadorMaterialImagesMo
 import { HubPrintedFilesApp } from './components/HubPrintedFilesApp'
 import { MaterialTabs } from './components/MaterialTabs'
 import { TaskCard } from './components/TaskCard'
-import { hubTasksReadOnly, canEditManejadorList } from './lib/hubRoles'
+import { hubTasksReadOnly, canDeleteManejadorReport, canEditManejadorList } from './lib/hubRoles'
 import { HubEntrarRedirect } from './components/HubEntrarRedirect'
 import { HubHome } from './components/HubHome'
 import { HubBrandBar } from './components/HubBrandBar'
@@ -102,6 +102,10 @@ function areaFromDimensions(dimensions: string): number {
   return width * height
 }
 
+function reportStorageKey(fecha: string): string {
+  return `nm_prod_report_${normalizeCalendarDate(fecha)}`
+}
+
 /** Lista «Cortados»: texto en medida (título de fila) o en notas (descripción). */
 function nmProdTaskMatchesCompletedSearch(task: NmProdTask, q: string): boolean {
   if (!q) return true
@@ -176,7 +180,7 @@ export default function App() {
     mode === 'creator'
   const canDeleteReports =
     mode === 'manager' &&
-    (!authEnabled || !profileReady || !profile || profile.role === 'taller_1')
+    (!authEnabled || !profileReady || !profile || canDeleteManejadorReport(profile.role))
   const [selectedDate, setSelectedDate] = useState(todayIsoLocal)
   const [taskFilter, setTaskFilter] = useState<TaskFilter>('all')
   const [completedSearch, setCompletedSearch] = useState('')
@@ -208,6 +212,9 @@ export default function App() {
   /** Evita aplicar `fetchTasks` viejo si el usuario ya cambió de lista o de día (race async). */
   const reportIdForTasksRef = useRef<string | null>(null)
   reportIdForTasksRef.current = reportId
+  /** Realtime + mutaciones pueden solapar fetchTasks; el que termina último no debe pisar datos nuevos. */
+  const tasksLoadSeqRef = useRef(0)
+  const loadTasksDebounceRef = useRef<number | null>(null)
 
   const refreshReports = useCallback(async () => {
     if (!configured) return
@@ -237,9 +244,12 @@ export default function App() {
   const refreshCurrentTasks = useCallback(async () => {
     if (!configured || !reportId) return
     const rid = reportId
+    const seq = ++tasksLoadSeqRef.current
     const rows = await fetchTasks(rid)
     if (reportIdForTasksRef.current !== rid) return
+    if (seq !== tasksLoadSeqRef.current) return
     setTasks(rows)
+    setTasksLoaded(true)
   }, [configured, reportId])
 
   const patchTaskLocal = useCallback((taskId: string, updater: (t: NmProdTask) => NmProdTask) => {
@@ -312,12 +322,28 @@ export default function App() {
 
     const loadTasks = () => {
       const rid = reportId
+      const seq = ++tasksLoadSeqRef.current
       return fetchTasks(rid).then((rows) => {
         if (cancelled) return
         if (reportIdForTasksRef.current !== rid) return
+        if (seq !== tasksLoadSeqRef.current) return
         setTasks(rows)
         setTasksLoaded(true)
       })
+    }
+
+    const scheduleLoadTasks = () => {
+      if (loadTasksDebounceRef.current !== null) {
+        window.clearTimeout(loadTasksDebounceRef.current)
+      }
+      loadTasksDebounceRef.current = window.setTimeout(() => {
+        loadTasksDebounceRef.current = null
+        void loadTasks()
+          .then(() => {
+            scheduleRefreshReports()
+          })
+          .catch(() => {})
+      }, 120)
     }
 
     loadTasks().catch((e: unknown) => {
@@ -338,17 +364,17 @@ export default function App() {
           filter: `report_id=eq.${reportId}`,
         },
         () => {
-          loadTasks()
-            .then(() => {
-              scheduleRefreshReports()
-            })
-            .catch(() => {})
+          scheduleLoadTasks()
         },
       )
       .subscribe()
 
     return () => {
       cancelled = true
+      if (loadTasksDebounceRef.current !== null) {
+        window.clearTimeout(loadTasksDebounceRef.current)
+        loadTasksDebounceRef.current = null
+      }
       if (pendingReportsRefreshRef.current !== null) {
         window.clearTimeout(pendingReportsRefreshRef.current)
         pendingReportsRefreshRef.current = null
@@ -468,21 +494,32 @@ export default function App() {
       return
     }
     const idInDay = Boolean(reportId && reportsForSelectedDate.some((r) => r.id === reportId))
-    if (idInDay && reportId) {
-      const openHere = reportHasPendingById[reportId] === true
-      const anyOpen = reportsForSelectedDate.some((r) => reportHasPendingById[r.id] === true)
-      if (!openHere && anyOpen) {
-        const next = reportsForSelectedDate.find((r) => reportHasPendingById[r.id] === true)
-        if (next) {
-          setReportId(next.id)
-          return
-        }
-      }
+    if (idInDay) return
+
+    const day = normalizeCalendarDate(selectedDate)
+    let saved: string | null = null
+    try {
+      saved = sessionStorage.getItem(reportStorageKey(day))
+    } catch {
+      saved = null
+    }
+    if (saved && reportsForSelectedDate.some((r) => r.id === saved)) {
+      setReportId(saved)
       return
     }
     const withPending = reportsForSelectedDate.find((r) => reportHasPendingById[r.id] === true)
     setReportId((withPending ?? reportsForSelectedDate[0]).id)
-  }, [mode, reportsForSelectedDate, reportId, reportHasPendingById])
+  }, [mode, reportsForSelectedDate, reportId, reportHasPendingById, selectedDate])
+
+  useEffect(() => {
+    if (mode !== 'manager' || !reportId) return
+    const day = normalizeCalendarDate(selectedDate)
+    try {
+      sessionStorage.setItem(reportStorageKey(day), reportId)
+    } catch {
+      /* quota / private mode */
+    }
+  }, [mode, reportId, selectedDate])
 
   useEffect(() => {
     if (!authEnabled) {
@@ -550,7 +587,8 @@ export default function App() {
     }
     try {
       await incrementTaskQty(task)
-      await refreshReports()
+      await refreshCurrentTasks()
+      scheduleRefreshReports()
     } catch (e: unknown) {
       setError(formatSupabaseOrError(e))
       await refreshCurrentTasks()
@@ -593,7 +631,8 @@ export default function App() {
     try {
       if (done) await restoreTaskQty(task)
       else await decrementTaskQty(task)
-      await refreshReports()
+      await refreshCurrentTasks()
+      scheduleRefreshReports()
     } catch (e: unknown) {
       setError(formatSupabaseOrError(e))
       await refreshCurrentTasks()
@@ -619,7 +658,8 @@ export default function App() {
     })
     try {
       await toggleTaskCompleted(task)
-      await refreshReports()
+      await refreshCurrentTasks()
+      scheduleRefreshReports()
     } catch (e: unknown) {
       setError(formatSupabaseOrError(e))
       await refreshCurrentTasks()

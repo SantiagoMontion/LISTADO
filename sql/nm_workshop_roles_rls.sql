@@ -100,32 +100,32 @@ CREATE POLICY nm_prod_reports_select_auth
 
 CREATE POLICY nm_prod_reports_insert_auth
   ON public.nm_prod_reports FOR INSERT TO authenticated
-  WITH CHECK (public.nm_hub_profile_role() = 'creador_lista');
+  WITH CHECK (public.nm_hub_profile_role() IN ('creador_lista', 'taller_1', 'taller_2'));
 
 CREATE POLICY nm_prod_reports_update_auth
   ON public.nm_prod_reports FOR UPDATE TO authenticated
-  USING (public.nm_hub_profile_role() IN ('creador_lista', 'taller_1'))
-  WITH CHECK (public.nm_hub_profile_role() IN ('creador_lista', 'taller_1'));
+  USING (public.nm_hub_profile_role() IN ('creador_lista', 'taller_1', 'taller_2'))
+  WITH CHECK (public.nm_hub_profile_role() IN ('creador_lista', 'taller_1', 'taller_2'));
 
 CREATE POLICY nm_prod_reports_delete_auth
   ON public.nm_prod_reports FOR DELETE TO authenticated
-  USING (public.nm_hub_profile_role() IN ('creador_lista', 'taller_1'));
+  USING (public.nm_hub_profile_role() IN ('creador_lista', 'taller_1', 'taller_2'));
 
 CREATE POLICY nm_prod_tasks_select_auth
   ON public.nm_prod_tasks FOR SELECT TO authenticated USING (true);
 
 CREATE POLICY nm_prod_tasks_insert_auth
   ON public.nm_prod_tasks FOR INSERT TO authenticated
-  WITH CHECK (public.nm_hub_profile_role() IN ('creador_lista', 'taller_1'));
+  WITH CHECK (public.nm_hub_profile_role() IN ('creador_lista', 'taller_1', 'taller_2'));
 
 CREATE POLICY nm_prod_tasks_update_auth
   ON public.nm_prod_tasks FOR UPDATE TO authenticated
-  USING (public.nm_hub_profile_role() = 'taller_1')
-  WITH CHECK (public.nm_hub_profile_role() = 'taller_1');
+  USING (public.nm_hub_profile_role() IN ('taller_1', 'taller_2'))
+  WITH CHECK (public.nm_hub_profile_role() IN ('taller_1', 'taller_2'));
 
 CREATE POLICY nm_prod_tasks_delete_auth
   ON public.nm_prod_tasks FOR DELETE TO authenticated
-  USING (public.nm_hub_profile_role() IN ('creador_lista', 'taller_1'));
+  USING (public.nm_hub_profile_role() IN ('creador_lista', 'taller_1', 'taller_2'));
 
 -- -----------------------------------------------------------------------------
 -- nm_hub_tasks + storage (solo taller_1 escribe)

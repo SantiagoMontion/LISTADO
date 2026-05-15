@@ -4,7 +4,7 @@
 -- Roles: creador_lista | taller_1 | taller_2
 --   creador_lista: sube listas (/creador); ve lista de corte y tareas en solo lectura.
 --   taller_1: todo excepto subir lista de corte; crea y edita tareas del hub.
---   taller_2: lista de corte editable (cortes/prioridad); hub /tareas en solo lectura.
+--   taller_2: lista de corte con permisos completos (cortes, +, borrar lista); hub /tareas en solo lectura.
 -- El rol se edita en Table Editor / SQL como postgres (auth.uid() nulo en trigger).
 -- =============================================================================
 

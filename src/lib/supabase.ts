@@ -59,6 +59,47 @@ function isMissingFromFaltasColumn(e: unknown): boolean {
   )
 }
 
+function isMissingRpc(e: unknown): boolean {
+  const msg = String((e as { message?: string })?.message ?? '').toLowerCase()
+  const code = String((e as { code?: string })?.code ?? '')
+  return (
+    code === '42883' ||
+    code === 'PGRST202' ||
+    msg.includes('could not find the function') ||
+    msg.includes('nm_prod_increment_task_qty')
+  )
+}
+
+/** UPDATE con bloqueo optimista si aún no está la RPC en Supabase. */
+async function updateTaskQtyWithLock(
+  task: NmProdTask,
+  buildPatch: (expectedQty: number) => { current_qty: number; is_completed?: boolean } | null,
+): Promise<void> {
+  const sb = requireSupabase()
+  let expected = task.current_qty
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const patch = buildPatch(expected)
+    if (!patch) return
+    const { data, error } = await sb
+      .from('nm_prod_tasks')
+      .update(patch)
+      .eq('id', task.id)
+      .eq('current_qty', expected)
+      .select('id')
+    if (error) throw error
+    if (data && data.length > 0) return
+    const { data: fresh, error: fetchErr } = await sb
+      .from('nm_prod_tasks')
+      .select('current_qty, total_qty')
+      .eq('id', task.id)
+      .single()
+    if (fetchErr) throw fetchErr
+    expected = Number(fresh.current_qty)
+    if (!Number.isFinite(expected)) return
+  }
+  throw new Error('No se pudo guardar: otro usuario modificó esta línea. La lista se actualizará sola.')
+}
+
 /** Sin columna `from_faltas`: una sola fila por material+medida (suma cantidades, prioridad si alguna era faltas). */
 export function collapseTasksForLegacySchema(tasks: NewTaskRow[]): NewTaskRow[] {
   const map = new Map<string, NewTaskRow>()
@@ -93,6 +134,33 @@ export function taskProgressRowDone(row: {
   return Number.isFinite(cq) && Number.isFinite(tq) && cq >= tq
 }
 
+const TASK_PROGRESS_PAGE = 1000
+
+type TaskProgressRow = {
+  report_id: string
+  current_qty: number
+  total_qty: number
+  is_completed: boolean
+}
+
+/** Supabase devuelve como máximo 1000 filas por consulta; sin paginar el estado «pendiente» queda mal. */
+export async function fetchAllTaskProgressRows(sb: SupabaseClient): Promise<TaskProgressRow[]> {
+  const out: TaskProgressRow[] = []
+  let from = 0
+  while (true) {
+    const { data, error } = await sb
+      .from('nm_prod_tasks')
+      .select('report_id, current_qty, total_qty, is_completed')
+      .range(from, from + TASK_PROGRESS_PAGE - 1)
+    if (error) throw error
+    const batch = (data ?? []) as TaskProgressRow[]
+    out.push(...batch)
+    if (batch.length < TASK_PROGRESS_PAGE) break
+    from += TASK_PROGRESS_PAGE
+  }
+  return out
+}
+
 /**
  * Reportes + pendientes por fecha y por reporte.
  * Tareas en query aparte (sin embed) para no truncar filas y alinear con lo que ves en pantalla.
@@ -111,11 +179,7 @@ export async function fetchReportsWithTasksProgress(): Promise<{
 
   if (e1) throw e1
 
-  const { data: taskData, error: e2 } = await sb
-    .from('nm_prod_tasks')
-    .select('report_id, current_qty, total_qty, is_completed')
-
-  if (e2) throw e2
+  const taskData = await fetchAllTaskProgressRows(sb)
 
   const reports: NmProdReport[] = (repData ?? []).map((row) => {
     let fecha = normalizeCalendarDate(row.fecha)
@@ -289,36 +353,39 @@ export async function mergeTaskIntoReport(reportId: string, task: NewTaskRow): P
 export async function incrementTaskQty(task: NmProdTask): Promise<void> {
   if (task.current_qty >= task.total_qty) return
   const sb = requireSupabase()
-  const { error } = await sb
-    .from('nm_prod_tasks')
-    .update({ current_qty: task.current_qty + 1 })
-    .eq('id', task.id)
-  if (error) throw error
+  const rpc = await sb.rpc('nm_prod_increment_task_qty', { p_task_id: task.id })
+  if (!rpc.error) return
+  if (!isMissingRpc(rpc.error)) throw rpc.error
+  await updateTaskQtyWithLock(task, (expected) => {
+    if (expected >= task.total_qty) return null
+    const nextQty = expected + 1
+    return {
+      current_qty: nextQty,
+      ...(nextQty >= task.total_qty ? { is_completed: true } : {}),
+    }
+  })
 }
 
 export async function decrementTaskQty(task: NmProdTask): Promise<void> {
   if (task.current_qty <= 0) return
-  const nextQty = task.current_qty - 1
   const sb = requireSupabase()
-  const { error } = await sb
-    .from('nm_prod_tasks')
-    .update({
-      current_qty: nextQty,
-      // Si baja cantidad, quitamos "cortada" para mantener consistencia.
-      is_completed: false,
-    })
-    .eq('id', task.id)
-  if (error) throw error
+  const rpc = await sb.rpc('nm_prod_decrement_task_qty', { p_task_id: task.id })
+  if (!rpc.error) return
+  if (!isMissingRpc(rpc.error)) throw rpc.error
+  await updateTaskQtyWithLock(task, (expected) => {
+    if (expected <= 0) return null
+    return { current_qty: expected - 1, is_completed: false }
+  })
 }
 
 export async function restoreTaskQty(task: NmProdTask): Promise<void> {
   const sb = requireSupabase()
+  const rpc = await sb.rpc('nm_prod_restore_task_qty', { p_task_id: task.id })
+  if (!rpc.error) return
+  if (!isMissingRpc(rpc.error)) throw rpc.error
   const { error } = await sb
     .from('nm_prod_tasks')
-    .update({
-      current_qty: 0,
-      is_completed: false,
-    })
+    .update({ current_qty: 0, is_completed: false })
     .eq('id', task.id)
   if (error) throw error
 }

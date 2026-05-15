@@ -190,7 +190,9 @@ export function HubHome({ user, profile, profileError = null, guestMode = false 
                 </span>
                 <span className="nm-hub-tile-title">Lista de corte</span>
                 <span className="nm-hub-tile-desc">
-                  {guestMode || canEditManejadorList(r) ? 'Ver y marcar cortes del día' : 'Ver listado del día'}
+                  {guestMode || canEditManejadorList(r)
+                    ? 'Ver, marcar cortes y gestionar la lista del día'
+                    : 'Ver listado del día'}
                 </span>
               </a>
             ) : null}
