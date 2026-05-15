@@ -43,19 +43,24 @@ export function HubBrandBar({
   context,
   asPageHeading = true,
   trailing,
+  integratedDashboard = false,
 }: {
   context?: string
   /** Si es false, el bloque de marca no usa h1 (p. ej. cuando la pantalla ya tiene su propio h1). */
   asPageHeading?: boolean
   /** Acciones a la derecha (ej. + en corte). */
   trailing?: ReactNode
+  /** Dashboard home: barra integrada tema REBEL (home-btn-rebel + navbar-brand). */
+  integratedDashboard?: boolean
 }) {
   const TitleTag: 'h1' | 'div' = asPageHeading ? 'h1' : 'div'
   return (
-    <div className={`nm-hub-brand-bar${trailing ? ' nm-hub-brand-bar--with-trailing' : ''}`}>
+    <div
+      className={`nm-hub-brand-bar${trailing ? ' nm-hub-brand-bar--with-trailing' : ''}${integratedDashboard ? ' nm-hub-brand-bar--integrated-dashboard' : ''}`}
+    >
       <a
         href="/"
-        className="nm-hub-brand-bar__home"
+        className={`nm-hub-brand-bar__home${integratedDashboard ? ' home-btn-rebel' : ''}`}
         aria-label="Inicio"
         title="Inicio"
         onClick={(e) => onHubLinkClick(e, '/')}
@@ -63,7 +68,11 @@ export function HubBrandBar({
         <HomeIcon />
       </a>
       <TitleTag className="nm-hub-brand-bar__heading">
-        <a href="/" className="nm-hub-brand-bar__brand" onClick={(e) => onHubLinkClick(e, '/')}>
+        <a
+          href="/"
+          className={`nm-hub-brand-bar__brand${integratedDashboard ? ' navbar-brand' : ''}`}
+          onClick={(e) => onHubLinkClick(e, '/')}
+        >
           {APP_BRAND_TITLE}
         </a>
         {context ? <span className="nm-hub-brand-bar__context">{context}</span> : null}

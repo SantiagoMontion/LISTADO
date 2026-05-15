@@ -1,11 +1,14 @@
 import { useLayoutEffect } from 'react'
+import { defaultHubPathForRole } from '../lib/hubPermissions'
 import { hubReplace } from '../lib/hubNavigate'
+import type { HubUserRole } from '../lib/types'
 import { HubLoadingScreen } from './HubLoadingScreen'
 
-/** Sesión activa pero la URL sigue en `/entrar`: pasamos a `/` sin recargar toda la página. */
-export function HubEntrarRedirect() {
+/** Tras login: pantalla principal según rol (menos clics). */
+export function HubEntrarRedirect({ role }: { role?: HubUserRole | null }) {
   useLayoutEffect(() => {
-    hubReplace('/')
-  }, [])
+    hubReplace(defaultHubPathForRole(role))
+  }, [role])
+
   return <HubLoadingScreen label="Entrando…" />
 }

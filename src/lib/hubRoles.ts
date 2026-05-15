@@ -1,54 +1,50 @@
 import type { HubUserRole } from './types'
+import {
+  getHubPermissions,
+  HUB_PERMISSIONS,
+  HUB_ROLE_LABEL,
+  type HubPermissions,
+} from './hubPermissions'
 
-/** Solo este rol sube listas de producción (/creador). */
+export type { HubPermissions }
+export { HUB_PERMISSIONS, HUB_ROLE_LABEL, getHubPermissions }
+
 export function canUseCreadorList(role: HubUserRole | null | undefined): boolean {
-  return role === 'creador_lista'
+  return getHubPermissions(role)?.uploadProductionList ?? false
 }
 
-/** Crear / editar / borrar tareas del hub (formulario + acciones en lista). */
 export function canWriteHubTasks(role: HubUserRole | null | undefined): boolean {
-  return role === 'taller_1'
+  return getHubPermissions(role)?.createHubTasks ?? false
 }
 
-/** Pantalla /tareas en solo lectura (sin formulario ni acciones de mutación). */
 export function hubTasksReadOnly(role: HubUserRole | null | undefined): boolean {
-  if (role == null) return true
-  return role === 'creador_lista' || role === 'taller_2'
+  const p = getHubPermissions(role)
+  if (!p?.viewHubTasks) return true
+  return !p.editHubTasks
 }
 
-/** Ver lista de corte por día (/manejador). Edición de cortes: solo taller_1 / taller_2. */
 export function canUseManejador(role: HubUserRole | null | undefined): boolean {
-  return role === 'creador_lista' || role === 'taller_1' || role === 'taller_2'
+  return getHubPermissions(role)?.viewCutList ?? false
 }
 
-/** Ver imágenes de materiales subidas por día (/archivos-impresos). */
 export function canViewPrintedMaterialFiles(role: HubUserRole | null | undefined): boolean {
-  return role === 'taller_1'
+  return getHubPermissions(role)?.viewPrintedFiles ?? false
 }
 
-/** Marcar cortes, prioridad, agregar medidas y borrar listas en /manejador (Taller 1 y Taller 2). */
 export function canEditManejadorList(role: HubUserRole | null | undefined): boolean {
-  return role === 'taller_1' || role === 'taller_2'
+  return getHubPermissions(role)?.editCutList ?? false
 }
 
-/** Alias explícito: eliminar reporte del día en /manejador. */
 export function canDeleteManejadorReport(role: HubUserRole | null | undefined): boolean {
-  return canEditManejadorList(role)
+  return getHubPermissions(role)?.deleteCutList ?? false
 }
 
-/** Ver pantalla de tareas del hub (lista; escritura según canWriteHubTasks). */
 export function canOpenHubTasks(role: HubUserRole | null | undefined): boolean {
-  return role === 'creador_lista' || role === 'taller_1' || role === 'taller_2'
+  return getHubPermissions(role)?.viewHubTasks ?? false
 }
 
-/** Mostrar botón “Crear” en el home (al menos una acción de creación). */
 export function canShowHomeCrearMenu(role: HubUserRole | null | undefined): boolean {
-  return canUseCreadorList(role) || canWriteHubTasks(role)
-}
-
-/** Etiqueta legible del rol (UI). */
-export const HUB_ROLE_LABEL: Record<HubUserRole, string> = {
-  creador_lista: 'Creador de lista',
-  taller_1: 'Taller 1',
-  taller_2: 'Taller 2',
+  const p = getHubPermissions(role)
+  if (!p) return false
+  return p.uploadProductionList || p.createHubTasks
 }

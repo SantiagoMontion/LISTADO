@@ -3,7 +3,12 @@ import { CreadorMaterialImagesModal } from './components/CreadorMaterialImagesMo
 import { HubPrintedFilesApp } from './components/HubPrintedFilesApp'
 import { MaterialTabs } from './components/MaterialTabs'
 import { TaskCard } from './components/TaskCard'
-import { hubTasksReadOnly, canDeleteManejadorReport, canEditManejadorList } from './lib/hubRoles'
+import {
+  canAccessHubPath,
+  getHubPermissions,
+  hubPathBlockedMessage,
+} from './lib/hubPermissions'
+import { canDeleteManejadorReport, canEditManejadorList, hubTasksReadOnly } from './lib/hubRoles'
 import { HubEntrarRedirect } from './components/HubEntrarRedirect'
 import { HubHome } from './components/HubHome'
 import { HubBrandBar } from './components/HubBrandBar'
@@ -171,12 +176,12 @@ export default function App() {
     (!authEnabled || !profileReady || !profile || canEditManejadorList(profile.role))
   const canImportReports =
     mode === 'creator' &&
-    (!authEnabled || !profileReady || !profile || profile.role === 'creador_lista')
+    (!authEnabled || !profileReady || !profile || getHubPermissions(profile.role)?.uploadProductionList)
   const showCreadorMaterialImages =
     configured &&
     authEnabled &&
     profileReady &&
-    profile?.role === 'creador_lista' &&
+    getHubPermissions(profile?.role)?.uploadMaterialImages &&
     mode === 'creator'
   const canDeleteReports =
     mode === 'manager' &&
@@ -744,7 +749,7 @@ export default function App() {
   }
 
   if (authEnabled && authReady && session && isLogin) {
-    return <HubEntrarRedirect />
+    return <HubEntrarRedirect role={profile?.role ?? null} />
   }
 
   if (authEnabled && authReady && !isLogin && !session) {
@@ -760,19 +765,11 @@ export default function App() {
   }
 
   if (authEnabled && authReady && session && profileReady && profile) {
-    if (path === '/creador' && profile.role !== 'creador_lista') {
+    if (!canAccessHubPath(path, profile.role)) {
       return (
         <HubRoleBlocked
-          title="Subir lista"
-          message="Solo el perfil «Creador de lista» puede cargar listas de producción para corte."
-        />
-      )
-    }
-    if (path === '/archivos-impresos' && profile.role !== 'taller_1') {
-      return (
-        <HubRoleBlocked
-          title="Archivos impresos"
-          message="Solo el perfil «Taller 1» puede ver archivos impresos por día."
+          title="Sin acceso"
+          message={hubPathBlockedMessage(path, profile.role)}
         />
       )
     }
@@ -791,7 +788,14 @@ export default function App() {
     return <HubTasksApp readOnly={hubReadOnly} />
   }
 
-  if (authEnabled && authReady && session && isHubPrintedFiles && profileReady && profile?.role === 'taller_1') {
+  if (
+    authEnabled &&
+    authReady &&
+    session &&
+    isHubPrintedFiles &&
+    profileReady &&
+    getHubPermissions(profile?.role)?.viewPrintedFiles
+  ) {
     return <HubPrintedFilesApp configured={configured} />
   }
 

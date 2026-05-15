@@ -1,9 +1,10 @@
 -- =============================================================================
 -- NOTMID — Realtime en lista de tareas (/tareas)
--- Ejecutar en SQL Editor si las tareas no se actualizan solas entre dispositivos.
+-- Ejecutar en SQL Editor si las tareas no se actualizan solas entre dispositivos
+-- (nueva tarea, Completar, Descompletar, edición del mismo día).
 -- =============================================================================
 
--- Filtros Realtime en UPDATE/DELETE necesitan la fila completa en el WAL.
+-- INSERT/UPDATE/DELETE en Realtime: hace falta la fila completa (p. ej. executed_at al completar).
 ALTER TABLE public.nm_hub_tasks REPLICA IDENTITY FULL;
 
 DO $$

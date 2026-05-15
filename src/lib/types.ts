@@ -51,7 +51,10 @@ export interface ParsedSection {
   items: ParsedLineItem[]
 }
 
-export type HubUserRole = 'creador_lista' | 'taller_1' | 'taller_2'
+export type HubUserRole = 'admin' | 'lista_creator' | 'taller_1' | 'taller_2'
+
+/** Valor legacy en BD; se normaliza a lista_creator al leer el perfil. */
+export type HubUserRoleLegacy = 'creador_lista'
 
 export interface NmHubProfile {
   id: string

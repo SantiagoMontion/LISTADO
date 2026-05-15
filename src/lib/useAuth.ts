@@ -11,9 +11,10 @@ function pickStr(v: unknown): string | null {
 
 function normalizeHubRole(raw: string | undefined): HubUserRole {
   const s = (raw ?? '').trim().toLowerCase()
-  if (s === 'creador_lista' || s === 'taller_1' || s === 'taller_2') return s
-  if (s === 'admin' || s === 'operario') return 'taller_1'
-  if (s === 'vista') return 'taller_2'
+  if (s === 'admin') return 'admin'
+  if (s === 'lista_creator' || s === 'creador_lista' || s === 'lista') return 'lista_creator'
+  if (s === 'taller_1' || s === 'operario') return 'taller_1'
+  if (s === 'taller_2' || s === 'vista') return 'taller_2'
   return 'taller_1'
 }
 

@@ -1126,3 +1126,390 @@ a.nm-hub-brand-bar__btn:hover {
   z-index: 1;
   pointer-events: none;
 }
+
+:root {
+  --bg-main-rebel: #08090a;
+  --bg-surface-rebel: #121417;
+  --bg-surface-hover-rebel: #1c1f24;
+  --texture-rebel: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiIHZpZXdCb3g9IjAgMCA0IDQiPjxnIGZpbGwtcnVsZT0iZXZlbm9kZCI+PGcgZmlsbD0iIzI2MjYyNiIgZmlsbC1vcGFjaXR5PSIwLjA5Ij48cGF0aCBkPSJNMCAwaDF2MUgwVjB6TTIgMGgxdjFIMlYwek0wIDJoMXYxSDBWMnpNMiAyaDF2MUgyVjJ6Ii8+PC9nPjwvZz48L3N2Zz4=');
+  --text-rebel-primary: #fcfdff;
+  --text-rebel-secondary: #9099a3;
+  --text-rebel-muted: #535a62;
+  --accent-rebel-orange: #ffab40;
+  --accent-rebel-green: #4ade80;
+  --accent-rebel-blue: #46cff8;
+  --accent-rebel-purple: #d1a3ff;
+  --accent-rebel-gray: #a1a9b6;
+  --radius-lg-rebel: 20px;
+  --font-rebel-heading: 'MessyMarker', 'Inter', system-ui, sans-serif;
+  --font-rebel-main: 'Stencilia', 'Inter', system-ui, sans-serif;
+  --font-rebel-count: 'RawPainted', 'Inter', system-ui, sans-serif;
+}
+
+body:has(.nm-hub-app--dashboard) {
+  background-color: var(--bg-main-rebel);
+  background-image: var(--texture-rebel);
+  background-repeat: repeat;
+}
+
+/* ==========================================================================
+   Dashboard home — tema REBEL (crudo, alto contraste, textura urbana)
+   ========================================================================== */
+
+.nm-hub-app.nm-hub-app--dashboard {
+  min-height: 100dvh;
+  background: transparent;
+  color: var(--text-rebel-primary);
+  font-family: var(--font-rebel-main);
+  padding-bottom: 1.5rem;
+}
+
+.nm-hub-app--dashboard .dashboard-navbar {
+  background-color: var(--bg-surface-rebel);
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.03);
+  position: relative;
+  -webkit-mask-image: linear-gradient(to right, transparent 5%, white 10%, white 90%, transparent 95%),
+    linear-gradient(to bottom, white 95%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 5%, white 10%, white 90%, transparent 95%),
+    linear-gradient(to bottom, white 95%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+}
+
+.nm-hub-app--dashboard .nm-hub-brand-bar.nm-hub-brand-bar--integrated-dashboard {
+  width: 100%;
+  padding: 0;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.nm-hub-app--dashboard .nm-hub-brand-bar--integrated-dashboard .nm-hub-brand-bar__heading {
+  flex: 0 0 auto;
+  margin-left: auto;
+  text-align: right;
+  align-items: flex-end;
+}
+
+.nm-hub-app--dashboard .home-btn-rebel.nm-hub-brand-bar__home {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  height: auto;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 10px;
+  border-radius: var(--radius-lg-rebel);
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  color: var(--text-rebel-primary);
+  flex-shrink: 0;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.nm-hub-app--dashboard .home-btn-rebel.nm-hub-brand-bar__home:hover {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: var(--text-rebel-primary);
+}
+
+.nm-hub-app--dashboard .navbar-brand.nm-hub-brand-bar__brand {
+  margin: 0;
+  font-family: var(--font-rebel-heading);
+  font-weight: 800;
+  font-size: 1.15rem;
+  letter-spacing: 0.8px;
+  color: var(--text-rebel-primary);
+  text-decoration: none;
+  line-height: 1.2;
+  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.4);
+}
+
+.nm-hub-app--dashboard .navbar-brand.nm-hub-brand-bar__brand:hover {
+  color: var(--text-rebel-primary);
+  opacity: 0.92;
+}
+
+.nm-hub-app--dashboard .nm-hub-brand-bar__context {
+  color: var(--text-rebel-secondary);
+  font-family: var(--font-rebel-main);
+}
+
+/* Saludo + badge pegatina */
+.nm-hub-app--dashboard .header-section {
+  padding: 24px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.nm-hub-app--dashboard .welcome-text-rebel {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-family: var(--font-rebel-heading);
+  color: var(--text-rebel-primary);
+  margin: 0 0 12px;
+  line-height: 1.2;
+}
+
+.nm-hub-app--dashboard .role-badge-sticker {
+  background-color: var(--accent-rebel-orange);
+  color: #000000;
+  padding: 4px 14px;
+  border-radius: 24px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  width: fit-content;
+  position: relative;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Barra de métricas */
+.nm-hub-app--dashboard .status-bar-rebel {
+  background-color: var(--bg-surface-rebel);
+  border: 1px solid rgba(255, 255, 255, 0.015);
+  border-radius: var(--radius-lg-rebel);
+  padding: 14px;
+  margin: 0 16px 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  position: relative;
+}
+
+.nm-hub-app--dashboard .status-bar-rebel .status-metric {
+  flex: 1;
+  text-align: center;
+  font-size: 0.85rem;
+  font-family: var(--font-rebel-main);
+  color: var(--text-rebel-secondary);
+  min-width: 4.5rem;
+}
+
+.nm-hub-app--dashboard .status-bar-rebel .status-metric strong {
+  color: var(--text-rebel-primary);
+  font-size: 1rem;
+  font-weight: 700;
+  margin-right: 4px;
+  font-family: var(--font-rebel-count);
+}
+
+.nm-hub-app--dashboard .status-metric.completed-rebel strong {
+  color: var(--accent-rebel-purple);
+  text-shadow: 0 0 12px rgba(209, 163, 255, 0.15);
+}
+
+/* Lista de tarjetas */
+.nm-hub-app--dashboard .cards-container-rebel {
+  padding: 0 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.nm-hub-app--dashboard .cards-container-rebel--focus {
+  padding-top: 8px;
+}
+
+.nm-hub-app--dashboard .nm-hub-dash-loading {
+  margin: 0 16px 12px;
+  font-size: 0.85rem;
+  color: var(--text-rebel-secondary);
+  font-family: var(--font-rebel-main);
+}
+
+.nm-hub-app--dashboard .dashboard-footnote,
+.nm-hub-app--dashboard .dashboard-footnote code {
+  color: var(--text-rebel-secondary);
+}
+
+.nm-hub-app--dashboard .dashboard-alert.nm-hub-error {
+  margin: 0 16px 12px;
+}
+
+/* Tarjetas rebel */
+.nm-hub-app--dashboard .action-card-rebel {
+  background-color: var(--bg-surface-rebel);
+  border: 1px solid rgba(255, 255, 255, 0.02);
+  border-radius: var(--radius-lg-rebel);
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  position: relative;
+  transition: background-color 0.25s ease, border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+  text-decoration: none;
+  color: inherit;
+  overflow: visible;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nm-hub-app--dashboard .action-card-rebel::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: calc(var(--radius-lg-rebel) + 2px);
+  border: 1px solid rgba(255, 255, 255, 0.015);
+  -webkit-mask-image: radial-gradient(white, transparent 95%);
+  mask-image: radial-gradient(white, transparent 95%);
+  pointer-events: none;
+}
+
+.nm-hub-app--dashboard .action-card-rebel:hover {
+  background-color: var(--bg-surface-hover-rebel);
+  border-color: rgba(255, 255, 255, 0.04);
+  transform: translateY(-2px) scale(1.005);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.nm-hub-app--dashboard .action-card-rebel:focus-visible {
+  outline: 2px solid var(--accent-rebel-blue);
+  outline-offset: 2px;
+}
+
+.nm-hub-app--dashboard .card-left-block-rebel {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+  flex: 1;
+}
+
+.nm-hub-app--dashboard .card-icon-wrapper-rebel {
+  width: 44px;
+  height: 44px;
+  border-radius: calc(var(--radius-lg-rebel) * 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.005);
+}
+
+.nm-hub-app--dashboard .card-info-rebel {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.nm-hub-app--dashboard .action-card-rebel .card-title-rebel {
+  font-size: 1.1rem;
+  font-weight: 600;
+  font-family: var(--font-rebel-heading);
+  color: var(--text-rebel-primary);
+  line-height: 1.2;
+}
+
+.nm-hub-app--dashboard .action-card-rebel .card-description-rebel {
+  font-size: 0.88rem;
+  color: var(--text-rebel-secondary);
+  line-height: 1.4;
+  font-family: var(--font-rebel-main);
+}
+
+.nm-hub-app--dashboard .card-counter-block-rebel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+  padding-left: 14px;
+  text-align: right;
+}
+
+.nm-hub-app--dashboard .card-counter-rebel {
+  font-size: 1.6rem;
+  font-weight: 800;
+  font-family: var(--font-rebel-count);
+  color: var(--text-rebel-primary);
+  line-height: 1;
+}
+
+.nm-hub-app--dashboard .card-counter-label-rebel {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-rebel-secondary);
+  font-family: var(--font-rebel-main);
+  text-transform: lowercase;
+}
+
+/* Variantes */
+.nm-hub-app--dashboard .card-create-rebel {
+  border-left: 3px solid var(--accent-rebel-green);
+}
+
+.nm-hub-app--dashboard .card-create-rebel .card-icon-wrapper-rebel {
+  background: rgba(74, 222, 128, 0.06);
+  color: var(--accent-rebel-green);
+}
+
+.nm-hub-app--dashboard .card-pending-rebel {
+  border-left: 3px solid var(--accent-rebel-blue);
+}
+
+.nm-hub-app--dashboard .card-pending-rebel .card-icon-wrapper-rebel {
+  background: rgba(70, 207, 248, 0.06);
+  color: var(--accent-rebel-blue);
+}
+
+.nm-hub-app--dashboard .card-pending-rebel .card-counter-rebel {
+  color: var(--accent-rebel-blue);
+}
+
+.nm-hub-app--dashboard .card-files-rebel {
+  border-left: 3px solid var(--accent-rebel-purple);
+}
+
+.nm-hub-app--dashboard .card-files-rebel .card-icon-wrapper-rebel {
+  background: rgba(209, 163, 255, 0.06);
+  color: var(--accent-rebel-purple);
+}
+
+.nm-hub-app--dashboard .card-completed-rebel {
+  border-left: 3px solid var(--accent-rebel-gray);
+}
+
+.nm-hub-app--dashboard .card-completed-rebel .card-icon-wrapper-rebel {
+  background: rgba(161, 169, 182, 0.06);
+  color: var(--accent-rebel-gray);
+}
+
+.nm-hub-app--dashboard .card-completed-rebel .card-counter-rebel {
+  color: var(--text-rebel-secondary);
+}
+
+.nm-hub-app--dashboard .card-muted-rebel {
+  border-left: 3px solid var(--text-rebel-muted);
+}
+
+.nm-hub-app--dashboard .card-muted-rebel .card-icon-wrapper-rebel {
+  background: rgba(83, 90, 98, 0.12);
+  color: var(--text-rebel-secondary);
+}
+
+/* Fallback otros hub */
+.nm-hub-role-pill {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(232, 216, 0, 0.35);
+  color: rgba(232, 216, 0, 0.95);
+  background: rgba(232, 216, 0, 0.08);
+}

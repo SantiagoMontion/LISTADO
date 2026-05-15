@@ -303,6 +303,12 @@ export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
   /** Evita que un fetch viejo pise tareas nuevas (realtime + mutación simultánea). */
   const tasksLoadSeqRef = useRef(0)
   const hubTasksRealtimeDebounceRef = useRef<number | null>(null)
+  /** Tras completar/crear en este cliente, ignorar realtime breve (ya hay patch local). */
+  const suppressHubRealtimeUntilRef = useRef(0)
+
+  const markLocalHubMutation = useCallback(() => {
+    suppressHubRealtimeUntilRef.current = Date.now() + 900
+  }, [])
 
   const appendTaskFilesFromInput = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     const picked = e.target.files ? Array.from(e.target.files) : []
@@ -319,10 +325,9 @@ export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
     }
   }, [taskDay])
 
-  const load = useCallback(async () => {
+  const loadSilent = useCallback(async () => {
     const day = taskDay
     const seq = ++tasksLoadSeqRef.current
-    setError(null)
     const mode = readHubListMode()
     const rows =
       mode === 'completadas' ? await fetchHubTasksCompleted(day) : await fetchHubTasksPending(day)
@@ -338,6 +343,11 @@ export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
       setExecutorNames({})
     }
   }, [taskDay, hubDataGen])
+
+  const load = useCallback(async () => {
+    setError(null)
+    await loadSilent()
+  }, [loadSilent])
 
   useEffect(() => {
     if (hubTasksPanelFromLocation(readOnly) === 'create') {
@@ -363,13 +373,24 @@ export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
     const day = normalizeCalendarDate(taskDay)
     if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return
 
+    const hubChangeAffectsDay = (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
+      const fromRow = (row: Record<string, unknown> | undefined) => {
+        const fd = normalizeCalendarDate(row?.for_date as string | undefined)
+        return /^\d{4}-\d{2}-\d{2}$/.test(fd) ? fd : ''
+      }
+      const n = fromRow(payload.new)
+      const o = fromRow(payload.old)
+      return n === day || o === day
+    }
+
     const scheduleSyncFromServer = () => {
+      if (Date.now() < suppressHubRealtimeUntilRef.current) return
       if (hubTasksRealtimeDebounceRef.current !== null) {
         window.clearTimeout(hubTasksRealtimeDebounceRef.current)
       }
       hubTasksRealtimeDebounceRef.current = window.setTimeout(() => {
         hubTasksRealtimeDebounceRef.current = null
-        void load().catch(() => {})
+        void loadSilent().catch(() => {})
         if (panel !== 'create') void refreshOlderPending()
       }, 150)
     }
@@ -378,13 +399,11 @@ export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
       .channel(`nm_hub_tasks:${day}`)
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'nm_hub_tasks',
-          filter: `for_date=eq.${day}`,
+        { event: '*', schema: 'public', table: 'nm_hub_tasks' },
+        (payload) => {
+          if (!hubChangeAffectsDay(payload)) return
+          scheduleSyncFromServer()
         },
-        scheduleSyncFromServer,
       )
       .subscribe()
 
@@ -395,7 +414,7 @@ export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
       }
       void sb.removeChannel(channel)
     }
-  }, [taskDay, load, panel, refreshOlderPending])
+  }, [taskDay, loadSilent, panel, refreshOlderPending])
 
   useEffect(() => {
     if (panel === 'create') {
@@ -508,7 +527,11 @@ export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
       setBody('')
       setImportance('normal')
       setFiles([])
-      await load()
+      markLocalHubMutation()
+      setTasks((prev) =>
+        readHubListMode() === 'pendientes' ? [created, ...prev] : prev,
+      )
+      await loadSilent()
       replaceListPanelUrl()
       setPanel('list')
     } catch (err: unknown) {
@@ -522,11 +545,19 @@ export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
     if (readOnly) return
     setBusy(true)
     setError(null)
+    markLocalHubMutation()
+    const mode = readHubListMode()
+    setTasks((prev) => {
+      if (executed && mode === 'pendientes') return prev.filter((x) => x.id !== t.id)
+      if (!executed && mode === 'completadas') return prev.filter((x) => x.id !== t.id)
+      return prev
+    })
     try {
       await updateHubTaskExecuted(t.id, executed)
-      await load()
+      if (panel !== 'create') void refreshOlderPending()
     } catch (err: unknown) {
       setError(formatSupabaseOrError(err))
+      await loadSilent()
     } finally {
       setBusy(false)
     }
@@ -787,14 +818,14 @@ export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
               </button>
             </div>
           </div>
-          {loading ? <p className="nm-hub-muted">Cargando…</p> : null}
+          {loading && tasks.length === 0 ? <p className="nm-hub-muted">Cargando…</p> : null}
           {!loading && sorted.length === 0 ? (
             <p className="nm-hub-muted">{listMode === 'completadas' ? 'No hay tareas completadas este día.' : 'No hay tareas pendientes.'}</p>
           ) : null}
           {!loading && sorted.length > 0 && filteredSorted.length === 0 ? (
             <p className="nm-hub-muted">Ninguna tarea coincide con la búsqueda.</p>
           ) : null}
-          <ul className="nm-hub-task-list">
+          <ul className="nm-hub-task-list" aria-busy={loading}>
             {filteredSorted.map((t) => (
               <li key={t.id} className="nm-hub-task-item">
                 <div className="nm-hub-task-top">
