@@ -169,9 +169,6 @@ export function CreadorMaterialImagesModal({ open, configured, onClose, onDone }
                   <img src={r.objectUrl} alt="" className="nm-prod-material-img-preview-thumb" />
                 </div>
                 <div className="nm-prod-material-img-preview-meta">
-                  <span className="nm-prod-material-img-preview-name" title={r.file.name}>
-                    {r.file.name}
-                  </span>
                   <span className="nm-prod-material-img-preview-family">{NM_PROD_MATERIAL_FAMILY_LABEL[r.family]}</span>
                   <button
                     type="button"

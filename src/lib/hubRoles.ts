@@ -16,9 +16,9 @@ export function hubTasksReadOnly(role: HubUserRole | null | undefined): boolean 
   return role === 'creador_lista' || role === 'taller_2'
 }
 
-/** Ver lista de corte por día (/manejador). */
+/** Ver lista de corte por día (/manejador). Edición de cortes: solo taller_1 / taller_2. */
 export function canUseManejador(role: HubUserRole | null | undefined): boolean {
-  return role === 'taller_1' || role === 'taller_2'
+  return role === 'creador_lista' || role === 'taller_1' || role === 'taller_2'
 }
 
 /** Ver imágenes de materiales subidas por día (/archivos-impresos). */

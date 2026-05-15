@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type TouchEvent } from 'react'
 import { HubBrandBar } from './HubBrandBar'
 import { HUB_NAV_EVENT, onHubLinkClick } from '../lib/hubNavigate'
 import { addDaysToIsoDate, formatDayMonthShort, normalizeCalendarDate, todayIsoLocal } from '../lib/date'
@@ -36,7 +36,9 @@ export function HubPrintedFilesApp({ configured }: HubPrintedFilesAppProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [activeFamily, setActiveFamily] = useState<NmProdMaterialFamily>('classic')
-  const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(null)
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null)
+  const filteredLenRef = useRef(0)
 
   const applyDay = useCallback((next: string) => {
     const d = normalizeCalendarDate(next)
@@ -82,6 +84,8 @@ export function HubPrintedFilesApp({ configured }: HubPrintedFilesAppProps) {
     let cancelled = false
     setLoading(true)
     setError(null)
+    setRows([])
+    setUrls({})
     fetchMaterialImagesByFecha(day)
       .then(async (list) => {
         if (cancelled) return
@@ -132,14 +136,75 @@ export function HubPrintedFilesApp({ configured }: HubPrintedFilesAppProps) {
     [rows, activeFamily],
   )
 
+  const viewableRows = useMemo(() => filteredRows.filter((r) => Boolean(urls[r.id])), [filteredRows, urls])
+
+  filteredLenRef.current = viewableRows.length
+
   useEffect(() => {
-    if (!lightbox) return
+    setLightboxIndex(null)
+  }, [day, activeFamily])
+
+  useEffect(() => {
+    if (lightboxIndex === null) return
+    if (viewableRows.length === 0) {
+      setLightboxIndex(null)
+      return
+    }
+    if (lightboxIndex >= viewableRows.length) {
+      setLightboxIndex(viewableRows.length - 1)
+    }
+  }, [lightboxIndex, viewableRows.length])
+
+  useEffect(() => {
+    if (lightboxIndex === null) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setLightbox(null)
+      if (e.key === 'Escape') {
+        setLightboxIndex(null)
+        return
+      }
+      if (e.key === 'ArrowRight') {
+        e.preventDefault()
+        setLightboxIndex((i) =>
+          i !== null && i < filteredLenRef.current - 1 ? i + 1 : i,
+        )
+        return
+      }
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault()
+        setLightboxIndex((i) => (i !== null && i > 0 ? i - 1 : i))
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [lightbox])
+  }, [lightboxIndex])
+
+  const goLightboxNext = useCallback(() => {
+    setLightboxIndex((i) =>
+      i !== null && i < filteredLenRef.current - 1 ? i + 1 : i,
+    )
+  }, [])
+
+  const goLightboxPrev = useCallback(() => {
+    setLightboxIndex((i) => (i !== null && i > 0 ? i - 1 : i))
+  }, [])
+
+  const onLightboxTouchStart = useCallback((e: TouchEvent) => {
+    const t = e.touches[0]
+    touchStartRef.current = { x: t.clientX, y: t.clientY }
+  }, [])
+
+  const onLightboxTouchEnd = useCallback((e: TouchEvent) => {
+    const start = touchStartRef.current
+    touchStartRef.current = null
+    if (!start) return
+    const t = e.changedTouches[0]
+    const dx = t.clientX - start.x
+    const dy = t.clientY - start.y
+    if (Math.abs(dx) < Math.abs(dy) * 1.15) return
+    const threshold = 48
+    if (dx < -threshold) goLightboxNext()
+    else if (dx > threshold) goLightboxPrev()
+  }, [goLightboxNext, goLightboxPrev])
 
   return (
     <div className="nm-hub-app">
@@ -205,9 +270,14 @@ export function HubPrintedFilesApp({ configured }: HubPrintedFilesAppProps) {
         </p>
       ) : null}
 
-      {loading ? <p className="nm-hub-muted">Cargando…</p> : null}
+      {configured && loading ? (
+        <div className="nm-hub-printed-loading" role="status" aria-live="polite">
+          <div className="nm-hub-spinner" aria-hidden="true" />
+          <p className="nm-hub-loading-label">Cargando imágenes…</p>
+        </div>
+      ) : null}
 
-      {availableFamilies.length > 0 ? (
+      {availableFamilies.length > 0 && !loading ? (
         <div className="nm-hub-subtabs nm-hub-printed-filters" role="tablist" aria-label="Filtrar por material">
           {availableFamilies.map((fam) => {
             const n = counts[fam]
@@ -228,50 +298,85 @@ export function HubPrintedFilesApp({ configured }: HubPrintedFilesAppProps) {
         </div>
       ) : null}
 
-      {configured && !loading && filteredRows.length === 0 && rows.length > 0 ? (
+      {configured && !loading && viewableRows.length === 0 && rows.length > 0 ? (
         <p className="nm-hub-muted" style={{ marginTop: '0.75rem' }}>
           No hay imágenes en esta categoría para el día.
         </p>
       ) : null}
 
-      <ul className="nm-hub-printed-list" aria-label="Imágenes">
-        {filteredRows.map((r) => {
-          const src = urls[r.id]
-          if (!src) return null
-          const alt = r.original_name ?? NM_PROD_MATERIAL_FAMILY_LABEL[r.material_family]
-          return (
-            <li key={r.id} className="nm-hub-printed-item">
-              <button
-                type="button"
-                className="nm-hub-printed-thumb-btn"
-                onClick={() => setLightbox({ src, alt })}
-                aria-label={`Ampliar ${alt}`}
-              >
-                <img src={src} alt="" className="nm-hub-printed-thumb-img" decoding="async" />
-              </button>
-              {r.original_name ? (
-                <span className="nm-hub-printed-caption" title={r.original_name}>
-                  {r.original_name}
-                </span>
-              ) : null}
-            </li>
-          )
-        })}
-      </ul>
+      {!loading ? (
+        <ul className="nm-hub-printed-list" aria-label="Imágenes">
+          {viewableRows.map((r, idx) => {
+            const src = urls[r.id] as string
+            return (
+              <li key={r.id} className="nm-hub-printed-item">
+                <button
+                  type="button"
+                  className="nm-hub-printed-thumb-btn"
+                  onClick={() => setLightboxIndex(idx)}
+                  aria-label={`Ampliar imagen ${NM_PROD_MATERIAL_FAMILY_LABEL[r.material_family]}`}
+                >
+                  <img src={src} alt="" className="nm-hub-printed-thumb-img" decoding="async" />
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      ) : null}
 
-      {lightbox ? (
+      {lightboxIndex !== null && viewableRows[lightboxIndex] ? (
         <div
           className="nm-hub-printed-lightbox-backdrop"
           role="presentation"
           onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setLightbox(null)
+            if (e.target === e.currentTarget) setLightboxIndex(null)
           }}
         >
           <div className="nm-hub-printed-lightbox" role="dialog" aria-modal="true" aria-label="Vista ampliada">
-            <button type="button" className="nm-hub-btn nm-hub-printed-lightbox-close" onClick={() => setLightbox(null)}>
-              Cerrar
-            </button>
-            <img src={lightbox.src} alt={lightbox.alt} className="nm-hub-printed-lightbox-img" />
+            <div className="nm-hub-printed-lightbox-top">
+              <button type="button" className="nm-hub-btn nm-hub-printed-lightbox-close" onClick={() => setLightboxIndex(null)}>
+                Cerrar
+              </button>
+            </div>
+            {viewableRows.length > 1 ? (
+              <p className="nm-hub-printed-lightbox-counter" aria-live="polite">
+                {lightboxIndex + 1} / {viewableRows.length}
+              </p>
+            ) : null}
+            <div
+              className="nm-hub-printed-lightbox-swipe"
+              onTouchStart={onLightboxTouchStart}
+              onTouchEnd={onLightboxTouchEnd}
+            >
+              {viewableRows.length > 1 ? (
+                <>
+                  <button
+                    type="button"
+                    className="nm-hub-printed-lightbox-nav nm-hub-printed-lightbox-nav--prev"
+                    aria-label="Imagen anterior"
+                    disabled={lightboxIndex <= 0}
+                    onClick={goLightboxPrev}
+                  >
+                    ‹
+                  </button>
+                  <button
+                    type="button"
+                    className="nm-hub-printed-lightbox-nav nm-hub-printed-lightbox-nav--next"
+                    aria-label="Imagen siguiente"
+                    disabled={lightboxIndex >= viewableRows.length - 1}
+                    onClick={goLightboxNext}
+                  >
+                    ›
+                  </button>
+                </>
+              ) : null}
+              <img
+                src={urls[viewableRows[lightboxIndex].id] ?? ''}
+                alt=""
+                className="nm-hub-printed-lightbox-img"
+                draggable={false}
+              />
+            </div>
           </div>
         </div>
       ) : null}

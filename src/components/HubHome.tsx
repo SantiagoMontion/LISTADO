@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import {
+  canEditManejadorList,
   canOpenHubTasks,
   canShowHomeCrearMenu,
   canUseCreadorList,
@@ -188,7 +189,9 @@ export function HubHome({ user, profile, profileError = null, guestMode = false 
                   ✂
                 </span>
                 <span className="nm-hub-tile-title">Lista de corte</span>
-                <span className="nm-hub-tile-desc">Ver y marcar cortes del día</span>
+                <span className="nm-hub-tile-desc">
+                  {guestMode || canEditManejadorList(r) ? 'Ver y marcar cortes del día' : 'Ver listado del día'}
+                </span>
               </a>
             ) : null}
             {!guestMode && canViewPrintedMaterialFiles(r) ? (

@@ -746,13 +746,6 @@ a.nm-prod-btn {
   gap: 0.35rem;
 }
 
-.nm-prod-material-img-preview-name {
-  font-size: var(--fs-sm);
-  color: var(--foreground-secondary);
-  word-break: break-all;
-  line-height: 1.25;
-}
-
 .nm-prod-material-img-preview-family {
   font-size: var(--fs-sm);
   font-weight: 700;

@@ -968,6 +968,17 @@ a.nm-hub-brand-bar__btn:hover {
 }
 
 /* Archivos impresos (/archivos-impresos) */
+.nm-hub-printed-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-height: 10rem;
+  margin-top: 1rem;
+  padding: 2rem 1rem;
+}
+
 .nm-hub-printed-filters {
   margin-top: 0.85rem;
   flex-wrap: wrap;
@@ -988,7 +999,7 @@ a.nm-hub-brand-bar__btn:hover {
 .nm-hub-printed-item {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0;
 }
 
 .nm-hub-printed-thumb-btn {
@@ -1017,13 +1028,6 @@ a.nm-hub-brand-bar__btn:hover {
   object-position: center;
 }
 
-.nm-hub-printed-caption {
-  font-size: 0.78rem;
-  color: rgba(248, 250, 252, 0.65);
-  word-break: break-word;
-  line-height: 1.25;
-}
-
 .nm-hub-printed-lightbox-backdrop {
   position: fixed;
   inset: 0;
@@ -1039,21 +1043,86 @@ a.nm-hub-brand-bar__btn:hover {
   position: relative;
   max-width: min(100vw - 1rem, 56rem);
   max-height: 92dvh;
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.35rem;
+}
+
+.nm-hub-printed-lightbox-top {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+  flex-shrink: 0;
 }
 
 .nm-hub-printed-lightbox-close {
-  align-self: flex-end;
   flex-shrink: 0;
+}
+
+.nm-hub-printed-lightbox-counter {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: rgba(248, 250, 252, 0.72);
+}
+
+.nm-hub-printed-lightbox-swipe {
+  position: relative;
+  width: 100%;
+  flex: 1;
+  min-height: min(55dvh, 28rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.nm-hub-printed-lightbox-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(20, 22, 28, 0.75);
+  color: #fff;
+  font-size: 1.65rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nm-hub-printed-lightbox-nav:disabled {
+  opacity: 0.28;
+  cursor: default;
+}
+
+.nm-hub-printed-lightbox-nav--prev {
+  left: 0.2rem;
+}
+
+.nm-hub-printed-lightbox-nav--next {
+  right: 0.2rem;
 }
 
 .nm-hub-printed-lightbox-img {
   max-width: 100%;
-  max-height: calc(92dvh - 3.25rem);
+  max-height: calc(92dvh - 5.5rem);
   width: auto;
   height: auto;
   object-fit: contain;
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
 }

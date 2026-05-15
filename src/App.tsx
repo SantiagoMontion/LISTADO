@@ -102,6 +102,26 @@ function areaFromDimensions(dimensions: string): number {
   return width * height
 }
 
+/** Lista «Cortados»: texto en medida (título de fila) o en notas (descripción). */
+function nmProdTaskMatchesCompletedSearch(task: NmProdTask, q: string): boolean {
+  if (!q) return true
+  const d = task.dimensions.toLowerCase()
+  const n = (task.notes ?? '').toLowerCase()
+  return d.includes(q) || n.includes(q)
+}
+
+/** Menor = más relevante al ordenar con búsqueda activa. */
+function nmProdCompletedSearchRank(task: NmProdTask, q: string): number {
+  if (!q) return 0
+  const d = task.dimensions.toLowerCase()
+  const n = (task.notes ?? '').toLowerCase()
+  if (d === q) return 0
+  if (d.startsWith(q)) return 1
+  if (d.includes(q)) return 2
+  if (n.includes(q)) return 3
+  return 4
+}
+
 export default function App() {
   const configured = Boolean(
     import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY,
@@ -379,21 +399,16 @@ export default function App() {
     )
     const q = completedSearch.trim().toLowerCase()
     const searched =
-      taskFilter === 'completed'
-        ? tabbed.filter((t) => (q ? t.dimensions.toLowerCase().includes(q) : true))
-        : tabbed
+      taskFilter === 'completed' ? tabbed.filter((t) => nmProdTaskMatchesCompletedSearch(t, q)) : tabbed
 
     const base = (() => {
       if (taskFilter !== 'completed') {
         return sortTasksForDisplay(searched)
       }
       return [...searched].sort((a, b) => {
-        const da = a.dimensions.toLowerCase()
-        const db = b.dimensions.toLowerCase()
         if (q) {
-          const rank = (d: string) => (d === q ? 0 : d.startsWith(q) ? 1 : 2)
-          const ra = rank(da)
-          const rb = rank(db)
+          const ra = nmProdCompletedSearchRank(a, q)
+          const rb = nmProdCompletedSearchRank(b, q)
           if (ra !== rb) return ra - rb
         }
         const timeA = completedAtById[a.id] ?? Date.parse(a.created_at)
@@ -739,14 +754,6 @@ export default function App() {
         />
       )
     }
-    if (path === '/manejador' && profile.role === 'creador_lista') {
-      return (
-        <HubRoleBlocked
-          title="Lista de corte"
-          message="Tu usuario no usa esta pantalla. La lista de corte la ven Taller 1 y Taller 2."
-        />
-      )
-    }
     if (path === '/archivos-impresos' && profile.role !== 'taller_1') {
       return (
         <HubRoleBlocked
@@ -823,7 +830,7 @@ export default function App() {
         <HubBrandBar
           context={mode === 'creator' ? 'Lista' : mode === 'manager' ? 'Corte' : undefined}
           trailing={
-            mode === 'manager' ? (
+            mode === 'manager' && canEditTasks ? (
               <button
                 type="button"
                 className="nm-hub-brand-bar__btn"
@@ -1143,8 +1150,8 @@ export default function App() {
                         className="nm-prod-completed-search-inline-input"
                         value={completedSearch}
                         onChange={(e) => setCompletedSearch(e.target.value)}
-                        placeholder="Medida…"
-                        aria-label="Filtrar medidas en cortados"
+                        placeholder="Medida o notas…"
+                        aria-label="Filtrar por medida o notas en cortados"
                         autoCapitalize="none"
                         autoCorrect="off"
                       />
