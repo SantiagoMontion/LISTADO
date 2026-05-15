@@ -7,7 +7,7 @@
 CREATE TABLE IF NOT EXISTS public.nm_prod_material_images (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   fecha date NOT NULL,
-  material_family text NOT NULL CHECK (material_family IN ('classic', 'pro', 'ultra', 'alfombra')),
+  material_family text NOT NULL CHECK (material_family IN ('classic', 'pro', 'ultra', 'alfombra', 'faltas')),
   storage_path text NOT NULL,
   original_name text,
   created_at timestamptz NOT NULL DEFAULT now()

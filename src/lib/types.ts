@@ -6,8 +6,8 @@ export interface NmProdReport {
   created_at: string
 }
 
-/** Familia inferida del nombre de archivo (Classic1, PRO2, ultra1, Alfombra3…). */
-export type NmProdMaterialFamily = 'classic' | 'pro' | 'ultra' | 'alfombra'
+/** Familia inferida del nombre de archivo (Classic1, PRO2, FALTAS1, …). */
+export type NmProdMaterialFamily = 'classic' | 'pro' | 'ultra' | 'alfombra' | 'faltas'
 
 export interface NmProdMaterialImageRow {
   id: string

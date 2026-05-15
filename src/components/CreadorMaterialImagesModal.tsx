@@ -30,8 +30,8 @@ function appendFilesToRows(
   if (invalid.length > 0) {
     setError(
       invalid.length === 1
-        ? `No se reconoce el material en «${invalid[0]}». El nombre debe empezar con Classic, PRO, Ultra o Alfombra (ej. Classic1, PRO2).`
-        : `No se reconoce el material en ${invalid.length} archivos. Ejemplos: Classic1, PRO1, Ultra1, Alfombra1.`,
+        ? `No se reconoce el material en «${invalid[0]}». El nombre debe empezar con Classic, PRO, Ultra, Alfombra o FALTAS (ej. Classic1, FALTAS1).`
+        : `No se reconoce el material en ${invalid.length} archivos. Ejemplos: Classic1, PRO1, Ultra1, Alfombra1, FALTAS1.`,
     )
   } else {
     setError(null)

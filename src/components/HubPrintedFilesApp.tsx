@@ -110,7 +110,7 @@ export function HubPrintedFilesApp({ configured }: HubPrintedFilesAppProps) {
   }, [configured, day])
 
   const counts = useMemo(() => {
-    const c: Record<NmProdMaterialFamily, number> = { classic: 0, pro: 0, ultra: 0, alfombra: 0 }
+    const c: Record<NmProdMaterialFamily, number> = { classic: 0, pro: 0, ultra: 0, alfombra: 0, faltas: 0 }
     for (const r of rows) c[r.material_family] += 1
     return c
   }, [rows])

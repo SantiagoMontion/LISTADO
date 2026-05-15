@@ -153,7 +153,7 @@ export function HubHome({ user, profile, profileError = null, guestMode = false 
                   ▣
                 </span>
                 <span className="nm-hub-tile-title">Subir imágenes</span>
-                <span className="nm-hub-tile-desc">Imágenes por día (Classic, PRO, Ultra, Alfombra)</span>
+                <span className="nm-hub-tile-desc">Imágenes por día (Classic, PRO, Ultra, Alfombra, Faltas)</span>
               </a>
             ) : null}
             {guestMode || canWriteHubTasks(r) ? (
@@ -201,7 +201,7 @@ export function HubHome({ user, profile, profileError = null, guestMode = false 
                   ▣
                 </span>
                 <span className="nm-hub-tile-title">Archivos impresos</span>
-                <span className="nm-hub-tile-desc">Imágenes Classic, PRO, Ultra y Alfombra por día</span>
+                <span className="nm-hub-tile-desc">Imágenes Classic, PRO, Ultra, Alfombra y Faltas por día</span>
               </a>
             ) : null}
             {guestMode || canOpenHubTasks(r) ? (

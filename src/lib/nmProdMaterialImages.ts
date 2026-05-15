@@ -4,13 +4,14 @@ import type { NmProdMaterialFamily, NmProdMaterialImageRow } from './types'
 
 export const NM_PROD_MATERIAL_IMAGE_BUCKET = 'nm-prod-material-images'
 
-export const NM_PROD_MATERIAL_FAMILIES: NmProdMaterialFamily[] = ['classic', 'pro', 'ultra', 'alfombra']
+export const NM_PROD_MATERIAL_FAMILIES: NmProdMaterialFamily[] = ['classic', 'pro', 'ultra', 'alfombra', 'faltas']
 
 export const NM_PROD_MATERIAL_FAMILY_LABEL: Record<NmProdMaterialFamily, string> = {
   classic: 'Classic',
   pro: 'PRO',
   ultra: 'Ultra',
   alfombra: 'Alfombra',
+  faltas: 'Faltas',
 }
 
 function requireClient() {
@@ -19,12 +20,12 @@ function requireClient() {
 }
 
 /**
- * Interpreta el nombre de archivo (sin ruta): Classic1, PRO2, ultra10, Alfombra_3 → familia.
+ * Interpreta el nombre de archivo (sin ruta): Classic1, PRO2, FALTAS1, ultra10, Alfombra_3 → familia.
  * El número final no define el material; solo debe coincidir el prefijo de tipo.
  */
 export function parseMaterialFamilyFromFilename(filename: string): NmProdMaterialFamily | null {
   const base = filename.replace(/.*[/\\]/, '').replace(/\.[^.]+$/i, '').trim()
-  const m = base.match(/^(alfombra|classic|ultra|pro)(?:[\s._-]*\d+)?$/i)
+  const m = base.match(/^(alfombra|classic|faltas|ultra|pro)(?:[\s._-]*\d+)?$/i)
   if (!m) return null
   return m[1].toLowerCase() as NmProdMaterialFamily
 }
