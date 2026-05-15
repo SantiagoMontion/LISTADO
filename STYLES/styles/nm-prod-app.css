@@ -91,36 +91,6 @@
   outline-offset: 2px;
 }
 
-.nm-prod-nav-minimal {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-}
-
-.nm-prod-header-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.nm-prod-btn-home {
-  color: #fff;
-}
-
-.nm-prod-icon-home {
-  display: block;
-  flex-shrink: 0;
-}
-
-.nm-prod-title {
-  font-size: var(--fs-xl);
-  font-weight: var(--font-weight-bold);
-  margin: 0;
-  color: var(--foreground);
-  letter-spacing: -0.02em;
-}
-
 .nm-prod-subtitle {
   margin: 0;
   font-size: var(--fs-sm);

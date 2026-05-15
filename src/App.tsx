@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MaterialTabs } from './components/MaterialTabs'
 import { TaskCard } from './components/TaskCard'
+import { hubTasksReadOnly } from './lib/hubRoles'
+import { HubEntrarRedirect } from './components/HubEntrarRedirect'
+import { HubHome } from './components/HubHome'
+import { HubBrandBar } from './components/HubBrandBar'
+import { HubLoadingScreen } from './components/HubLoadingScreen'
+import { HubRoleBlocked } from './components/HubRoleBlocked'
+import { HubTasksApp } from './components/HubTasksApp'
+import { LoginPage } from './components/LoginPage'
+import { HUB_NAV_EVENT, onHubLinkClick } from './lib/hubNavigate'
 import { normalizeCalendarDate, todayIsoLocal } from './lib/date'
 import { formatSupabaseOrError } from './lib/errors'
 import { parseProductionReport } from './lib/parseReport'
@@ -20,6 +29,7 @@ import {
   toggleTaskPriority,
 } from './lib/supabase'
 import type { MaterialTab, NmProdReport, NmProdTask } from './lib/types'
+import { useAuth } from './lib/useAuth'
 
 const TAB_ORDER: MaterialTab[] = ['classic', 'pro', 'alfombras', 'bordes_rectos', 'otros']
 
@@ -94,6 +104,28 @@ export default function App() {
   const configured = Boolean(
     import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY,
   )
+  const { session, user, profile, profileReady, profileError, ready: authReady } = useAuth()
+  const authEnabled = configured && Boolean(supabase)
+
+  const [navTick, setNavTick] = useState(0)
+  useEffect(() => {
+    const bump = () => setNavTick((n) => n + 1)
+    window.addEventListener('popstate', bump)
+    window.addEventListener(HUB_NAV_EVENT, bump as EventListener)
+    return () => {
+      window.removeEventListener('popstate', bump)
+      window.removeEventListener(HUB_NAV_EVENT, bump as EventListener)
+    }
+  }, [])
+
+  const path = useMemo(() => {
+    let p = (window.location.pathname || '/').toLowerCase()
+    if (p.length > 1 && p.endsWith('/')) p = p.slice(0, -1)
+    return p
+  }, [navTick])
+  const isLogin = path === '/entrar'
+  const isHubTasks = path === '/tareas'
+  const isHubHome = path === '/' || path === ''
 
   const [reports, setReports] = useState<NmProdReport[]>([])
   const [reportId, setReportId] = useState<string | null>(null)
@@ -105,12 +137,17 @@ export default function App() {
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
-  const pathname = window.location.pathname.toLowerCase()
   const mode: 'home' | 'creator' | 'manager' =
-    pathname === '/creador' ? 'creator' : pathname === '/manejador' ? 'manager' : 'home'
-  const canEditTasks = mode === 'manager'
-  const canImportReports = mode === 'creator'
-  const canDeleteReports = mode === 'manager'
+    path === '/creador' ? 'creator' : path === '/manejador' ? 'manager' : 'home'
+  const canEditTasks =
+    mode === 'manager' &&
+    (!authEnabled || !profileReady || !profile || profile.role === 'taller_1')
+  const canImportReports =
+    mode === 'creator' &&
+    (!authEnabled || !profileReady || !profile || profile.role === 'creador_lista')
+  const canDeleteReports =
+    mode === 'manager' &&
+    (!authEnabled || !profileReady || !profile || profile.role === 'taller_1')
   const [selectedDate, setSelectedDate] = useState(todayIsoLocal)
   const [taskFilter, setTaskFilter] = useState<TaskFilter>('all')
   const [completedSearch, setCompletedSearch] = useState('')
@@ -411,6 +448,21 @@ export default function App() {
     setReportId((withPending ?? reportsForSelectedDate[0]).id)
   }, [mode, reportsForSelectedDate, reportId, reportHasPendingById])
 
+  useEffect(() => {
+    if (!authEnabled) {
+      if (isLogin) window.location.replace('/')
+      return
+    }
+    if (!authReady) return
+    if (isLogin && session) window.location.replace('/')
+  }, [authEnabled, authReady, isLogin, session])
+
+  useEffect(() => {
+    if (!authEnabled || !authReady) return
+    if (isLogin) return
+    if (!session) window.location.replace('/entrar')
+  }, [authEnabled, authReady, isLogin, session])
+
   const onImport = async () => {
     setError(null)
     setSuccess(null)
@@ -633,6 +685,78 @@ export default function App() {
     }
   }
 
+  if (authEnabled && !authReady) {
+    return <HubLoadingScreen label="Iniciando…" />
+  }
+
+  if (authEnabled && authReady && isLogin && !session) {
+    return <LoginPage />
+  }
+
+  if (authEnabled && authReady && session && isLogin) {
+    return <HubEntrarRedirect />
+  }
+
+  if (authEnabled && authReady && !isLogin && !session) {
+    return <HubLoadingScreen label="Redirigiendo…" />
+  }
+
+  if (authEnabled && authReady && session && isHubHome && !profileReady) {
+    return <HubLoadingScreen label="Cargando perfil…" />
+  }
+
+  if (authEnabled && authReady && session && isHubHome) {
+    return <HubHome user={user} profile={profile} profileError={profileError} />
+  }
+
+  if (authEnabled && authReady && session && profileReady && profile) {
+    if (path === '/creador' && profile.role !== 'creador_lista') {
+      return (
+        <HubRoleBlocked
+          title="Subir lista"
+          message="Solo el perfil «Creador de lista» puede cargar listas de producción para corte."
+        />
+      )
+    }
+    if (path === '/manejador' && profile.role === 'creador_lista') {
+      return (
+        <HubRoleBlocked
+          title="Lista de corte"
+          message="Tu usuario no usa esta pantalla. La lista de corte la ven Taller 1 y Taller 2."
+        />
+      )
+    }
+  }
+
+  if (authEnabled && authReady && session && isHubTasks && !profileReady) {
+    return <HubLoadingScreen label="Cargando perfil…" />
+  }
+
+  if (authEnabled && authReady && session && isHubTasks) {
+    const hubReadOnly = !profile || hubTasksReadOnly(profile.role)
+    return <HubTasksApp readOnly={hubReadOnly} />
+  }
+
+  if (!authEnabled && isHubHome) {
+    return <HubHome guestMode />
+  }
+
+  if (!authEnabled && isHubTasks) {
+    return (
+      <div className="nm-hub-app">
+        <p className="nm-hub-muted">Configurá Supabase en <code>.env</code> para usar tareas.</p>
+        <a
+          href="/"
+          className="nm-hub-back"
+          style={{ display: 'inline-block', marginTop: '1rem' }}
+          onClick={(e) => onHubLinkClick(e, '/')}
+        >
+          ← Inicio
+        </a>
+      </div>
+    )
+  }
+
   return (
     <div className="nm-prod-app">
       {!configured && (
@@ -643,77 +767,42 @@ export default function App() {
       )}
 
       <header className={`nm-prod-header${mode === 'home' ? ' nm-prod-header--home' : ''}`}>
-        <div className="nm-prod-nav-minimal">
-          <h1 className="nm-prod-title">NOTMID</h1>
-          {mode !== 'home' && (
-            <div className="nm-prod-header-actions">
-              {mode === 'manager' && (
-                <button
-                  type="button"
-                  className="nm-prod-btn nm-prod-btn-icon"
-                  onClick={() => {
-                    setQuickAddInput('')
-                    setQuickAddError(null)
-                    setPendingQuickAdd(true)
-                  }}
-                  disabled={!configured || loading}
-                  aria-label="Agregar medida al día seleccionado"
-                  title="Agregar medida"
-                >
-                  +
-                </button>
-              )}
-              <a href="/" className="nm-prod-btn nm-prod-btn-icon nm-prod-btn-home" aria-label="Inicio" title="Inicio">
-                <svg
-                  className="nm-prod-icon-home"
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M4 10.5 12 4l8 6.5"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M7.5 10v10h9V10"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M10.5 20v-4h3v4"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </a>
-            </div>
-          )}
-        </div>
+        <HubBrandBar
+          context={mode === 'creator' ? 'Lista' : mode === 'manager' ? 'Corte' : undefined}
+          trailing={
+            mode === 'manager' ? (
+              <button
+                type="button"
+                className="nm-hub-brand-bar__btn"
+                onClick={() => {
+                  setQuickAddInput('')
+                  setQuickAddError(null)
+                  setPendingQuickAdd(true)
+                }}
+                disabled={!configured || loading}
+                aria-label="Agregar medida al día seleccionado"
+                title="Agregar medida"
+              >
+                +
+              </button>
+            ) : null
+          }
+        />
       </header>
 
-      {mode === 'home' && (
-        <div className="nm-prod-home-hub">
-          <section className="nm-prod-home-hub-inner" aria-label="Acciones principales">
-            <div className="nm-prod-home-hub-actions">
-              <a href="/creador" className="nm-prod-btn nm-prod-btn-primary nm-prod-home-hub-btn">
-                Subir lista
-              </a>
-              <a href="/manejador" className="nm-prod-btn nm-prod-btn-list-view nm-prod-home-hub-btn">
-                Ver lista
-              </a>
-            </div>
-          </section>
-        </div>
+      {mode === 'home' && !isHubHome && (
+        <section className="nm-prod-section" aria-label="Navegación">
+          <p className="nm-prod-task-meta" style={{ textAlign: 'center' }}>
+            <a
+              href="/"
+              className="nm-prod-btn nm-prod-btn-primary"
+              style={{ display: 'inline-flex', textDecoration: 'none' }}
+              onClick={(e) => onHubLinkClick(e, '/')}
+            >
+              Ir al inicio
+            </a>
+          </p>
+        </section>
       )}
 
       {canImportReports && (

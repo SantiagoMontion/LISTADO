@@ -96,8 +96,11 @@ CREATE POLICY nm_prod_tasks_all_anon
   WITH CHECK (true);
 
 -- -----------------------------------------------------------------------------
--- Realtime: cambios visibles en todos los clientes
+-- Realtime: cambios visibles en todos los clientes (idempotente)
 -- -----------------------------------------------------------------------------
-ALTER PUBLICATION supabase_realtime ADD TABLE public.nm_prod_tasks;
-
--- Si la tabla ya estaba en la publicación, Supabase puede errorar; en ese caso omitir esta línea.
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.nm_prod_tasks;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;

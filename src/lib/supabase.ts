@@ -19,7 +19,15 @@ if (!url || !anon) {
   )
 }
 
-export const supabase: SupabaseClient | null = url && anon ? createClient(url, anon) : null
+export const supabase: SupabaseClient | null = url && anon
+  ? createClient(url, anon, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+      },
+    })
+  : null
 
 function requireSupabase(): SupabaseClient {
   if (!supabase) {

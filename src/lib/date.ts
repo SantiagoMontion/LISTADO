@@ -6,6 +6,24 @@ export function todayIsoLocal(): string {
   return `${y}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 }
 
+/** Suma días a una fecha calendario YYYY-MM-DD (zona local). */
+export function addDaysToIsoDate(isoDate: string, days: number): string {
+  const [y, m, d] = isoDate.split('-').map(Number)
+  const base = new Date(y, m - 1, d)
+  base.setDate(base.getDate() + days)
+  const y2 = base.getFullYear()
+  const m2 = String(base.getMonth() + 1).padStart(2, '0')
+  const d2 = String(base.getDate()).padStart(2, '0')
+  return `${y2}-${m2}-${d2}`
+}
+
+/** Etiqueta corta dd/mm para cabeceras. */
+export function formatDayMonthShort(isoDate: string): string {
+  const parts = isoDate.split('-')
+  if (parts.length < 3) return isoDate
+  return `${Number(parts[2])}/${Number(parts[1])}`
+}
+
 /** YYYY-MM-DD para comparar con `fecha` de Postgres (string, ISO, o Date). */
 export function normalizeCalendarDate(value: unknown): string {
   if (value == null || value === '') return ''

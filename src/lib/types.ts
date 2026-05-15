@@ -38,3 +38,34 @@ export interface ParsedSection {
   rawHeader: string
   items: ParsedLineItem[]
 }
+
+export type HubUserRole = 'creador_lista' | 'taller_1' | 'taller_2'
+
+export interface NmHubProfile {
+  id: string
+  display_name: string
+  role: HubUserRole
+  created_at: string
+  updated_at: string
+}
+
+export type HubImportance = 'low' | 'normal' | 'high' | 'urgent'
+
+export interface NmHubTask {
+  id: string
+  title: string
+  body: string | null
+  importance: HubImportance
+  /** Día calendario (YYYY-MM-DD) al que pertenece la tarea en el taller. */
+  for_date?: string
+  due_at: string | null
+  executed_at: string | null
+  /** Usuario que marcó como hecha (misma fila que executed_at). */
+  executed_by: string | null
+  image_paths: string[]
+  created_by: string | null
+  /** Usuario asignado; ausente o null = sin asignar (requiere columna en BD). */
+  assigned_to?: string | null
+  created_at: string
+  updated_at: string
+}

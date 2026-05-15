@@ -10,7 +10,8 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "auth:set-name": "node scripts/set-user-full-name.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
