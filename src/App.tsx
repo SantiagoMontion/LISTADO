@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MaterialTabs } from './components/MaterialTabs'
 import { TaskCard } from './components/TaskCard'
-import { hubTasksReadOnly } from './lib/hubRoles'
+import { hubTasksReadOnly, canEditManejadorList } from './lib/hubRoles'
 import { HubEntrarRedirect } from './components/HubEntrarRedirect'
 import { HubHome } from './components/HubHome'
 import { HubBrandBar } from './components/HubBrandBar'
@@ -141,7 +141,7 @@ export default function App() {
     path === '/creador' ? 'creator' : path === '/manejador' ? 'manager' : 'home'
   const canEditTasks =
     mode === 'manager' &&
-    (!authEnabled || !profileReady || !profile || profile.role === 'taller_1')
+    (!authEnabled || !profileReady || !profile || canEditManejadorList(profile.role))
   const canImportReports =
     mode === 'creator' &&
     (!authEnabled || !profileReady || !profile || profile.role === 'creador_lista')

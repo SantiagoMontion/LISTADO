@@ -21,6 +21,11 @@ export function canUseManejador(role: HubUserRole | null | undefined): boolean {
   return role === 'taller_1' || role === 'taller_2'
 }
 
+/** Marcar cortes, prioridad y cantidades en /manejador (misma lista que ven Taller 1 y Taller 2). */
+export function canEditManejadorList(role: HubUserRole | null | undefined): boolean {
+  return role === 'taller_1' || role === 'taller_2'
+}
+
 /** Ver pantalla de tareas del hub (lista; escritura según canWriteHubTasks). */
 export function canOpenHubTasks(role: HubUserRole | null | undefined): boolean {
   return role === 'creador_lista' || role === 'taller_1' || role === 'taller_2'

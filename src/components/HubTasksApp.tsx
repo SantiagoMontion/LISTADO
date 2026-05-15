@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import {
   appendTaskImages,
   createHubTask,
@@ -297,6 +297,14 @@ export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
   const [body, setBody] = useState('')
   const [importance, setImportance] = useState<HubImportance>('normal')
   const [files, setFiles] = useState<File[]>([])
+  const taskGalleryInputRef = useRef<HTMLInputElement>(null)
+  const taskCameraInputRef = useRef<HTMLInputElement>(null)
+
+  const appendTaskFilesFromInput = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    const picked = e.target.files ? Array.from(e.target.files) : []
+    if (picked.length > 0) setFiles((prev) => [...prev, ...picked])
+    e.target.value = ''
+  }, [])
 
   const load = useCallback(async () => {
     setError(null)
@@ -333,6 +341,10 @@ export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
   }, [load, readOnly])
 
   useEffect(() => {
+    if (panel === 'create') {
+      setHasOlderPending(false)
+      return
+    }
     let cancelled = false
     fetchHasPendingHubTasksBefore(taskDay)
       .then((v) => {
@@ -344,7 +356,7 @@ export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
     return () => {
       cancelled = true
     }
-  }, [taskDay, tasks])
+  }, [taskDay, tasks, panel])
 
   useEffect(() => {
     const u = new URL(window.location.href)
@@ -528,7 +540,7 @@ export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
             >
               ←
             </button>
-            {hasOlderPending ? (
+            {panel === 'list' && hasOlderPending ? (
               <span className="nm-hub-nav-pending-dot" title="Hay tareas pendientes en días anteriores" aria-hidden="true">
                 !
               </span>
@@ -616,35 +628,46 @@ export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
               Imágenes <span className="nm-hub-label-optional">(opcional)</span>
             </span>
             <input
-              id="nm-hub-t-files"
+              ref={taskGalleryInputRef}
+              id="nm-hub-t-files-gallery"
               className="nm-hub-sr-only"
               type="file"
               accept="image/*"
               multiple
               aria-labelledby="nm-hub-t-files-legend"
-              onChange={(e) => {
-                const picked = e.target.files ? Array.from(e.target.files) : []
-                if (picked.length > 0) setFiles((prev) => [...prev, ...picked])
-                e.target.value = ''
-              }}
+              onChange={appendTaskFilesFromInput}
             />
-            <label htmlFor="nm-hub-t-files" className="nm-hub-image-picker-btn">
-              <span className="nm-hub-image-picker-btn__icons" aria-hidden="true">
-                <svg className="nm-hub-image-picker-btn__pic" viewBox="0 0 24 24" width="44" height="44" fill="none" aria-hidden="true">
-                  <path
-                    d="M4 7a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H6a2 2 0 01-2-2V7z"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinejoin="round"
-                  />
-                  <circle cx="9" cy="10" r="1.35" fill="currentColor" />
-                  <path d="M4 16l4.5-4.5a1 1 0 011.4 0L14 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M14 13l2-2a1 1 0 011.4 0L20 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                <span className="nm-hub-image-picker-btn__plus">+</span>
-              </span>
-              <span className="nm-hub-image-picker-btn__hint">Tocá para agregar · en el celular podés usar la cámara o la galería</span>
-            </label>
+            <input
+              ref={taskCameraInputRef}
+              id="nm-hub-t-files-camera"
+              className="nm-hub-sr-only"
+              type="file"
+              accept="image/*"
+              capture="environment"
+              aria-labelledby="nm-hub-t-files-legend"
+              onChange={appendTaskFilesFromInput}
+            />
+            <div className="nm-hub-image-picker" role="group" aria-labelledby="nm-hub-t-files-legend" aria-describedby="nm-hub-t-files-hint">
+              <div className="nm-hub-image-picker-split">
+                <button
+                  type="button"
+                  className="nm-hub-image-picker-split__btn"
+                  onClick={() => taskGalleryInputRef.current?.click()}
+                >
+                  Galería
+                </button>
+                <button
+                  type="button"
+                  className="nm-hub-image-picker-split__btn"
+                  onClick={() => taskCameraInputRef.current?.click()}
+                >
+                  Cámara
+                </button>
+              </div>
+              <p className="nm-hub-image-picker-hint" id="nm-hub-t-files-hint">
+                Galería: varias a la vez. Cámara: una foto al instante (podés repetir).
+              </p>
+            </div>
             {files.length > 0 ? (
               <ul className="nm-hub-create-file-list" aria-label="Imágenes seleccionadas">
                 {files.map((file, idx) => (

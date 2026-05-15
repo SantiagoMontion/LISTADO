@@ -260,74 +260,54 @@ button.nm-hub-tile {
   position: relative;
 }
 
-.nm-hub-image-picker-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.65rem;
-  width: 100%;
-  min-height: 7.5rem;
+.nm-hub-image-picker {
   margin-top: 0.35rem;
-  padding: 1rem 1rem 1.1rem;
+  padding: 1rem;
   border-radius: 0.85rem;
   border: 2px dashed rgba(255, 255, 255, 0.22);
   background: rgba(30, 34, 44, 0.55);
-  color: rgba(248, 250, 252, 0.92);
-  cursor: pointer;
-  text-align: center;
+}
+
+.nm-hub-image-picker-split {
+  display: flex;
+  gap: 0.65rem;
+  align-items: stretch;
+}
+
+.nm-hub-image-picker-split__btn {
+  flex: 1;
+  min-height: 3.25rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(40, 48, 62, 0.65);
+  color: rgba(248, 250, 252, 0.95);
   font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
   transition:
     background 0.15s ease,
     border-color 0.15s ease;
 }
 
-.nm-hub-image-picker-btn:hover {
-  background: rgba(40, 48, 62, 0.75);
+.nm-hub-image-picker-split__btn:hover {
+  background: rgba(50, 58, 78, 0.85);
   border-color: rgba(96, 165, 250, 0.45);
 }
 
-#nm-hub-t-files:focus-visible + .nm-hub-image-picker-btn {
+.nm-hub-image-picker-split__btn:focus-visible {
   outline: 2px solid rgba(96, 165, 250, 0.85);
   outline-offset: 2px;
 }
 
-.nm-hub-image-picker-btn__icons {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: rgba(147, 197, 253, 0.95);
-}
-
-.nm-hub-image-picker-btn__pic {
-  display: block;
-}
-
-.nm-hub-image-picker-btn__plus {
-  position: absolute;
-  right: -0.35rem;
-  bottom: -0.2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.65rem;
-  height: 1.65rem;
-  border-radius: 50%;
-  background: rgba(59, 130, 246, 0.95);
-  color: #fff;
-  font-size: 1.35rem;
-  font-weight: 700;
-  line-height: 1;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-}
-
-.nm-hub-image-picker-btn__hint {
+.nm-hub-image-picker-hint {
+  margin: 0.75rem 0 0;
   font-size: 0.78rem;
   font-weight: 600;
-  color: rgba(248, 250, 252, 0.72);
+  color: rgba(248, 250, 252, 0.65);
   line-height: 1.35;
-  max-width: 16rem;
+  text-align: center;
 }
 
 .nm-hub-image-count {
