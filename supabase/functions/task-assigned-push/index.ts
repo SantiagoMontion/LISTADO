@@ -20,9 +20,20 @@ const corsHeaders = {
 
 const vapidPublic = Deno.env.get('VAPID_PUBLIC_KEY') ?? ''
 const vapidPrivate = Deno.env.get('VAPID_PRIVATE_KEY') ?? ''
-const vapidSubject = Deno.env.get('VAPID_SUBJECT') ?? 'mailto:hola@notmid.com'
 
-if (vapidPublic && vapidPrivate) {
+/** web-push exige URL; si pusiste solo el mail, agregamos mailto: */
+function normalizeVapidSubject(raw: string): string {
+  const s = raw.trim()
+  if (!s) return 'mailto:hola@notmid.com'
+  if (s.startsWith('mailto:') || s.startsWith('https://') || s.startsWith('http://')) return s
+  if (s.includes('@')) return `mailto:${s}`
+  return s
+}
+
+const vapidSubject = normalizeVapidSubject(Deno.env.get('VAPID_SUBJECT') ?? 'mailto:hola@notmid.com')
+
+function ensureVapidConfigured(): void {
+  if (!vapidPublic || !vapidPrivate) return
   webpush.setVapidDetails(vapidSubject, vapidPublic, vapidPrivate)
 }
 
@@ -72,6 +83,16 @@ Deno.serve(async (req) => {
 
   if (!vapidPublic || !vapidPrivate) {
     return new Response(JSON.stringify({ error: 'VAPID keys missing' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
+  try {
+    ensureVapidConfigured()
+  } catch (e: unknown) {
+    const msg = (e as { message?: string })?.message ?? String(e)
+    return new Response(JSON.stringify({ error: 'VAPID config invalid', detail: msg }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })

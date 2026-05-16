@@ -32,7 +32,9 @@ LIMIT 10;
 -- -----------------------------------------------------------------------------
 -- A) Vercel: VITE_VAPID_PUBLIC_KEY = misma clave pública que en Supabase
 -- B) Supabase → Edge Functions → Secrets:
---      VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT=mailto:tu@email.com
+--      VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY
+--      VAPID_SUBJECT=mailto:santiagomontion@gmail.com   ← OBLIGATORIO el prefijo mailto:
+--      MAL:  VAPID_SUBJECT=santiagomontion@gmail.com     (rompe la función; error en logs)
 -- C) supabase functions deploy task-assigned-push
 -- D) Database → Webhooks → INSERT nm_hub_tasks → URL de la función
 --      Header: Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY>
