@@ -133,9 +133,6 @@ export function HubPushNotificationSetup({ userId, variant = 'default' }: Props)
             {busy ? 'Activando…' : 'Permitir avisos cuando te asignen tareas'}
           </button>
         )}
-        <p className="nm-hub-push-footer__muted">
-          El aviso llega al celular del operador asignado (Dani, Juancruz, etc.), no a quien crea la tarea.
-        </p>
         {permission === 'denied' ? (
           <p className="nm-hub-push-footer__warn" role="status">
             El navegador bloqueó los avisos (en incógnito casi nunca aparece el cartel). Abrí el sitio en una
