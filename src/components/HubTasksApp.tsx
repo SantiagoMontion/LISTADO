@@ -184,7 +184,7 @@ function AssigneeRoleSelect({
         onClick={() => !disabled && setOpen((o) => !o)}
       >
         <span className="importance-dropdown__value">
-          {value ? HUB_TASK_ASSIGNEE_LABEL[value] : 'Elegí a quién va la tarea'}
+          {value ? HUB_TASK_ASSIGNEE_LABEL[value] : 'Elegí a quién va'}
         </span>
         <svg
           className="importance-dropdown__chevron"
@@ -978,7 +978,7 @@ export function HubTasksApp({
 
           <div className="field-group">
             <label className="field-label" htmlFor="nm-hub-t-assign">
-              Asignar a
+              Asignar a:
             </label>
             <AssigneeRoleSelect
               id="nm-hub-t-assign"
