@@ -5,7 +5,7 @@ import {
   getNotificationPermission,
   isHubPushEnabledLocally,
   shouldNotifyUserForNewTask,
-  showLocalTaskAssignedNotification,
+  showTaskAssignedNotification,
 } from '../lib/hubPushNotifications'
 import type { HubUserRole } from '../lib/types'
 
@@ -48,7 +48,7 @@ export function HubTaskPushListener({ profileRole, profileId, isAdmin }: Props) 
           const title = typeof row.title === 'string' ? row.title : 'Nueva tarea'
           const id = typeof row.id === 'string' ? row.id : String(Date.now())
           const forDate = typeof row.for_date === 'string' ? row.for_date : undefined
-          showLocalTaskAssignedNotification({ title, taskId: id, forDate })
+          void showTaskAssignedNotification({ title, taskId: id, forDate })
         })
         .subscribe()
     }

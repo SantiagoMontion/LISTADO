@@ -123,10 +123,9 @@ Deno.serve(async (req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   )
 
-  const { data: profiles, error: profErr } = await supabase
-    .from('nm_hub_profiles')
-    .select('id')
-    .eq('role', assignedRole)
+  const roleNorm = assignedRole.trim().toLowerCase()
+
+  const { data: profiles, error: profErr } = await supabase.from('nm_hub_profiles').select('id, role')
 
   if (profErr) {
     return new Response(JSON.stringify({ error: profErr.message }), {
@@ -135,7 +134,13 @@ Deno.serve(async (req) => {
     })
   }
 
-  const userIds = (profiles ?? []).map((p) => p.id as string).filter((id) => id && id !== createdBy)
+  const userIds = (profiles ?? [])
+    .filter((p) => {
+      const r = typeof p.role === 'string' ? p.role.trim().toLowerCase() : ''
+      return r === roleNorm
+    })
+    .map((p) => p.id as string)
+    .filter((id) => id && id !== createdBy)
   if (userIds.length === 0) {
     return new Response(JSON.stringify({ sent: 0, reason: 'no-target-users', assignedRole }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

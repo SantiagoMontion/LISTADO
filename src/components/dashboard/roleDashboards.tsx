@@ -1,7 +1,6 @@
 import type { HubDashboardStats } from '../../lib/hubDashboardStats'
 import { hubDashboardLinks } from '../../lib/hubPermissions'
 import type { HubPermissions } from '../../lib/hubPermissions'
-import { formatDayMonthShort } from '../../lib/date'
 import { DashboardCard } from './DashboardCard'
 import { DashboardStatusSummary } from './DashboardStatusSummary'
 interface RoleDashboardProps {
@@ -21,13 +20,7 @@ export function OnlineOperatorDashboard({ stats }: RoleDashboardProps) {
         ]}
       />
       <nav className="cards-container-rebel" aria-label="Panel clientes operator">
-        <DashboardCard
-          href={links.createTask}
-          accent="create"
-          icon="✎"
-          title="Crear tarea"
-          description="Alta rápida con destinatario obligatorio"
-        />
+        <DashboardCard href={links.createTask} accent="create" icon="✎" title="Crear tarea" />
         <DashboardCard
           href={links.pendingTasks}
           accent="pending"
@@ -35,7 +28,6 @@ export function OnlineOperatorDashboard({ stats }: RoleDashboardProps) {
           stat={stats.pendingHubTasks}
           statLabel="pendientes"
           title="Ver tareas pendientes"
-          description="Mis tareas del día"
         />
         <DashboardCard
           href={links.completedTasks}
@@ -44,7 +36,6 @@ export function OnlineOperatorDashboard({ stats }: RoleDashboardProps) {
           stat={stats.completedHubTasksToday}
           statLabel="completadas"
           title="Tareas completadas"
-          description="Histórico del día"
         />
       </nav>
     </>
@@ -63,20 +54,8 @@ export function AdminDashboard({ stats }: RoleDashboardProps) {
         ]}
       />
       <nav className="cards-container-rebel" aria-label="Panel administración">
-        <DashboardCard
-          href={links.createTask}
-          accent="create"
-          icon="✎"
-          title="Crear tarea"
-          description="Nueva tarea con detalle e imágenes"
-        />
-        <DashboardCard
-          href={links.uploadList}
-          accent="create"
-          icon="↑"
-          title="Subir lista"
-          description="Cargar reporte de producción del día"
-        />
+        <DashboardCard href={links.createTask} accent="create" icon="✎" title="Crear tarea" />
+        <DashboardCard href={links.uploadList} accent="create" icon="↑" title="Subir lista" />
         <DashboardCard
           href={links.cutList}
           accent="pending"
@@ -84,7 +63,6 @@ export function AdminDashboard({ stats }: RoleDashboardProps) {
           stat={stats.pendingCutItems}
           statLabel="por cortar"
           title="Lista de corte"
-          description={`${formatDayMonthShort(stats.day)} · estado del taller`}
         />
         <DashboardCard
           href={links.pendingTasks}
@@ -93,15 +71,8 @@ export function AdminDashboard({ stats }: RoleDashboardProps) {
           stat={stats.urgentHubTasks}
           statLabel="urgentes"
           title="Tareas pendientes"
-          description="Prioridad y seguimiento"
         />
-        <DashboardCard
-          href={links.printedFiles}
-          accent="files"
-          icon="▣"
-          title="Archivos impresos"
-          description="Imágenes por material y día"
-        />
+        <DashboardCard href={links.printedFiles} accent="files" icon="▣" title="Archivos impresos" />
         <DashboardCard
           href={links.completedTasks}
           accent="completed"
@@ -109,7 +80,6 @@ export function AdminDashboard({ stats }: RoleDashboardProps) {
           stat={stats.completedHubTasksToday}
           statLabel="hechas hoy"
           title="Tareas completadas"
-          description="Historial del día"
         />
       </nav>
     </>
@@ -129,24 +99,8 @@ export function ListaCreatorDashboard({ stats }: RoleDashboardProps) {
         ]}
       />
       <nav className="cards-container-rebel" aria-label="Panel PDF creator">
-        <DashboardCard
-          href={links.uploadList}
-          accent="create"
-          icon="↑"
-          title="Subir lista"
-          description={
-            stats.hasListForDay
-              ? `Lista del ${formatDayMonthShort(stats.day)} cargada · podés actualizar`
-              : 'Pegar reporte y guardar en el día'
-          }
-        />
-        <DashboardCard
-          href={links.uploadImages}
-          accent="files"
-          icon="▣"
-          title="Subir imágenes"
-          description="Classic, PRO, Ultra, Alfombra y Faltas"
-        />
+        <DashboardCard href={links.uploadList} accent="create" icon="↑" title="Subir lista" />
+        <DashboardCard href={links.uploadImages} accent="files" icon="▣" title="Subir imágenes" />
         <DashboardCard
           href={links.cutList}
           accent="pending"
@@ -154,15 +108,8 @@ export function ListaCreatorDashboard({ stats }: RoleDashboardProps) {
           stat={stats.pendingCutItems}
           statLabel="pendientes en corte"
           title="Ver lista de corte"
-          description="Solo lectura del avance del taller"
         />
-        <DashboardCard
-          href={links.createTask}
-          accent="create"
-          icon="✎"
-          title="Crear tarea"
-          description="Asignación obligatoria a operador/cliente"
-        />
+        <DashboardCard href={links.createTask} accent="create" icon="✎" title="Crear tarea" />
         <DashboardCard
           href={links.pendingTasks}
           accent="pending"
@@ -170,7 +117,6 @@ export function ListaCreatorDashboard({ stats }: RoleDashboardProps) {
           stat={stats.pendingHubTasks}
           statLabel="pendientes hub"
           title="Tareas del taller"
-          description="Mis tareas · asignadas"
         />
         <DashboardCard
           href={links.completedTasks}
@@ -179,7 +125,6 @@ export function ListaCreatorDashboard({ stats }: RoleDashboardProps) {
           stat={stats.completedHubTasksToday}
           statLabel="completadas"
           title="Tareas completadas"
-          description="Cerradas este día"
         />
       </nav>
     </>
@@ -198,13 +143,7 @@ export function Taller1Dashboard({ stats }: RoleDashboardProps) {
         ]}
       />
       <nav className="cards-container-rebel" aria-label="Panel supervisor">
-        <DashboardCard
-          href={links.createTask}
-          accent="create"
-          icon="✎"
-          title="Crear tarea"
-          description="Alta rápida con detalle e imágenes"
-        />
+        <DashboardCard href={links.createTask} accent="create" icon="✎" title="Crear tarea" />
         <DashboardCard
           href={links.pendingTasks}
           accent="pending"
@@ -212,15 +151,8 @@ export function Taller1Dashboard({ stats }: RoleDashboardProps) {
           stat={stats.pendingHubTasks}
           statLabel="pendientes"
           title="Ver tareas pendientes"
-          description="Listado y prioridad del día"
         />
-        <DashboardCard
-          href={links.printedFiles}
-          accent="files"
-          icon="▣"
-          title="Ver archivos impresos"
-          description="Referencias Classic, PRO, Ultra, Alfombra, Faltas"
-        />
+        <DashboardCard href={links.printedFiles} accent="files" icon="▣" title="Ver archivos impresos" />
         <DashboardCard
           href={links.completedTasks}
           accent="completed"
@@ -228,7 +160,6 @@ export function Taller1Dashboard({ stats }: RoleDashboardProps) {
           stat={stats.completedHubTasksToday}
           statLabel="completadas"
           title="Tareas completadas"
-          description="Quién cerró cada tarea"
         />
       </nav>
     </>
@@ -249,7 +180,6 @@ export function Taller2Dashboard({ stats }: RoleDashboardProps) {
         stat={stats.pendingCutItems}
         statLabel="ítems por cortar"
         title="Lista de corte"
-        description={`Día ${formatDayMonthShort(stats.day)} · marcar cortes al avanzar`}
       />
     </nav>
   )

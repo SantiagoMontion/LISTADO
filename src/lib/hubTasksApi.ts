@@ -161,10 +161,17 @@ export async function deleteHubTask(taskId: string): Promise<void> {
   if (error) throw error
 }
 
-/** Dispara push a quien tenga el rol asignado (Edge Function; respaldo del webhook DB). */
-export async function notifyTaskAssignedPush(task: NmHubTask): Promise<void> {
+export type TaskAssignedPushResult = {
+  ok: boolean
+  sent?: number
+  reason?: string
+  detail?: string
+}
+
+/** Dispara push al celular del rol asignado (Edge Function; también conviene webhook DB). */
+export async function notifyTaskAssignedPush(task: NmHubTask): Promise<TaskAssignedPushResult> {
   const sb = requireClient()
-  const { error } = await sb.functions.invoke('task-assigned-push', {
+  const { data, error } = await sb.functions.invoke('task-assigned-push', {
     body: {
       type: 'INSERT',
       table: 'nm_hub_tasks',
@@ -177,9 +184,20 @@ export async function notifyTaskAssignedPush(task: NmHubTask): Promise<void> {
       },
     },
   })
+
   if (error) {
     console.warn('[nm-hub] aviso push:', error.message)
+    return { ok: false, detail: error.message }
   }
+
+  const payload = data as { sent?: number; reason?: string; errors?: string[] } | null
+  const sent = typeof payload?.sent === 'number' ? payload.sent : 0
+  if (sent > 0) return { ok: true, sent }
+
+  const reason = payload?.reason ?? 'unknown'
+  const errHint = payload?.errors?.join('; ')
+  console.warn('[nm-hub] aviso push sin envíos:', reason, errHint ?? '')
+  return { ok: false, sent: 0, reason, detail: errHint }
 }
 
 export async function updateHubTaskExecuted(id: string, executed: boolean): Promise<void> {

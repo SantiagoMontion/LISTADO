@@ -8,6 +8,7 @@ import {
   getHubPushUnsupportedHint,
   getNotificationPermission,
   isHubPushEnabledLocally,
+  verifyHubPushSubscriptionSaved,
 } from '../lib/hubPushNotifications'
 
 type Props = {
@@ -22,6 +23,7 @@ export function HubPushNotificationSetup({ userId, variant = 'default' }: Props)
   const [enabled, setEnabled] = useState(isHubPushEnabledLocally())
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [savedInDb, setSavedInDb] = useState<boolean | null>(null)
 
   const refresh = useCallback(() => {
     setPermission(getNotificationPermission())
@@ -31,6 +33,20 @@ export function HubPushNotificationSetup({ userId, variant = 'default' }: Props)
   useEffect(() => {
     refresh()
   }, [refresh])
+
+  useEffect(() => {
+    if (!userId || permission !== 'granted' || !enabled) {
+      setSavedInDb(null)
+      return
+    }
+    let cancelled = false
+    void verifyHubPushSubscriptionSaved(userId).then((ok) => {
+      if (!cancelled) setSavedInDb(ok)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [userId, permission, enabled])
 
   const onEnable = async () => {
     setBusy(true)
@@ -62,7 +78,7 @@ export function HubPushNotificationSetup({ userId, variant = 'default' }: Props)
     }
   }
 
-  const active = permission === 'granted' && enabled
+  const active = permission === 'granted' && enabled && savedInDb !== false
 
   const iosSteps =
     support.reason === 'ios-pwa-required' || support.reason === 'ios-pwa-unsupported'
@@ -87,9 +103,14 @@ export function HubPushNotificationSetup({ userId, variant = 'default' }: Props)
 
     return (
       <footer className="nm-hub-push-footer" aria-label="Notificaciones de tareas asignadas">
+        {permission === 'granted' && enabled && savedInDb === false ? (
+          <p className="nm-hub-push-footer__warn" role="status">
+            Permiso OK pero falta guardar en el servidor. Tocá «Activar» de nuevo.
+          </p>
+        ) : null}
         {active ? (
           <p className="nm-hub-push-footer__row">
-            <span className="nm-hub-push-footer__ok">Avisos activos</span>
+            <span className="nm-hub-push-footer__ok">Avisos activos en este celular</span>
             <span className="nm-hub-push-footer__sep" aria-hidden="true">
               ·
             </span>
@@ -112,6 +133,9 @@ export function HubPushNotificationSetup({ userId, variant = 'default' }: Props)
             {busy ? 'Activando…' : 'Permitir avisos cuando te asignen tareas'}
           </button>
         )}
+        <p className="nm-hub-push-footer__muted">
+          El aviso llega al celular del operador asignado (Dani, Juancruz, etc.), no a quien crea la tarea.
+        </p>
         {permission === 'denied' ? (
           <p className="nm-hub-push-footer__warn" role="status">
             El navegador bloqueó los avisos (en incógnito casi nunca aparece el cartel). Abrí el sitio en una
@@ -157,8 +181,8 @@ export function HubPushNotificationSetup({ userId, variant = 'default' }: Props)
           <p className="nm-hub-push-setup__title">Avisos en el celular</p>
           {variant !== 'compact' ? (
             <p className="nm-hub-muted nm-hub-push-setup__hint">
-              Cuando te asignen una tarea, sonará una notificación. En Android: Chrome. En iPhone: solo con Safari →
-              agregar a pantalla de inicio → abrir desde el ícono.
+              Activá acá en el celular de quien recibe las tareas (Dani, Juancruz, Spesia o vos si sos admin).
+              Android: Chrome. iPhone: Safari → agregar a pantalla de inicio → abrir desde el ícono.
             </p>
           ) : null}
         </div>

@@ -1,7 +1,8 @@
 import { supabase } from './supabase'
 import type { HubUserRole } from './types'
 
-const SW_URL = '/sw.js'
+const SW_SCRIPT = '/sw.js'
+const SW_SCOPE = '/'
 const LS_PUSH_ENABLED = 'nm_hub_push_enabled'
 export const HUB_PUSH_ENABLED_EVENT = 'nm-hub-push-enabled'
 
@@ -142,9 +143,20 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 }
 
 async function getServiceWorkerRegistration(): Promise<ServiceWorkerRegistration> {
-  const existing = await navigator.serviceWorker.getRegistration(SW_URL)
-  if (existing) return existing
-  return navigator.serviceWorker.register(SW_URL, { scope: '/' })
+  const existing =
+    (await navigator.serviceWorker.getRegistration(SW_SCOPE)) ??
+    (await navigator.serviceWorker.getRegistration())
+  if (existing?.active) return existing
+  return navigator.serviceWorker.register(SW_SCRIPT, { scope: SW_SCOPE })
+}
+
+/** Registra el SW al cargar la app (mejora entrega en Android/iOS PWA). */
+export function prefetchHubPushServiceWorker(): void {
+  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return
+  if (!import.meta.env.VITE_VAPID_PUBLIC_KEY?.trim()) return
+  void getServiceWorkerRegistration().catch(() => {
+    /* ignore */
+  })
 }
 
 async function waitForActiveWorker(reg: ServiceWorkerRegistration): Promise<ServiceWorkerRegistration> {
@@ -192,13 +204,29 @@ export async function subscribeHubPush(userId: string): Promise<void> {
     { onConflict: 'endpoint' },
   )
   if (error) throw error
+
+  const saved = await verifyHubPushSubscriptionSaved(userId)
+  if (!saved) {
+    throw new Error('No se pudo guardar la suscripción push. Revisá la conexión e intentá de nuevo.')
+  }
+
   setHubPushEnabledLocally(true)
   dispatchPushEnabledEvent()
 }
 
+export async function verifyHubPushSubscriptionSaved(userId: string): Promise<boolean> {
+  if (!supabase) return false
+  const { count, error } = await supabase
+    .from('nm_hub_push_subscriptions')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+  if (error) return false
+  return (count ?? 0) > 0
+}
+
 export async function unsubscribeHubPush(userId: string): Promise<void> {
   if (!supabase) return
-  const reg = await navigator.serviceWorker.getRegistration(SW_URL)
+  const reg = await getServiceWorkerRegistration()
   const sub = reg ? await reg.pushManager.getSubscription() : null
   if (sub) {
     await supabase.from('nm_hub_push_subscriptions').delete().eq('endpoint', sub.endpoint)
@@ -257,23 +285,36 @@ export function playTaskAssignedSound(): void {
   }
 }
 
-export function showLocalTaskAssignedNotification(opts: {
+/** Muestra aviso en el sistema (vía SW; en celular `new Notification` casi no sirve). */
+export async function showTaskAssignedNotification(opts: {
   title: string
   taskId: string
   forDate?: string
-}): void {
+}): Promise<void> {
   if (typeof window === 'undefined' || Notification.permission !== 'granted') return
+  if (!isHubPushEnabledLocally()) return
 
   const day = opts.forDate?.match(/^\d{4}-\d{2}-\d{2}$/) ? opts.forDate : ''
   const url = day ? `/tareas?d=${day}#nm-hub-tareas-lista` : '/tareas#nm-hub-tareas-lista'
+  const body = opts.title.trim() || 'Tarea del taller'
+  const tag = `nm-hub-task-${opts.taskId}`
 
   playTaskAssignedSound()
 
   try {
-    const n = new Notification('Nueva tarea asignada', {
-      body: opts.title.trim() || 'Tarea del taller',
-      tag: `nm-hub-task-${opts.taskId}`,
-    })
+    const reg = await navigator.serviceWorker.ready
+    await reg.showNotification('Nueva tarea asignada', {
+      body,
+      tag,
+      data: { url },
+    } as NotificationOptions)
+    return
+  } catch {
+    /* fallback escritorio */
+  }
+
+  try {
+    const n = new Notification('Nueva tarea asignada', { body, tag })
     n.onclick = () => {
       window.focus()
       window.location.href = url
@@ -282,6 +323,15 @@ export function showLocalTaskAssignedNotification(opts: {
   } catch {
     /* ignore */
   }
+}
+
+/** @deprecated Usar showTaskAssignedNotification */
+export function showLocalTaskAssignedNotification(opts: {
+  title: string
+  taskId: string
+  forDate?: string
+}): void {
+  void showTaskAssignedNotification(opts)
 }
 
 /** ¿Debe avisar a este usuario por una fila INSERT de nm_hub_tasks? */

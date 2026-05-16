@@ -14,7 +14,6 @@ const ACCENT_CLASS: Record<DashboardCardAccent, string> = {
 interface DashboardCardProps {
   href: string
   title: string
-  description: string
   icon: ReactNode
   stat?: string | number | null
   statLabel?: string
@@ -24,7 +23,6 @@ interface DashboardCardProps {
 export function DashboardCard({
   href,
   title,
-  description,
   icon,
   stat,
   statLabel,
@@ -45,7 +43,6 @@ export function DashboardCard({
         </span>
         <div className="card-info-rebel">
           <span className="card-title-rebel">{title}</span>
-          <span className="card-description-rebel">{description}</span>
         </div>
       </div>
       {showStat ? (
