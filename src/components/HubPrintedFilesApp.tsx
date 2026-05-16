@@ -25,9 +25,10 @@ function readDayFromUrl(): string {
 
 interface HubPrintedFilesAppProps {
   configured: boolean
+  adminSignOut?: boolean
 }
 
-export function HubPrintedFilesApp({ configured }: HubPrintedFilesAppProps) {
+export function HubPrintedFilesApp({ configured, adminSignOut = false }: HubPrintedFilesAppProps) {
   const [day, setDay] = useState(() =>
     typeof window !== 'undefined' ? readDayFromUrl() || todayIsoLocal() : todayIsoLocal(),
   )
@@ -213,6 +214,7 @@ export function HubPrintedFilesApp({ configured }: HubPrintedFilesAppProps) {
       <header className="dashboard-navbar dashboard-navbar-clean nm-hub-header">
         <HubBrandBar
           integratedDashboard
+          adminSignOut={adminSignOut}
           integratedSubtitle="Archivos impresos"
           integratedSubtitleTone="muted"
           trailing={

@@ -3,20 +3,85 @@ import type { HubUserRole } from './types'
 
 const SW_URL = '/sw.js'
 const LS_PUSH_ENABLED = 'nm_hub_push_enabled'
+export const HUB_PUSH_ENABLED_EVENT = 'nm-hub-push-enabled'
+
+function dispatchPushEnabledEvent() {
+  try {
+    window.dispatchEvent(new CustomEvent(HUB_PUSH_ENABLED_EVENT))
+  } catch {
+    /* ignore */
+  }
+}
+
+export type HubPushSupportReason =
+  | 'no-window'
+  | 'no-vapid'
+  | 'browser'
+  | 'safari-ios-pwa'
+  | 'safari-mac-old'
 
 export type HubPushSupport = {
   supported: boolean
-  reason?: string
+  reason?: HubPushSupportReason
+}
+
+function isSafariBrowser(): boolean {
+  const ua = navigator.userAgent
+  return /Safari/i.test(ua) && !/Chrome|Chromium|CriOS|Edg|OPR|Firefox|FxiOS/i.test(ua)
+}
+
+function isIosDevice(): boolean {
+  return (
+    /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  )
+}
+
+function isStandaloneDisplay(): boolean {
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    (navigator as Navigator & { standalone?: boolean }).standalone === true
+  )
+}
+
+/** Texto de ayuda cuando push no está disponible en este navegador. */
+export function getHubPushUnsupportedHint(reason?: HubPushSupportReason): string {
+  switch (reason) {
+    case 'no-vapid':
+      return 'Avisos no configurados en el servidor (falta VITE_VAPID_PUBLIC_KEY en el deploy).'
+    case 'safari-ios-pwa':
+      return 'En iPhone/iPad: Compartir → «Agregar a pantalla de inicio». Abrí la app desde el ícono, andá al inicio y activá avisos ahí. En Safari normal (pestaña) iOS no permite push.'
+    case 'safari-mac-old':
+      return 'En Mac necesitás macOS 13+ y Safari 16+. Luego: Safari → Ajustes para este sitio web → Notificaciones → Permitir.'
+    case 'browser':
+      return 'Este navegador no admite avisos push. Probá Chrome, Edge o Safari actualizado.'
+    default:
+      return 'Avisos no disponibles en este navegador.'
+  }
 }
 
 export function getHubPushSupport(): HubPushSupport {
   if (typeof window === 'undefined') return { supported: false, reason: 'no-window' }
-  if (!('Notification' in window) || !('serviceWorker' in navigator)) {
-    return { supported: false, reason: 'browser' }
-  }
   if (!import.meta.env.VITE_VAPID_PUBLIC_KEY?.trim()) {
     return { supported: false, reason: 'no-vapid' }
   }
+
+  const hasNotification = 'Notification' in window
+  const hasServiceWorker = 'serviceWorker' in navigator
+  const hasPushManager = 'PushManager' in window
+  const safari = isSafariBrowser()
+  const ios = isIosDevice()
+  const standalone = isStandaloneDisplay()
+
+  if (ios && safari && !standalone) {
+    return { supported: false, reason: 'safari-ios-pwa' }
+  }
+
+  if (!hasNotification || !hasServiceWorker || !hasPushManager) {
+    if (safari) return { supported: false, reason: 'safari-mac-old' }
+    return { supported: false, reason: 'browser' }
+  }
+
   return { supported: true }
 }
 
@@ -103,6 +168,7 @@ export async function subscribeHubPush(userId: string): Promise<void> {
   )
   if (error) throw error
   setHubPushEnabledLocally(true)
+  dispatchPushEnabledEvent()
 }
 
 export async function unsubscribeHubPush(userId: string): Promise<void> {
@@ -116,17 +182,14 @@ export async function unsubscribeHubPush(userId: string): Promise<void> {
     await supabase.from('nm_hub_push_subscriptions').delete().eq('user_id', userId)
   }
   setHubPushEnabledLocally(false)
+  dispatchPushEnabledEvent()
 }
 
 /** Pide permiso al SO y registra push + SW. */
 export async function enableHubPushNotifications(userId: string): Promise<NotificationPermission> {
   const support = getHubPushSupport()
   if (!support.supported) {
-    throw new Error(
-      support.reason === 'no-vapid'
-        ? 'Avisos no configurados en el servidor (clave VAPID).'
-        : 'Este navegador no admite notificaciones push.',
-    )
+    throw new Error(getHubPushUnsupportedHint(support.reason))
   }
 
   const perm = await Notification.requestPermission()
@@ -201,11 +264,9 @@ export function shouldNotifyUserForNewTask(
   row: Record<string, unknown>,
   profileRole: HubUserRole,
   profileId: string,
-  isAdmin: boolean,
 ): boolean {
   const assigned = typeof row.assigned_role === 'string' ? row.assigned_role : ''
   const createdBy = typeof row.created_by === 'string' ? row.created_by : null
   if (createdBy === profileId) return false
-  if (isAdmin) return assigned.length > 0
   return assigned === profileRole
 }

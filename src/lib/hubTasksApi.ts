@@ -7,7 +7,7 @@ const BUCKET = 'nm-hub-task-images'
 
 function normalizeAssignedRole(raw: unknown): HubTaskAssignableRole {
   const s = typeof raw === 'string' ? raw : ''
-  if (s === 'online_1' || s === 'taller_1' || s === 'lista_creator') return s
+  if (s === 'online_1' || s === 'taller_1' || s === 'lista_creator' || s === 'admin') return s
   return 'taller_1'
 }
 
@@ -111,6 +111,27 @@ export async function createHubTask(input: {
 
   if (error) throw error
   return coerceHubTask(data as Record<string, unknown>)
+}
+
+/** Dispara push a quien tenga el rol asignado (Edge Function; respaldo del webhook DB). */
+export async function notifyTaskAssignedPush(task: NmHubTask): Promise<void> {
+  const sb = requireClient()
+  const { error } = await sb.functions.invoke('task-assigned-push', {
+    body: {
+      type: 'INSERT',
+      table: 'nm_hub_tasks',
+      record: {
+        id: task.id,
+        title: task.title,
+        for_date: task.for_date,
+        assigned_role: task.assigned_role,
+        created_by: task.created_by ?? null,
+      },
+    },
+  })
+  if (error) {
+    console.warn('[nm-hub] aviso push:', error.message)
+  }
 }
 
 export async function updateHubTaskExecuted(id: string, executed: boolean): Promise<void> {

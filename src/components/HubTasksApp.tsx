@@ -2,6 +2,7 @@ import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState, type
 import {
   appendTaskImages,
   createHubTask,
+  notifyTaskAssignedPush,
   fetchHasPendingHubTasksBefore,
   fetchHubProfileDisplayNames,
   fetchHubTasksCompleted,
@@ -14,10 +15,11 @@ import { addDaysToIsoDate, formatDayMonthShort, normalizeCalendarDate, todayIsoL
 import { supabase } from '../lib/supabase'
 import type { HubImportance, HubUserRole, NmHubTask } from '../lib/types'
 import { HubBrandBar } from './HubBrandBar'
+import { HubPushNotificationSetup } from './HubPushNotificationSetup'
 import { HUB_NAV_EVENT } from '../lib/hubNavigate'
 import {
+  getTaskAssigneeRolesForCreator,
   HUB_TASK_ASSIGNEE_LABEL,
-  HUB_TASK_ASSIGNEE_ROLES,
   type HubTaskAssignableRole,
 } from '../lib/hubTaskAssignable'
 
@@ -136,11 +138,13 @@ function AssigneeRoleSelect({
   id,
   value,
   onChange,
+  roles,
   disabled = false,
 }: {
   id: string
   value: HubTaskAssignableRole | null
   onChange: (v: HubTaskAssignableRole) => void
+  roles: readonly HubTaskAssignableRole[]
   disabled?: boolean
 }) {
   const [open, setOpen] = useState(false)
@@ -212,7 +216,7 @@ function AssigneeRoleSelect({
           role="listbox"
           aria-labelledby={id}
         >
-          {HUB_TASK_ASSIGNEE_ROLES.map((k) => (
+          {roles.map((k) => (
             <button
               key={k}
               type="button"
@@ -249,8 +253,8 @@ function isDelegatedByMe(t: NmHubTask, myRole: HubUserRole, myId: string): boole
   return t.assigned_role !== myRole
 }
 
-function taskInAssignedInbox(t: NmHubTask, myRole: HubUserRole, isAdmin: boolean): boolean {
-  if (isAdmin) return true
+/** Bandeja «Mis tareas»: solo lo asignado a mi rol (incl. admin → assigned_role admin). */
+function taskInAssignedInbox(t: NmHubTask, myRole: HubUserRole): boolean {
   return t.assigned_role === myRole
 }
 /** Hash explícito gana; si no hay hash útil, `?hub=crear` (desde inicio) abre el formulario aunque el fragmento se pierda. */
@@ -750,9 +754,11 @@ export function HubTasksApp({
     }
   }, [syncUrlToState])
 
+  const assigneeRolesCreate = useMemo(() => getTaskAssigneeRolesForCreator(isAdmin), [isAdmin])
+
   const inboxPendingTasks = useMemo(
-    () => rawPending.filter((t) => !t.executed_at && taskInAssignedInbox(t, profileRole, isAdmin)),
-    [rawPending, profileRole, isAdmin],
+    () => rawPending.filter((t) => !t.executed_at && taskInAssignedInbox(t, profileRole)),
+    [rawPending, profileRole],
   )
   /** Tareas que asigné a otro rol (pendientes y completadas por el destinatario). */
   const assignedByMeTasks = useMemo(() => {
@@ -766,10 +772,10 @@ export function HubTasksApp({
     () =>
       rawCompleted.filter((t) => {
         if (!t.executed_at) return false
-        if (isAdmin) return !isDelegatedByMe(t, profileRole, profileId)
-        return taskInAssignedInbox(t, profileRole, false)
+        if (isDelegatedByMe(t, profileRole, profileId)) return false
+        return taskInAssignedInbox(t, profileRole)
       }),
-    [rawCompleted, profileRole, profileId, isAdmin],
+    [rawCompleted, profileRole, profileId],
   )
 
   const scopedForSorting = useMemo(() => {
@@ -799,7 +805,7 @@ export function HubTasksApp({
       if (readOnly) return false
       if (isAdmin) return true
       if (listScope === 'sent') return false
-      return taskInAssignedInbox(t, profileRole, false)
+      return taskInAssignedInbox(t, profileRole)
     },
     [readOnly, isAdmin, listScope, profileRole],
   )
@@ -854,6 +860,7 @@ export function HubTasksApp({
       if (files.length > 0) {
         await appendTaskImages(created.id, files)
       }
+      void notifyTaskAssignedPush(created)
       setTitle('')
       setBody('')
       setImportance('normal')
@@ -912,6 +919,7 @@ export function HubTasksApp({
       <header className="nm-hub-header dashboard-navbar">
         <HubBrandBar
           integratedDashboard
+          adminSignOut={isAdmin}
           integratedSubtitle={integratedSubtitle}
           integratedSubtitleTone={integratedSubtitleTone}
           trailing={
@@ -1035,6 +1043,7 @@ export function HubTasksApp({
             </label>
             <AssigneeRoleSelect
               id="nm-hub-t-assign"
+              roles={assigneeRolesCreate}
               value={assignedRoleCreate}
               onChange={(v) => setAssignedRoleCreate(v)}
               disabled={busy}
@@ -1287,6 +1296,8 @@ export function HubTasksApp({
           </ul>
         </section>
       ) : null}
+
+      {!readOnly ? <HubPushNotificationSetup userId={profileId} variant="footer" /> : null}
     </div>
   )
 }

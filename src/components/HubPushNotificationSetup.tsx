@@ -4,6 +4,7 @@ import {
   disableHubPushNotifications,
   enableHubPushNotifications,
   getHubPushSupport,
+  getHubPushUnsupportedHint,
   getNotificationPermission,
   isHubPushEnabledLocally,
 } from '../lib/hubPushNotifications'
@@ -37,7 +38,7 @@ export function HubPushNotificationSetup({ userId, variant = 'default' }: Props)
       const perm = await enableHubPushNotifications(userId)
       setPermission(perm)
       if (perm !== 'granted') {
-        setError('Permiso denegado. En ajustes del navegador permití notificaciones para este sitio.')
+        setError(null)
       }
       refresh()
     } catch (e: unknown) {
@@ -64,10 +65,9 @@ export function HubPushNotificationSetup({ userId, variant = 'default' }: Props)
 
   if (variant === 'footer') {
     if (!support.supported) {
-      if (support.reason === 'no-vapid') return null
       return (
         <footer className="nm-hub-push-footer" aria-live="polite">
-          <p className="nm-hub-push-footer__muted">Este navegador no admite avisos.</p>
+          <p className="nm-hub-push-footer__muted">{getHubPushUnsupportedHint(support.reason)}</p>
         </footer>
       )
     }
@@ -101,7 +101,9 @@ export function HubPushNotificationSetup({ userId, variant = 'default' }: Props)
         )}
         {permission === 'denied' ? (
           <p className="nm-hub-push-footer__warn" role="status">
-            Bloqueadas en el navegador. Permití notificaciones en la configuración del sitio.
+            El navegador bloqueó los avisos (en incógnito casi nunca aparece el cartel). Abrí el sitio en una
+            ventana normal → candado o ícono junto a la URL → Notificaciones → Permitir → recargá la página y
+            tocá de nuevo.
           </p>
         ) : null}
         {error ? (
@@ -117,7 +119,7 @@ export function HubPushNotificationSetup({ userId, variant = 'default' }: Props)
     if (support.reason === 'no-vapid') return null
     return (
       <p className={`nm-hub-push-setup${variant === 'compact' ? ' nm-hub-push-setup--compact' : ''}`}>
-        <span className="nm-hub-muted">Este navegador no admite avisos en el celular.</span>
+        <span className="nm-hub-muted">{getHubPushUnsupportedHint(support.reason)}</span>
       </p>
     )
   }
@@ -161,7 +163,8 @@ export function HubPushNotificationSetup({ userId, variant = 'default' }: Props)
       </div>
       {permission === 'denied' ? (
         <p className="nm-hub-push-setup__warn" role="status">
-          Bloqueadas en el navegador. Abrí la configuración del sitio y permití notificaciones.
+          Avisos bloqueados. Usá una ventana normal (no incógnito), permití notificaciones en el candado de la URL y
+          recargá.
         </p>
       ) : null}
       {error ? (

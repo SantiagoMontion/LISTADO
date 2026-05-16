@@ -774,7 +774,9 @@ export default function App() {
     profileReady &&
     getHubPermissions(profile?.role)?.viewPrintedFiles
   ) {
-    return <HubPrintedFilesApp configured={configured} />
+    return (
+      <HubPrintedFilesApp configured={configured} adminSignOut={profile?.role === 'admin'} />
+    )
   }
 
   if (!authEnabled && isHubHome) {
@@ -841,6 +843,7 @@ export default function App() {
       >
         <HubBrandBar
           integratedDashboard={isListaUpload || isCutList}
+          adminSignOut={profile?.role === 'admin'}
           integratedSubtitle={
             isListaUpload ? 'Subir lista de corte' : isCutList ? 'Lista de corte' : undefined
           }

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { APP_BRAND_TITLE } from '../lib/appBrand'
 import { onHubLinkClick } from '../lib/hubNavigate'
+import { HubAdminSignOutButton } from './HubAdminSignOutButton'
 
 /** Casa clásica (trazo / pantallas no integradas). */
 function HomeIconOutline() {
@@ -65,6 +66,7 @@ export function HubBrandBar({
   integratedSubtitleTone = 'default',
   asPageHeading = true,
   trailing,
+  adminSignOut = false,
   integratedDashboard = false,
 }: {
   context?: string
@@ -75,8 +77,10 @@ export function HubBrandBar({
   /** Si es false, el bloque de marca no usa h1 (p. ej. cuando la pantalla ya tiene su propio h1). */
   asPageHeading?: boolean
   trailing?: ReactNode
+  adminSignOut?: boolean
   integratedDashboard?: boolean
 }) {
+  const hasTrailing = Boolean(trailing) || adminSignOut
   const TitleTag: 'h1' | 'div' = asPageHeading ? 'h1' : 'div'
   const headingStacked = Boolean(integratedDashboard && integratedSubtitle)
   const subtitleClasses = [
@@ -92,7 +96,7 @@ export function HubBrandBar({
 
   return (
     <div
-      className={`nm-hub-brand-bar${trailing ? ' nm-hub-brand-bar--with-trailing' : ''}${integratedDashboard ? ' nm-hub-brand-bar--integrated-dashboard' : ''}`}
+      className={`nm-hub-brand-bar${hasTrailing ? ' nm-hub-brand-bar--with-trailing' : ''}${integratedDashboard ? ' nm-hub-brand-bar--integrated-dashboard' : ''}`}
     >
       <a
         href="/"
@@ -121,7 +125,12 @@ export function HubBrandBar({
           <span className="nm-hub-brand-bar__context">{context}</span>
         ) : null}
       </TitleTag>
-      {trailing ? <div className="nm-hub-brand-bar__trailing">{trailing}</div> : null}
+      {hasTrailing ? (
+        <div className="nm-hub-brand-bar__trailing">
+          {trailing}
+          {adminSignOut ? <HubAdminSignOutButton /> : null}
+        </div>
+      ) : null}
     </div>
   )
 }

@@ -106,7 +106,7 @@ export function DashboardContainer({
   return (
     <div className="nm-hub-app nm-hub-app--dashboard">
       <header className="dashboard-navbar">
-        <HubBrandBar integratedDashboard />
+        <HubBrandBar integratedDashboard adminSignOut={role === 'admin'} />
       </header>
 
       {!guestMode ? (
@@ -156,7 +156,7 @@ export function DashboardContainer({
         </>
       ) : null}
 
-      {!guestMode && profile && getHubPermissions(profile.role)?.viewHubTasks ? (
+      {!guestMode && profile ? (
         <HubPushNotificationSetup userId={profile.id} variant="footer" />
       ) : null}
     </div>

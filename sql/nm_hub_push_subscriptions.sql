@@ -55,5 +55,7 @@ COMMENT ON TABLE public.nm_hub_push_subscriptions IS
 -- 3) supabase secrets set VAPID_PUBLIC_KEY VAPID_PRIVATE_KEY VAPID_SUBJECT=mailto:…
 -- 4) supabase functions deploy task-assigned-push
 -- 5) Dashboard → Database → Webhooks → INSERT nm_hub_tasks → URL de la función
---    Header Authorization: Bearer <TASK_PUSH_WEBHOOK_SECRET> (mismo secret en la función)
+--    Header Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY>  (recomendado)
+--    O bien: Bearer <TASK_PUSH_WEBHOOK_SECRET> si definiste ese secret en la función
+-- 6) Tras crear tarea, el cliente también invoca la función (respaldo si el webhook falla).
 -- -----------------------------------------------------------------------------
