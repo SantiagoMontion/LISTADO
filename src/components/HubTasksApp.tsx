@@ -14,7 +14,6 @@ import { addDaysToIsoDate, formatDayMonthShort, normalizeCalendarDate, todayIsoL
 import { supabase } from '../lib/supabase'
 import type { HubImportance, HubUserRole, NmHubTask } from '../lib/types'
 import { HubBrandBar } from './HubBrandBar'
-import { HubPushNotificationSetup } from './HubPushNotificationSetup'
 import { HUB_NAV_EVENT } from '../lib/hubNavigate'
 import {
   HUB_TASK_ASSIGNEE_LABEL,
@@ -948,8 +947,6 @@ export function HubTasksApp({
           {error}
         </p>
       ) : null}
-
-      {!readOnly ? <HubPushNotificationSetup userId={profileId} compact /> : null}
 
       <section className="nm-hub-date-strip date-pager-fullwidth" aria-label="Día de las tareas">
         <div className="date-pager-side date-pager-side--start">

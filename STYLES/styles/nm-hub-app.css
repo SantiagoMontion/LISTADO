@@ -3654,6 +3654,80 @@ body:has(.nm-hub-app--cut-list) {
   color: #ffab40;
 }
 
+/* Home — pie discreto para activar avisos globales */
+.nm-hub-app--dashboard .nm-hub-push-footer {
+  margin: 1.25rem 1rem 1.5rem;
+  padding: 0.75rem 0 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  text-align: center;
+}
+
+.nm-hub-push-footer__row {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #8b949e;
+}
+
+.nm-hub-push-footer__ok {
+  color: #4ade80;
+  font-weight: 600;
+}
+
+.nm-hub-push-footer__sep {
+  margin: 0 0.35rem;
+  opacity: 0.5;
+}
+
+.nm-hub-push-footer__link {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #8b949e;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nm-hub-push-footer__link--cta {
+  display: inline;
+  color: #46cff8;
+  text-decoration: underline;
+}
+
+.nm-hub-push-footer__link:hover:not(:disabled) {
+  color: #fcfdff;
+}
+
+.nm-hub-push-footer__link:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.nm-hub-push-footer__muted,
+.nm-hub-push-footer__warn,
+.nm-hub-push-footer__error {
+  margin: 0.35rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.nm-hub-push-footer__warn {
+  color: #ffab40;
+}
+
+.nm-hub-push-footer__error {
+  color: #fb7185;
+}
+
+.nm-hub-push-footer__muted {
+  color: #535a62;
+}
+
 /* Fallback otros hub */
 .nm-hub-role-pill {
   display: inline-block;

@@ -116,10 +116,6 @@ export function DashboardContainer({
         </div>
       ) : null}
 
-      {!guestMode && profile && getHubPermissions(profile.role)?.viewHubTasks ? (
-        <HubPushNotificationSetup userId={profile.id} />
-      ) : null}
-
       {guestMode ? (
         <p className="nm-hub-footnote dashboard-footnote">
           Modo local: agregá variables de Supabase en <code>.env</code> para activar login y sincronización segura.
@@ -158,6 +154,10 @@ export function DashboardContainer({
           ) : null}
           <RoleDashboardView role={role} stats={stats} perms={perms} />
         </>
+      ) : null}
+
+      {!guestMode && profile && getHubPermissions(profile.role)?.viewHubTasks ? (
+        <HubPushNotificationSetup userId={profile.id} variant="footer" />
       ) : null}
     </div>
   )
