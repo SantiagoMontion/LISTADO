@@ -12,6 +12,7 @@ import type { HubUserRole, NmHubProfile } from '../../lib/types'
 import {
   AdminDashboard,
   ListaCreatorDashboard,
+  OnlineOperatorDashboard,
   Taller1Dashboard,
   Taller2Dashboard,
 } from './roleDashboards'
@@ -27,7 +28,7 @@ const EMPTY_STATS: HubDashboardStats = {
   day: '',
   pendingCutItems: 0,
   pendingHubTasks: 0,
-  unassignedHubTasks: 0,
+  urgentHubTasks: 0,
   completedHubTasksToday: 0,
   hasListForDay: false,
 }
@@ -49,6 +50,8 @@ function RoleDashboardView({
       return <ListaCreatorDashboard {...props} />
     case 'taller_1':
       return <Taller1Dashboard {...props} />
+    case 'online_1':
+      return <OnlineOperatorDashboard {...props} />
     case 'taller_2':
       return <Taller2Dashboard {...props} />
     default:

@@ -779,13 +779,25 @@ export default function App() {
     return <HubLoadingScreen label="Cargando perfil…" />
   }
 
+  if (authEnabled && authReady && session && isHubTasks && profileReady && !profile) {
+    return <HubLoadingScreen label="No se pudo cargar el perfil del hub." />
+  }
+
   if (authEnabled && authReady && session && isHubPrintedFiles && !profileReady) {
     return <HubLoadingScreen label="Cargando perfil…" />
   }
 
-  if (authEnabled && authReady && session && isHubTasks) {
-    const hubReadOnly = !profile || hubTasksReadOnly(profile.role)
-    return <HubTasksApp readOnly={hubReadOnly} />
+  if (authEnabled && authReady && session && isHubTasks && profileReady && profile) {
+    const hubReadOnly = hubTasksReadOnly(profile.role)
+    return (
+      <HubTasksApp
+        readOnly={hubReadOnly}
+        profileRole={profile.role}
+        profileId={profile.id}
+        isAdmin={profile.role === 'admin'}
+        showSentTab={Boolean(getHubPermissions(profile.role)?.createHubTasks)}
+      />
+    )
   }
 
   if (

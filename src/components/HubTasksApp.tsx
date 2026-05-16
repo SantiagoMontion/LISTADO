@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
+import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties } from 'react'
 import {
   appendTaskImages,
   createHubTask,
@@ -12,9 +12,14 @@ import {
 import { formatSupabaseOrError } from '../lib/errors'
 import { addDaysToIsoDate, formatDayMonthShort, normalizeCalendarDate, todayIsoLocal } from '../lib/date'
 import { supabase } from '../lib/supabase'
-import type { HubImportance, NmHubTask } from '../lib/types'
+import type { HubImportance, HubUserRole, NmHubTask } from '../lib/types'
 import { HubBrandBar } from './HubBrandBar'
 import { HUB_NAV_EVENT } from '../lib/hubNavigate'
+import {
+  HUB_TASK_ASSIGNEE_LABEL,
+  HUB_TASK_ASSIGNEE_ROLES,
+  type HubTaskAssignableRole,
+} from '../lib/hubTaskAssignable'
 
 const IMPORTANCE_LABEL: Record<HubImportance, string> = {
   low: 'Baja',
@@ -23,15 +28,229 @@ const IMPORTANCE_LABEL: Record<HubImportance, string> = {
   urgent: 'Urgente',
 }
 
-type TasksPanel = 'list' | 'create'
-type HubListMode = 'pendientes' | 'completadas'
-
-function readHubListMode(): HubListMode {
-  if (typeof window === 'undefined') return 'pendientes'
-  const hub = new URLSearchParams(window.location.search).get('hub')
-  return hub === 'completadas' ? 'completadas' : 'pendientes'
+/** Borde izquierdo de tarjeta (prioridad). */
+const PRIORITY_ACCENT: Record<HubImportance, string> = {
+  low: '#a1a9b6',
+  normal: '#46cff8',
+  high: '#ffab40',
+  urgent: '#fb7185',
 }
 
+const IMPORTANCE_ORDER: HubImportance[] = ['low', 'normal', 'high', 'urgent']
+
+/** Importancia con menú HTML (select nativo en Windows muestra lista clara del SO). */
+function ImportanceSelect({
+  id,
+  value,
+  onChange,
+  disabled = false,
+}: {
+  id: string
+  value: HubImportance
+  onChange: (v: HubImportance) => void
+  disabled?: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onDocDown = (e: MouseEvent) => {
+      if (rootRef.current?.contains(e.target as Node)) return
+      setOpen(false)
+    }
+    document.addEventListener('mousedown', onDocDown)
+    return () => document.removeEventListener('mousedown', onDocDown)
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [open])
+
+  const select = (k: HubImportance) => {
+    onChange(k)
+    setOpen(false)
+  }
+
+  return (
+    <div ref={rootRef} className="importance-dropdown">
+      <button
+        type="button"
+        id={id}
+        className="importance-dropdown__trigger nm-hub-input field-select"
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls={`${id}-listbox`}
+        onClick={() => !disabled && setOpen((o) => !o)}
+      >
+        <span className="importance-dropdown__value">{IMPORTANCE_LABEL[value]}</span>
+        <svg
+          className="importance-dropdown__chevron"
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          aria-hidden="true"
+        >
+          <path
+            d="M6 9l6 6 6-6"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+      {open ? (
+        <div
+          id={`${id}-listbox`}
+          className="importance-dropdown__panel"
+          role="listbox"
+          aria-labelledby={id}
+        >
+          {IMPORTANCE_ORDER.map((k) => (
+            <button
+              key={k}
+              type="button"
+              role="option"
+              aria-selected={value === k}
+              className={`importance-dropdown__option importance-dropdown__option--${k}`}
+              onClick={() => select(k)}
+            >
+              {IMPORTANCE_LABEL[k]}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function AssigneeRoleSelect({
+  id,
+  value,
+  onChange,
+  disabled = false,
+}: {
+  id: string
+  value: HubTaskAssignableRole | null
+  onChange: (v: HubTaskAssignableRole) => void
+  disabled?: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onDocDown = (e: MouseEvent) => {
+      if (rootRef.current?.contains(e.target as Node)) return
+      setOpen(false)
+    }
+    document.addEventListener('mousedown', onDocDown)
+    return () => document.removeEventListener('mousedown', onDocDown)
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [open])
+
+  const select = (k: HubTaskAssignableRole) => {
+    onChange(k)
+    setOpen(false)
+  }
+
+  return (
+    <div ref={rootRef} className="importance-dropdown assignee-dropdown">
+      <button
+        type="button"
+        id={id}
+        className="importance-dropdown__trigger nm-hub-input field-select"
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls={`${id}-assignee-listbox`}
+        aria-invalid={value === null && !disabled}
+        onClick={() => !disabled && setOpen((o) => !o)}
+      >
+        <span className="importance-dropdown__value">
+          {value ? HUB_TASK_ASSIGNEE_LABEL[value] : 'Elegí a quién va la tarea'}
+        </span>
+        <svg
+          className="importance-dropdown__chevron"
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          aria-hidden="true"
+        >
+          <path
+            d="M6 9l6 6 6-6"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+      {open ? (
+        <div
+          id={`${id}-assignee-listbox`}
+          className="importance-dropdown__panel"
+          role="listbox"
+          aria-labelledby={id}
+        >
+          {HUB_TASK_ASSIGNEE_ROLES.map((k) => (
+            <button
+              key={k}
+              type="button"
+              role="option"
+              aria-selected={value === k}
+              className="importance-dropdown__option"
+              onClick={() => select(k)}
+            >
+              {HUB_TASK_ASSIGNEE_LABEL[k]}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+type TasksPanel = 'list' | 'create'
+type HubListScope = 'inbox' | 'sent' | 'completadas'
+
+function readHubListScope(): HubListScope {
+  if (typeof window === 'undefined') return 'inbox'
+  const hub = new URLSearchParams(window.location.search).get('hub')
+  if (hub === 'completadas') return 'completadas'
+  if (hub === 'seguimiento') return 'sent'
+  /** Compatibilidad con enlaces viejos `hub=pendientes`. */
+  if (hub === 'pendientes') return 'inbox'
+  return 'inbox'
+}
+
+/** Tareas que creé y asigné a otro rol (seguimiento), o a Dani/Juanc/Tomas cuando no coincide con mi perfil hub. */
+function isDelegatedByMe(t: NmHubTask, myRole: HubUserRole, myId: string): boolean {
+  if (t.created_by !== myId) return false
+  return t.assigned_role !== myRole
+}
+
+function taskInAssignedInbox(t: NmHubTask, myRole: HubUserRole, isAdmin: boolean): boolean {
+  if (isAdmin) return true
+  return t.assigned_role === myRole
+}
 /** Hash explícito gana; si no hay hash útil, `?hub=crear` (desde inicio) abre el formulario aunque el fragmento se pierda. */
 function hubTasksPanelFromLocation(readOnly: boolean): TasksPanel {
   if (readOnly) return 'list'
@@ -82,11 +301,13 @@ function replaceListPanelUrl() {
   window.dispatchEvent(new CustomEvent(HUB_NAV_EVENT))
 }
 
-function setListModeInUrl(mode: HubListMode) {
+function setListScopeInUrl(scope: HubListScope) {
   if (typeof window === 'undefined') return
   const u = new URL(window.location.href)
-  if (mode === 'completadas') {
+  if (scope === 'completadas') {
     u.searchParams.set('hub', 'completadas')
+  } else if (scope === 'sent') {
+    u.searchParams.set('hub', 'seguimiento')
   } else {
     u.searchParams.delete('hub')
   }
@@ -211,7 +432,7 @@ function HubImageLightbox({
   )
 }
 
-function TaskThumbnails({ paths }: { paths: string[] }) {
+function TaskThumbnails({ paths, rebel = false }: { paths: string[]; rebel?: boolean }) {
   const [urls, setUrls] = useState<Record<string, string>>({})
   const [lightbox, setLightbox] = useState<string | null>(null)
 
@@ -232,22 +453,26 @@ function TaskThumbnails({ paths }: { paths: string[] }) {
   }, [paths])
 
   if (paths.length === 0) return null
+  const wrapCls = rebel ? 'task-media-attachment' : 'nm-hub-task-images'
+  const btnCls = rebel ? 'task-thumb-hit' : 'nm-hub-thumb-btn'
+  const imgCls = rebel ? 'task-thumb-rebel' : 'nm-hub-thumb'
+
   return (
     <>
-      <div className="nm-hub-task-images">
+      <div className={wrapCls}>
         {paths.map((p) =>
           urls[p] ? (
             <button
               key={p}
               type="button"
-              className="nm-hub-thumb-btn"
+              className={btnCls}
               onClick={() => setLightbox(urls[p])}
               aria-label="Ampliar imagen"
             >
-              <img src={urls[p]} alt="" className="nm-hub-thumb" />
+              <img src={urls[p]} alt="" className={imgCls} />
             </button>
           ) : (
-            <span key={p} className="nm-hub-thumb-placeholder" />
+            <span key={p} className="nm-hub-thumb-placeholder" aria-hidden />
           ),
         )}
       </div>
@@ -256,12 +481,30 @@ function TaskThumbnails({ paths }: { paths: string[] }) {
   )
 }
 
-export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
-  const [tasks, setTasks] = useState<NmHubTask[]>([])
+export type HubTasksAppProps = {
+  readOnly?: boolean
+  profileRole: HubUserRole
+  profileId: string
+  isAdmin: boolean
+  /** Pestaña «Seguimiento» (delegadas por mí); útil cuando `createHubTasks`. */
+  showSentTab?: boolean
+}
+
+export function HubTasksApp({
+  readOnly = false,
+  profileRole,
+  profileId,
+  isAdmin,
+  showSentTab = true,
+}: HubTasksAppProps) {
+  const [rawPending, setRawPending] = useState<NmHubTask[]>([])
+  const [rawCompleted, setRawCompleted] = useState<NmHubTask[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const [listMode, setListMode] = useState<HubListMode>(() => (typeof window !== 'undefined' ? readHubListMode() : 'pendientes'))
+  const [listScope, setListScope] = useState<HubListScope>(() =>
+    typeof window !== 'undefined' ? readHubListScope() : 'inbox',
+  )
   const [hasOlderPending, setHasOlderPending] = useState(false)
   const [executorNames, setExecutorNames] = useState<Record<string, string>>({})
   const [taskQuery, setTaskQuery] = useState('')
@@ -297,6 +540,7 @@ export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [importance, setImportance] = useState<HubImportance>('normal')
+  const [assignedRoleCreate, setAssignedRoleCreate] = useState<HubTaskAssignableRole | null>(null)
   const [files, setFiles] = useState<File[]>([])
   const taskGalleryInputRef = useRef<HTMLInputElement>(null)
   const taskCameraInputRef = useRef<HTMLInputElement>(null)
@@ -328,14 +572,17 @@ export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
   const loadSilent = useCallback(async () => {
     const day = taskDay
     const seq = ++tasksLoadSeqRef.current
-    const mode = readHubListMode()
-    const rows =
-      mode === 'completadas' ? await fetchHubTasksCompleted(day) : await fetchHubTasksPending(day)
+    const scope = readHubListScope()
+    const [pendingRows, completedRows] = await Promise.all([
+      fetchHubTasksPending(day),
+      fetchHubTasksCompleted(day),
+    ])
     if (seq !== tasksLoadSeqRef.current) return
-    setListMode(mode)
-    setTasks(rows)
-    if (mode === 'completadas') {
-      const ids = rows.map((t) => t.executed_by).filter((x): x is string => Boolean(x))
+    setListScope(scope)
+    setRawPending(pendingRows)
+    setRawCompleted(completedRows)
+    if (scope === 'completadas') {
+      const ids = completedRows.map((t) => t.executed_by).filter((x): x is string => Boolean(x))
       const names = await fetchHubProfileDisplayNames(ids)
       if (seq !== tasksLoadSeqRef.current) return
       setExecutorNames(names)
@@ -422,7 +669,7 @@ export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
       return
     }
     void refreshOlderPending()
-  }, [taskDay, tasks, panel, refreshOlderPending])
+  }, [taskDay, rawPending, panel, refreshOlderPending])
 
   useEffect(() => {
     const u = new URL(window.location.href)
@@ -463,7 +710,7 @@ export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
     }
 
     setPanel(hubTasksPanelFromLocation(readOnly))
-    setListMode(readHubListMode())
+    setListScope(readHubListScope())
   }, [readOnly])
 
   useEffect(() => {
@@ -478,9 +725,35 @@ export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
     }
   }, [syncUrlToState])
 
+  const inboxPendingTasks = useMemo(
+    () => rawPending.filter((t) => !t.executed_at && taskInAssignedInbox(t, profileRole, isAdmin)),
+    [rawPending, profileRole, isAdmin],
+  )
+  const sentPendingTasks = useMemo(
+    () => rawPending.filter((t) => !t.executed_at && isDelegatedByMe(t, profileRole, profileId)),
+    [rawPending, profileRole, profileId],
+  )
+  /** Completadas accesibles: asignadas a mi rol / delegadas por mí. */
+  const mergedCompletedTasks = useMemo(
+    () =>
+      rawCompleted.filter((t) => {
+        if (!t.executed_at) return false
+        if (isAdmin) return true
+        return taskInAssignedInbox(t, profileRole, false) || isDelegatedByMe(t, profileRole, profileId)
+      }),
+    [rawCompleted, profileRole, profileId, isAdmin],
+  )
+
+  const scopedForSorting = useMemo(() => {
+    if (listScope === 'completadas') return mergedCompletedTasks
+    if (listScope === 'sent') return sentPendingTasks
+    return inboxPendingTasks
+  }, [listScope, mergedCompletedTasks, sentPendingTasks, inboxPendingTasks])
+
   const sorted = useMemo(
-    () => (listMode === 'completadas' ? sortCompletedTasks(tasks) : sortPendingTasks(tasks)),
-    [tasks, listMode],
+    () =>
+      listScope === 'completadas' ? sortCompletedTasks(scopedForSorting) : sortPendingTasks(scopedForSorting),
+    [scopedForSorting, listScope],
   )
 
   const filteredSorted = useMemo(() => {
@@ -493,9 +766,19 @@ export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
     })
   }, [sorted, taskQuery])
 
+  const canToggleExecuted = useCallback(
+    (t: NmHubTask) => {
+      if (readOnly) return false
+      if (isAdmin) return true
+      if (listScope === 'sent') return false
+      return taskInAssignedInbox(t, profileRole, false)
+    },
+    [readOnly, isAdmin, listScope, profileRole],
+  )
+
   useEffect(() => {
     setTaskQuery('')
-  }, [taskDay, listMode])
+  }, [taskDay, listScope])
 
   const goCreatePanel = useCallback(() => {
     if (readOnly) return
@@ -508,9 +791,9 @@ export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
     setPanel('list')
   }, [])
 
-  const onCreate = async (e: React.FormEvent) => {
+  const onCreate = async (e: FormEvent) => {
     e.preventDefault()
-    if (readOnly || !title.trim()) return
+    if (readOnly || !title.trim() || assignedRoleCreate === null) return
     setBusy(true)
     setError(null)
     try {
@@ -519,6 +802,7 @@ export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
         body: body.trim() || null,
         importance,
         for_date: taskDay,
+        assigned_role: assignedRoleCreate,
       })
       if (files.length > 0) {
         await appendTaskImages(created.id, files)
@@ -526,11 +810,9 @@ export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
       setTitle('')
       setBody('')
       setImportance('normal')
+      setAssignedRoleCreate(null)
       setFiles([])
       markLocalHubMutation()
-      setTasks((prev) =>
-        readHubListMode() === 'pendientes' ? [created, ...prev] : prev,
-      )
       await loadSilent()
       replaceListPanelUrl()
       setPanel('list')
@@ -546,14 +828,9 @@ export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
     setBusy(true)
     setError(null)
     markLocalHubMutation()
-    const mode = readHubListMode()
-    setTasks((prev) => {
-      if (executed && mode === 'pendientes') return prev.filter((x) => x.id !== t.id)
-      if (!executed && mode === 'completadas') return prev.filter((x) => x.id !== t.id)
-      return prev
-    })
     try {
       await updateHubTaskExecuted(t.id, executed)
+      await loadSilent()
       if (panel !== 'create') void refreshOlderPending()
     } catch (err: unknown) {
       setError(formatSupabaseOrError(err))
@@ -563,22 +840,33 @@ export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
     }
   }
 
-  const brandContext =
-    panel === 'create' ? 'Nueva' : listMode === 'completadas' ? 'Completadas' : 'Pendientes'
+  const integratedSubtitle =
+    panel === 'create'
+      ? 'Nueva tarea'
+      : listScope === 'completadas'
+        ? 'Tareas completadas'
+        : listScope === 'sent'
+          ? 'Seguimiento'
+          : 'Mis tareas'
+
+  const integratedSubtitleTone =
+    panel === 'create' ? 'accent' : listScope === 'completadas' ? 'completed' : 'pending'
 
   const showCreateBtn = !readOnly && (panel === 'create' || panel === 'list')
 
   return (
-    <div className="nm-hub-app">
-      <header className="nm-hub-header">
+    <div className="nm-hub-app nm-hub-app--tasks">
+      <header className="nm-hub-header dashboard-navbar">
         <HubBrandBar
-          context={brandContext}
+          integratedDashboard
+          integratedSubtitle={integratedSubtitle}
+          integratedSubtitleTone={integratedSubtitleTone}
           trailing={
             showCreateBtn ? (
               panel === 'list' ? (
                 <button
                   type="button"
-                  className="nm-hub-brand-bar__btn"
+                  className="nm-hub-brand-bar__btn navbar-trailing-action-btn"
                   onClick={() => goCreatePanel()}
                   aria-label="Nueva tarea"
                   title="Nueva tarea"
@@ -588,7 +876,7 @@ export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
               ) : (
                 <button
                   type="button"
-                  className="nm-hub-brand-bar__btn"
+                  className="nm-hub-brand-bar__btn navbar-trailing-action-btn"
                   onClick={() => goListPanel()}
                   aria-label="Volver al listado"
                   title="Listado"
@@ -607,12 +895,12 @@ export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
         </p>
       ) : null}
 
-      <section className="nm-hub-date-strip" aria-label="Día de las tareas">
-        <div className="nm-hub-date-nav">
-          <div className="nm-hub-date-nav-prev-wrap">
+      <section className="nm-hub-date-strip date-pager-fullwidth" aria-label="Día de las tareas">
+        <div className="date-pager-side date-pager-side--start">
+          <div className="date-pager-arrow-wrap">
             <button
               type="button"
-              className="nm-hub-btn nm-hub-btn-ghost"
+              className="pager-arrow-btn"
               onClick={() => applyTaskDay(addDaysToIsoDate(taskDay, -1))}
               aria-label="Día anterior"
             >
@@ -624,19 +912,21 @@ export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
               </span>
             ) : null}
           </div>
-          <div className="nm-hub-date-picker">
-            <span className="nm-hub-date-display">{formatDayMonthShort(taskDay)}</span>
-            <input
-              type="date"
-              className="nm-hub-input nm-hub-date-native"
-              value={taskDay}
-              onChange={(e) => applyTaskDay(normalizeCalendarDate(e.target.value))}
-              aria-label="Elegir día"
-            />
-          </div>
+        </div>
+        <div className="date-pager-center nm-hub-date-picker">
+          <span className="date-text-accent nm-hub-date-display date-pager-display">{formatDayMonthShort(taskDay)}</span>
+          <input
+            type="date"
+            className="nm-hub-input field-input nm-hub-date-native date-pager-native"
+            value={taskDay}
+            onChange={(e) => applyTaskDay(normalizeCalendarDate(e.target.value))}
+            aria-label="Elegir día"
+          />
+        </div>
+        <div className="date-pager-side date-pager-side--end">
           <button
             type="button"
-            className="nm-hub-btn nm-hub-btn-ghost"
+            className="pager-arrow-btn"
             onClick={() => applyTaskDay(addDaysToIsoDate(taskDay, 1))}
             aria-label="Día siguiente"
           >
@@ -645,64 +935,61 @@ export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
         </div>
       </section>
 
-      {panel === 'list' ? (
-        <div className="nm-hub-task-search-wrap">
-          <label className="nm-hub-sr-only" htmlFor="nm-hub-task-q">
-            Buscar en tareas
-          </label>
-          <input
-            id="nm-hub-task-q"
-            type="search"
-            className="nm-hub-input nm-hub-task-search"
-            placeholder="Buscar en título o detalle…"
-            value={taskQuery}
-            onChange={(e) => setTaskQuery(e.target.value)}
-            autoComplete="off"
-            spellCheck={false}
-          />
-        </div>
-      ) : null}
-
       {!readOnly && panel === 'create' ? (
-        <form id="nm-hub-tareas-nueva" className="nm-hub-card" onSubmit={(e) => void onCreate(e)}>
-          <h2 className="nm-hub-card-title">Nueva tarea</h2>
+        <form id="nm-hub-tareas-nueva" className="nm-hub-card nm-hub-card--task-create" onSubmit={(e) => void onCreate(e)}>
+          <div className="form-container-clean">
+          <div className="field-group">
+            <label className="field-label" htmlFor="nm-hub-t-title">
+              Título
+            </label>
+            <input
+              id="nm-hub-t-title"
+              className="nm-hub-input field-input"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+            />
+          </div>
 
-          <label className="nm-hub-label" htmlFor="nm-hub-t-title">
-            Título
-          </label>
-          <input
-            id="nm-hub-t-title"
-            className="nm-hub-input"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-          />
+          <div className="field-group">
+            <label className="field-label" htmlFor="nm-hub-t-body">
+              Detalle
+            </label>
+            <textarea
+              id="nm-hub-t-body"
+              className="nm-hub-textarea field-textarea"
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              rows={2}
+            />
+          </div>
 
-          <label className="nm-hub-label" htmlFor="nm-hub-t-body" style={{ marginTop: '0.65rem' }}>
-            Detalle
-          </label>
-          <textarea id="nm-hub-t-body" className="nm-hub-textarea" value={body} onChange={(e) => setBody(e.target.value)} rows={3} />
-
-          <div className="nm-hub-field-grow" style={{ marginTop: '0.65rem' }}>
-            <label className="nm-hub-label" htmlFor="nm-hub-t-imp">
+          <div className="field-group">
+            <label className="field-label" htmlFor="nm-hub-t-imp">
               Importancia
             </label>
-            <select
+            <ImportanceSelect
               id="nm-hub-t-imp"
-              className="nm-hub-input"
               value={importance}
-              onChange={(e) => setImportance(e.target.value as HubImportance)}
-            >
-              {(Object.keys(IMPORTANCE_LABEL) as HubImportance[]).map((k) => (
-                <option key={k} value={k}>
-                  {IMPORTANCE_LABEL[k]}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => setImportance(v)}
+              disabled={busy}
+            />
+          </div>
+
+          <div className="field-group">
+            <label className="field-label" htmlFor="nm-hub-t-assign">
+              Asignar a
+            </label>
+            <AssigneeRoleSelect
+              id="nm-hub-t-assign"
+              value={assignedRoleCreate}
+              onChange={(v) => setAssignedRoleCreate(v)}
+              disabled={busy}
+            />
           </div>
 
           <div className="nm-hub-image-block">
-            <span className="nm-hub-label" id="nm-hub-t-files-legend">
+            <span className="field-label" id="nm-hub-t-files-legend">
               Imágenes <span className="nm-hub-label-optional">(opcional)</span>
             </span>
             <input
@@ -725,14 +1012,14 @@ export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
               aria-labelledby="nm-hub-t-files-legend"
               onChange={appendTaskFilesFromInput}
             />
-            <div className="nm-hub-image-picker" role="group" aria-labelledby="nm-hub-t-files-legend nm-hub-t-files-title">
-              <p className="nm-hub-image-picker-title" id="nm-hub-t-files-title">
+            <div className="nm-hub-image-picker upload-zone-rebel" role="group" aria-labelledby="nm-hub-t-files-legend nm-hub-t-files-title">
+              <p className="nm-hub-image-picker-title upload-zone-title" id="nm-hub-t-files-title">
                 Cargar imagen
               </p>
-              <div className="nm-hub-image-picker-split">
+              <div className="nm-hub-image-picker-split upload-buttons-row">
                 <button
                   type="button"
-                  className="nm-hub-image-picker-split__btn"
+                  className="nm-hub-image-picker-split__btn upload-action-btn"
                   aria-label="Elegir desde la galería"
                   onClick={() => taskGalleryInputRef.current?.click()}
                 >
@@ -751,7 +1038,7 @@ export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
                 </button>
                 <button
                   type="button"
-                  className="nm-hub-image-picker-split__btn"
+                  className="nm-hub-image-picker-split__btn upload-action-btn"
                   aria-label="Sacar foto con la cámara"
                   onClick={() => taskCameraInputRef.current?.click()}
                 >
@@ -788,83 +1075,157 @@ export function HubTasksApp({ readOnly = false }: { readOnly?: boolean }) {
             ) : null}
           </div>
 
-          <button type="submit" className="nm-hub-btn nm-hub-btn-primary" disabled={busy} style={{ marginTop: '0.85rem', width: '100%' }}>
+          <button type="submit" className="btn-submit-task" disabled={busy || assignedRoleCreate === null}>
             {busy ? 'Guardando…' : 'Crear tarea'}
           </button>
+          </div>
         </form>
       ) : null}
 
       {panel === 'list' ? (
-        <section id="nm-hub-tareas-lista" className="nm-hub-section" aria-label="Tareas del día">
-          <div className="nm-hub-list-head">
-            <div className="nm-hub-subtabs" role="tablist" aria-label="Tareas del día">
+        <section id="nm-hub-tareas-lista" className="nm-hub-section nm-hub-section--task-list" aria-label="Tareas del día">
+          <div className="tasks-hub-filters-stack">
+            <div role="tablist" className="filter-track-rebel" aria-label="Vista de tareas">
               <button
                 type="button"
                 role="tab"
-                aria-selected={listMode === 'pendientes'}
-                className={`nm-hub-subtab${listMode === 'pendientes' ? ' nm-hub-subtab--active' : ''}`}
-                onClick={() => setListModeInUrl('pendientes')}
+                aria-selected={listScope === 'inbox'}
+                className={`filter-tab-item${listScope === 'inbox' ? ' active-pending' : ''}`}
+                onClick={() => setListScopeInUrl('inbox')}
               >
-                Pendientes
+                Mis tareas
               </button>
+              {showSentTab ? (
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={listScope === 'sent'}
+                  className={`filter-tab-item${listScope === 'sent' ? ' active-pending' : ''}`}
+                  onClick={() => setListScopeInUrl('sent')}
+                >
+                  Seguimiento
+                </button>
+              ) : null}
               <button
                 type="button"
                 role="tab"
-                aria-selected={listMode === 'completadas'}
-                className={`nm-hub-subtab${listMode === 'completadas' ? ' nm-hub-subtab--active' : ''}`}
-                onClick={() => setListModeInUrl('completadas')}
+                aria-selected={listScope === 'completadas'}
+                className={`filter-tab-item${listScope === 'completadas' ? ' active-completed' : ''}`}
+                onClick={() => setListScopeInUrl('completadas')}
               >
                 Completadas
               </button>
             </div>
+            <div className="nm-hub-task-search-wrap tasks-hub-search-wrap">
+              <label className="nm-hub-sr-only" htmlFor="nm-hub-task-q">
+                Buscar en tareas
+              </label>
+              <input
+                id="nm-hub-task-q"
+                type="search"
+                className="nm-hub-input field-input nm-hub-task-search"
+                placeholder="Buscar"
+                value={taskQuery}
+                onChange={(e) => setTaskQuery(e.target.value)}
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </div>
           </div>
-          {loading && tasks.length === 0 ? <p className="nm-hub-muted">Cargando…</p> : null}
+          {loading && rawPending.length === 0 && rawCompleted.length === 0 ? (
+            <p className="nm-hub-muted">Cargando…</p>
+          ) : null}
           {!loading && sorted.length === 0 ? (
-            <p className="nm-hub-muted">{listMode === 'completadas' ? 'No hay tareas completadas este día.' : 'No hay tareas pendientes.'}</p>
+            <p className="nm-hub-muted">
+              {listScope === 'completadas'
+                ? 'No hay tareas completadas este día.'
+                : listScope === 'sent'
+                  ? 'No hay tareas delegadas pendientes este día.'
+                  : 'No hay tareas pendientes para vos este día.'}
+            </p>
           ) : null}
           {!loading && sorted.length > 0 && filteredSorted.length === 0 ? (
             <p className="nm-hub-muted">Ninguna tarea coincide con la búsqueda.</p>
           ) : null}
-          <ul className="nm-hub-task-list" aria-busy={loading}>
+          <ul className="nm-hub-task-list tasks-list-rebel" aria-busy={loading}>
             {filteredSorted.map((t) => (
-              <li key={t.id} className="nm-hub-task-item">
-                <div className="nm-hub-task-top">
-                  <h3 className="nm-hub-task-title">{t.title}</h3>
-                  <div className="nm-hub-task-importance-block">
-                    <span className="nm-hub-task-importance-label">importancia</span>
-                    <span className={`nm-hub-badge nm-hub-badge--${t.importance}`}>{IMPORTANCE_LABEL[t.importance]}</span>
+              <li
+                key={t.id}
+                className="task-card-rebel nm-hub-task-item"
+                style={
+                  {
+                    '--accent-color': PRIORITY_ACCENT[t.importance],
+                  } as CSSProperties
+                }
+              >
+                <header className="task-card-header">
+                  <div className="task-title-block">
+                    <h3 className="task-card-title">{t.title}</h3>
+                    <div className="task-badge-row">
+                      <span
+                        className={`badge-priority-rebel badge-priority-rebel--${t.importance}`}
+                      >
+                        {IMPORTANCE_LABEL[t.importance]}
+                      </span>
+                      <span className="task-assignee-chip" title="Destinatario asignado">
+                        {HUB_TASK_ASSIGNEE_LABEL[t.assigned_role]}
+                      </span>
+                    </div>
                   </div>
-                </div>
-                {listMode === 'completadas' && t.executed_at ? (
-                  <p className="nm-hub-task-done-meta">
-                    Completada por{' '}
-                    <strong>{t.executed_by ? executorNames[t.executed_by] ?? '…' : '—'}</strong>
-                    {' · '}
-                    {formatExecutedLabel(t.executed_at)}
-                  </p>
+                  <div className="task-card-header-actions">
+                    {!readOnly && listScope !== 'completadas' && canToggleExecuted(t) ? (
+                      <button
+                        type="button"
+                        className="btn-complete-compact"
+                        disabled={busy}
+                        onClick={() => void onSetExecuted(t, true)}
+                      >
+                        Completar
+                      </button>
+                    ) : null}
+                    {!readOnly && listScope === 'completadas' && canToggleExecuted(t) ? (
+                      <button
+                        type="button"
+                        className="btn-undo-icon"
+                        disabled={busy}
+                        onClick={() => void onSetExecuted(t, false)}
+                        aria-label="Descompletar"
+                        title="Descompletar"
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                          <path
+                            d="M9 14 4 9l5-5"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M4 9h11a5 5 0 0 1 5 5v1"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </button>
+                    ) : null}
+                  </div>
+                </header>
+                {(listScope === 'completadas' && t.executed_at) || t.body ? (
+                  <div className="task-card-body">
+                    {listScope === 'completadas' && t.executed_at ? (
+                      <p className="task-meta-log">
+                        Completada por{' '}
+                        <strong>{t.executed_by ? executorNames[t.executed_by] ?? '…' : '—'}</strong>
+                        {' · '}
+                        {formatExecutedLabel(t.executed_at)}
+                      </p>
+                    ) : null}
+                    {t.body ? <p className="task-description-text">{t.body}</p> : null}
+                  </div>
                 ) : null}
-                {t.body ? <p className="nm-hub-task-body">{t.body}</p> : null}
-                <TaskThumbnails paths={t.image_paths ?? []} />
-                {!readOnly && listMode === 'pendientes' ? (
-                  <button
-                    type="button"
-                    className="nm-hub-btn nm-hub-btn-primary nm-hub-task-complete-btn"
-                    disabled={busy}
-                    onClick={() => void onSetExecuted(t, true)}
-                  >
-                    Completar
-                  </button>
-                ) : null}
-                {!readOnly && listMode === 'completadas' ? (
-                  <button
-                    type="button"
-                    className="nm-hub-btn nm-hub-btn-ghost nm-hub-task-complete-btn"
-                    disabled={busy}
-                    onClick={() => void onSetExecuted(t, false)}
-                  >
-                    Descompletar
-                  </button>
-                ) : null}
+                <TaskThumbnails paths={t.image_paths ?? []} rebel />
               </li>
             ))}
           </ul>

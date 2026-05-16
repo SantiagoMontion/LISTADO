@@ -2,10 +2,14 @@ import { normalizeCalendarDate, todayIsoLocal } from './date'
 import { fetchReportsWithTasksProgress, supabase, taskProgressRowDone } from './supabase'
 
 export interface HubDashboardStats {
+  /** Día ISO (local) sobre el que agrupan las métricas de tareas hub. */
   day: string
   pendingCutItems: number
+  /** Tareas hub pendientes del día (`for_date`, sin `executed_at`). */
   pendingHubTasks: number
-  unassignedHubTasks: number
+  /** Pendientes del mismo día con prioridad urgente (`importance = urgent`). */
+  urgentHubTasks: number
+  /** Completadas del mismo día (`for_date`, con `executed_at`). */
   completedHubTasksToday: number
   hasListForDay: boolean
 }
@@ -19,7 +23,7 @@ export async function fetchHubDashboardStats(forDate?: string): Promise<HubDashb
   const day = normalizeCalendarDate(forDate ?? todayIsoLocal())
   const sb = requireClient()
 
-  const [{ reports, reportHasPendingById }, pendingTasksRes, unassignedRes, completedRes, listRes] =
+  const [{ reports, reportHasPendingById }, pendingTasksRes, urgentRes, completedRes, listRes] =
     await Promise.all([
       fetchReportsWithTasksProgress(),
       sb
@@ -32,7 +36,7 @@ export async function fetchHubDashboardStats(forDate?: string): Promise<HubDashb
         .select('id', { count: 'exact', head: true })
         .eq('for_date', day)
         .is('executed_at', null)
-        .is('assigned_to', null),
+        .eq('importance', 'urgent'),
       sb
         .from('nm_hub_tasks')
         .select('id', { count: 'exact', head: true })
@@ -69,7 +73,7 @@ export async function fetchHubDashboardStats(forDate?: string): Promise<HubDashb
     day,
     pendingCutItems,
     pendingHubTasks: pendingTasksRes.count ?? 0,
-    unassignedHubTasks: unassignedRes.count ?? 0,
+    urgentHubTasks: urgentRes.count ?? 0,
     completedHubTasksToday: completedRes.count ?? 0,
     hasListForDay: (listRes.count ?? 0) > 0,
   }

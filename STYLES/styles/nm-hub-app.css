@@ -894,6 +894,116 @@ a.nm-hub-brand-bar__btn:hover {
   margin: 0 0 0.65rem;
 }
 
+/* Tareas: paginador día full-width — extremos flechas + fecha centrada */
+.nm-hub-app--tasks .nm-hub-date-strip.date-pager-fullwidth {
+  background-color: #121417;
+  border-radius: 16px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Columnas laterales iguales: centran el bloque del medio sobre el viewport */
+.nm-hub-app--tasks .date-pager-fullwidth .date-pager-side {
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.nm-hub-app--tasks .date-pager-fullwidth .date-pager-side--start {
+  justify-content: flex-start;
+}
+
+.nm-hub-app--tasks .date-pager-fullwidth .date-pager-side--end {
+  justify-content: flex-end;
+}
+
+.nm-hub-app--tasks .date-pager-arrow-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Botones flecha en extremos (spec Urban Rebel) */
+.nm-hub-app--tasks .pager-arrow-btn {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fcfdff;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 1.1rem;
+  line-height: 1;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nm-hub-app--tasks .pager-arrow-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.nm-hub-app--tasks .pager-arrow-btn:focus-visible {
+  outline: 2px solid var(--accent-rebel-blue);
+  outline-offset: 2px;
+}
+
+.nm-hub-app--tasks .date-pager-fullwidth > .date-pager-center.nm-hub-date-picker {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.nm-hub-app--tasks .date-pager-fullwidth .nm-hub-date-native.date-pager-native {
+  appearance: none;
+  -webkit-appearance: none;
+  max-width: 100%;
+}
+
+.nm-hub-app--tasks .date-pager-fullwidth .date-pager-display {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  text-align: center;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+/* Bloque central de fecha (+ input nativo) — solo vista tareas hub */
+.nm-hub-app--tasks .date-pager-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.nm-hub-app--tasks .date-text-accent {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #fcfdff;
+}
+
 .nm-hub-task-search {
   width: 100%;
   font-size: 0.8rem;
@@ -967,7 +1077,204 @@ a.nm-hub-brand-bar__btn:hover {
   width: 100%;
 }
 
-/* Archivos impresos (/archivos-impresos) */
+/* Archivos impresos (/archivos-impresos) — feed visual + fecha compacta */
+.nm-hub-app.nm-hub-app--printed-files .dashboard-navbar.dashboard-navbar-clean {
+  background-color: #121417;
+}
+
+.nm-hub-app.nm-hub-app--printed-files .nm-hub-printed-feedback {
+  margin: 0 0 0.85rem;
+}
+
+.nm-hub-app.nm-hub-app--printed-files .nm-hub-header.dashboard-navbar {
+  margin-bottom: 0;
+}
+
+.nm-hub-app.nm-hub-app--printed-files .date-pager-faja-compacta {
+  background-color: #121417;
+  border-radius: 16px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.nm-hub-app.nm-hub-app--printed-files .date-pager-faja-compacta .date-pager-compact-side {
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.nm-hub-app.nm-hub-app--printed-files .date-pager-faja-compacta .date-pager-compact-side--start {
+  justify-content: flex-start;
+}
+
+.nm-hub-app.nm-hub-app--printed-files .date-pager-faja-compacta .date-pager-compact-side--end {
+  justify-content: flex-end;
+}
+
+.nm-hub-app.nm-hub-app--printed-files .pager-tactic-btn {
+  appearance: none;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  font-family: inherit;
+  font-size: 1.12rem;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nm-hub-app.nm-hub-app--printed-files .pager-tactic-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(70, 207, 248, 0.35);
+  color: #46cff8;
+}
+
+.nm-hub-app.nm-hub-app--printed-files .pager-tactic-btn:focus-visible {
+  outline: 2px solid rgba(70, 207, 248, 0.55);
+  outline-offset: 2px;
+}
+
+.nm-hub-app.nm-hub-app--printed-files .pager-tactic-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.nm-hub-app.nm-hub-app--printed-files .date-pager-panel-compact.nm-hub-date-picker {
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.nm-hub-app.nm-hub-app--printed-files .date-text-accent-number {
+  color: #4ade80;
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.nm-hub-app.nm-hub-app--printed-files .nm-hub-printed-date-native.nm-hub-date-native {
+  width: auto;
+  max-width: 100%;
+  margin: 2px 0 0;
+  padding: 0.25rem 0.42rem;
+  font-size: 0.74rem;
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+}
+
+.nm-hub-app.nm-hub-app--printed-files .nm-hub-printed-date-native.nm-hub-date-native:focus {
+  outline: none;
+  border-color: rgba(70, 207, 248, 0.45);
+  box-shadow: 0 0 8px rgba(70, 207, 248, 0.12);
+}
+
+.nm-hub-app.nm-hub-app--printed-files .print-design-feed-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 0;
+}
+
+.nm-hub-app.nm-hub-app--printed-files .design-gallery-feed {
+  display: grid;
+  grid-template-columns: repeat(var(--printed-feed-columns, 2), minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+}
+
+.nm-hub-app.nm-hub-app--printed-files button.design-item-card {
+  appearance: none;
+  margin: 0;
+  text-align: left;
+  cursor: zoom-in;
+  background-color: #121417;
+  border-radius: 16px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.035);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.nm-hub-app.nm-hub-app--printed-files button.design-item-card:focus-visible {
+  outline: 2px solid rgba(70, 207, 248, 0.55);
+  outline-offset: 2px;
+}
+
+.nm-hub-app.nm-hub-app--printed-files .design-item-card--classic {
+  border-left: 4px solid #46cff8;
+}
+
+.nm-hub-app.nm-hub-app--printed-files .design-item-card--pro {
+  border-left: 4px solid var(--accent-rebel-orange);
+}
+
+.nm-hub-app.nm-hub-app--printed-files .design-item-card--ultra {
+  border-left: 4px solid var(--accent-rebel-purple);
+}
+
+.nm-hub-app.nm-hub-app--printed-files .design-item-card--alfombra {
+  border-left: 4px solid var(--accent-rebel-green);
+}
+
+.nm-hub-app.nm-hub-app--printed-files .design-item-card--faltas {
+  border-left: 4px solid var(--accent-rebel-gray);
+}
+
+.nm-hub-app.nm-hub-app--printed-files .design-item-card__media {
+  position: relative;
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  aspect-ratio: 1 / 1;
+}
+
+.nm-hub-app.nm-hub-app--printed-files .design-item-card__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.nm-hub-app.nm-hub-app--printed-files .design-card-meta {
+  font-size: 0.8rem;
+  color: #9099a3;
+  margin: 4px 0 0;
+  font-weight: 600;
+}
+
 .nm-hub-printed-loading {
   display: flex;
   flex-direction: column;
@@ -977,55 +1284,6 @@ a.nm-hub-brand-bar__btn:hover {
   min-height: 10rem;
   margin-top: 1rem;
   padding: 2rem 1rem;
-}
-
-.nm-hub-printed-filters {
-  margin-top: 0.85rem;
-  flex-wrap: wrap;
-}
-
-.nm-hub-printed-list {
-  list-style: none;
-  margin: 1rem 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  max-width: 28rem;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.nm-hub-printed-item {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.nm-hub-printed-thumb-btn {
-  display: block;
-  width: 100%;
-  padding: 0;
-  border: none;
-  border-radius: 0.65rem;
-  background: rgba(30, 34, 44, 0.85);
-  overflow: hidden;
-  cursor: zoom-in;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.nm-hub-printed-thumb-btn:focus-visible {
-  outline: 2px solid rgba(96, 165, 250, 0.85);
-  outline-offset: 2px;
-}
-
-.nm-hub-printed-thumb-img {
-  display: block;
-  width: 100%;
-  height: auto;
-  max-height: min(48vh, 22rem);
-  object-fit: contain;
-  object-position: center;
 }
 
 .nm-hub-printed-lightbox-backdrop {
@@ -1144,9 +1402,19 @@ a.nm-hub-brand-bar__btn:hover {
   --font-rebel-heading: 'MessyMarker', 'Inter', system-ui, sans-serif;
   --font-rebel-main: 'Stencilia', 'Inter', system-ui, sans-serif;
   --font-rebel-count: 'RawPainted', 'Inter', system-ui, sans-serif;
+
+  /* Alias compartidas (urban rebel — formularios, listados, navbar) */
+  --bg-main: var(--bg-main-rebel);
+  --bg-surface: var(--bg-surface-rebel);
+  --text-primary: var(--text-rebel-primary);
+  --text-secondary: var(--text-rebel-secondary);
+  --accent-green: var(--accent-rebel-green);
+  --accent-blue: var(--accent-rebel-blue);
 }
 
-body:has(.nm-hub-app--dashboard) {
+body:has(.nm-hub-app--dashboard),
+body:has(.nm-hub-app--tasks),
+body:has(.nm-hub-app--printed-files) {
   background-color: var(--bg-main-rebel);
   background-image: var(--texture-rebel);
   background-repeat: repeat;
@@ -1164,23 +1432,52 @@ body:has(.nm-hub-app--dashboard) {
   padding-bottom: 1.5rem;
 }
 
-.nm-hub-app--dashboard .dashboard-navbar {
-  background-color: var(--bg-surface-rebel);
-  padding: 16px;
+.nm-hub-app.nm-hub-app--tasks {
+  background: transparent;
+  color: var(--text-primary);
+}
+
+.nm-hub-app.nm-hub-app--printed-files {
+  background: transparent;
+  color: var(--text-rebel-primary);
+  font-family: var(--font-rebel-main);
+  /* Más densidad en viewports grandes: podés sobrescribir (--printed-feed-columns: 4) */
+  --printed-feed-columns: 2;
+}
+/* Navbar compartida: dashboard + tareas (alineación, sin barra blanca) */
+.nm-hub-app .dashboard-navbar {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 16px 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 2px solid rgba(255, 255, 255, 0.03);
-  position: relative;
-  -webkit-mask-image: linear-gradient(to right, transparent 5%, white 10%, white 90%, transparent 95%),
-    linear-gradient(to bottom, white 95%, transparent 100%);
-  mask-image: linear-gradient(to right, transparent 5%, white 10%, white 90%, transparent 95%),
-    linear-gradient(to bottom, white 95%, transparent 100%);
-  -webkit-mask-composite: source-in;
-  mask-composite: intersect;
+  gap: 0.75rem;
+  background-color: var(--bg-surface);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 
-.nm-hub-app--dashboard .nm-hub-brand-bar.nm-hub-brand-bar--integrated-dashboard {
+/* Banda navbar a ancho del carril (compensa padding horizontal de .nm-hub-app) */
+/* Navbar full-bleed: dashboard + tareas + archivos impresos */
+.nm-hub-app.nm-hub-app--dashboard .dashboard-navbar,
+.nm-hub-app.nm-hub-app--tasks .dashboard-navbar,
+.nm-hub-app.nm-hub-app--printed-files .dashboard-navbar {
+  width: calc(100% + 1.5rem);
+  max-width: calc(100% + 1.5rem);
+  margin-inline: -0.75rem;
+}
+
+/* Safe-area pegada arriba */
+.nm-hub-app.nm-hub-app--dashboard > .dashboard-navbar,
+.nm-hub-app.nm-hub-app--tasks .dashboard-navbar.nm-hub-header,
+.nm-hub-app.nm-hub-app--printed-files .dashboard-navbar.nm-hub-header {
+  margin-top: calc(-1 * max(0.75rem, env(safe-area-inset-top, 0px)));
+  padding-top: calc(16px + max(0.75rem, env(safe-area-inset-top, 0px)));
+}
+
+.nm-hub-app--dashboard .nm-hub-brand-bar.nm-hub-brand-bar--integrated-dashboard,
+.nm-hub-app--tasks .nm-hub-brand-bar.nm-hub-brand-bar--integrated-dashboard,
+.nm-hub-app--printed-files .nm-hub-brand-bar.nm-hub-brand-bar--integrated-dashboard {
   width: 100%;
   padding: 0;
   justify-content: space-between;
@@ -1188,55 +1485,153 @@ body:has(.nm-hub-app--dashboard) {
   gap: 0.75rem;
 }
 
-.nm-hub-app--dashboard .nm-hub-brand-bar--integrated-dashboard .nm-hub-brand-bar__heading {
-  flex: 0 0 auto;
-  margin-left: auto;
-  text-align: right;
+.nm-hub-app--dashboard .nm-hub-brand-bar--integrated-dashboard .nm-hub-brand-bar__heading,
+.nm-hub-app--tasks .nm-hub-brand-bar--integrated-dashboard .nm-hub-brand-bar__heading,
+.nm-hub-app--printed-files .nm-hub-brand-bar--integrated-dashboard .nm-hub-brand-bar__heading {
+  flex: 1 1 auto;
+  min-width: 0;
   align-items: flex-end;
+  text-align: right;
 }
 
-.nm-hub-app--dashboard .home-btn-rebel.nm-hub-brand-bar__home {
+.nm-hub-app .nm-hub-brand-bar__heading--stacked {
+  gap: 0.1rem;
+  line-height: 1.18;
+}
+
+.nm-hub-app .navbar-screen-title {
+  display: block;
+  font-family: var(--font-rebel-main);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-rebel-secondary);
+  letter-spacing: 0.04em;
+  text-transform: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: min(260px, calc(100vw - 9rem));
+}
+
+.nm-hub-app .navbar-screen-title.navbar-screen-title--accent {
+  color: var(--accent-rebel-green);
+  font-weight: 700;
+}
+
+/* Subtítulo dinámico bajo NOT BRAIN (lista tareas / crear) */
+.nm-hub-app .nm-hub-brand-bar__heading.navbar-brand-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.nm-hub-app .navbar-screen-title.navbar-brand-subtitle {
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition:
+    color 0.2s ease,
+    text-shadow 0.2s ease;
+}
+
+.nm-hub-app .navbar-brand-subtitle.subtitle-pending {
+  color: #46cff8;
+  text-shadow: 0 0 8px rgba(70, 207, 248, 0.15);
+}
+
+.nm-hub-app .navbar-brand-subtitle.subtitle-completed {
+  color: #9099a3;
+}
+
+.nm-hub-app .navbar-brand-subtitle.subtitle-muted {
+  color: #9099a3;
+  font-weight: 600;
+}
+
+.nm-hub-app.nm-hub-app--tasks .navbar-screen-title.navbar-brand-subtitle,
+.nm-hub-app.nm-hub-app--printed-files .navbar-screen-title.navbar-brand-subtitle {
+  max-width: min(340px, calc(100vw - 9rem));
+}
+
+.nm-hub-app.nm-hub-app--tasks .nm-hub-brand-bar__trailing .navbar-trailing-action-btn.nm-hub-brand-bar__btn,
+.nm-hub-app.nm-hub-app--printed-files .nm-hub-brand-bar__trailing .navbar-global-menu-btn.nm-hub-brand-bar__btn {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0;
+  box-sizing: border-box;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.nm-hub-app .navbar-home-btn.nm-hub-brand-bar__home {
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: auto;
-  height: auto;
-  min-width: 2.75rem;
-  min-height: 2.75rem;
-  padding: 10px;
-  border-radius: var(--radius-lg-rebel);
-  background: rgba(255, 255, 255, 0.015);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  color: var(--text-rebel-primary);
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0;
+  border-radius: 12px;
+  background: rgba(8, 9, 10, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
   flex-shrink: 0;
   transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
-.nm-hub-app--dashboard .home-btn-rebel.nm-hub-brand-bar__home:hover {
-  background: rgba(255, 255, 255, 0.03);
-  border-color: rgba(255, 255, 255, 0.08);
-  color: var(--text-rebel-primary);
+.nm-hub-brand-bar__home-svg--solid {
+  display: block;
 }
 
-.nm-hub-app--dashboard .navbar-brand.nm-hub-brand-bar__brand {
+.nm-hub-app .navbar-home-btn.nm-hub-brand-bar__home:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--accent-rebel-orange);
+  color: var(--text-primary);
+}
+
+.nm-hub-app .navbar-brand.nm-hub-brand-bar__brand {
   margin: 0;
   font-family: var(--font-rebel-heading);
   font-weight: 800;
-  font-size: 1.15rem;
-  letter-spacing: 0.8px;
-  color: var(--text-rebel-primary);
+  font-size: 1.1rem;
+  letter-spacing: 1px;
+  color: var(--text-primary);
   text-decoration: none;
   line-height: 1.2;
-  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: min(52vw, 14rem);
+  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.35);
 }
 
-.nm-hub-app--dashboard .navbar-brand.nm-hub-brand-bar__brand:hover {
-  color: var(--text-rebel-primary);
+.nm-hub-app .navbar-brand.nm-hub-brand-bar__brand:hover {
+  color: var(--text-primary);
   opacity: 0.92;
+}
+
+.nm-hub-app .nm-hub-brand-bar__heading--stacked .navbar-brand.nm-hub-brand-bar__brand {
+  font-size: clamp(1rem, 3.9vw, 1.09rem);
+  letter-spacing: 0.48px;
+  max-width: min(240px, calc(100vw - 9rem));
 }
 
 .nm-hub-app--dashboard .nm-hub-brand-bar__context {
   color: var(--text-rebel-secondary);
+  font-family: var(--font-rebel-main);
+}
+
+.nm-hub-app--tasks .nm-hub-brand-bar__context {
+  color: var(--text-secondary);
   font-family: var(--font-rebel-main);
 }
 
@@ -1498,6 +1893,652 @@ body:has(.nm-hub-app--dashboard) {
 .nm-hub-app--dashboard .card-muted-rebel .card-icon-wrapper-rebel {
   background: rgba(83, 90, 98, 0.12);
   color: var(--text-rebel-secondary);
+}
+
+.nm-hub-app
+  .nm-hub-brand-bar--with-trailing
+  .nm-hub-brand-bar__heading:not(.nm-hub-brand-bar__heading--stacked)
+  .navbar-brand.nm-hub-brand-bar__brand {
+  max-width: min(10rem, calc(100vw - 11.25rem));
+}
+
+.nm-hub-app .nm-hub-brand-bar--with-trailing .nm-hub-brand-bar__heading--stacked .navbar-brand.nm-hub-brand-bar__brand {
+  max-width: min(11rem, calc(100vw - 10rem));
+}
+
+/* --------------------------------------------------------------------------
+   Tareas hub — formulario “crear” y filas tipo dashboard (Urban Rebel tokens)
+   -------------------------------------------------------------------------- */
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva.nm-hub-card--task-create {
+  border-radius: clamp(14px, 3vw, 16px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--bg-surface);
+  margin-bottom: 0.75rem;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .form-container-clean {
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .field-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-rebel-secondary);
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .nm-hub-input.field-input,
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .nm-hub-textarea.field-textarea,
+.nm-hub-app--tasks form#nm-hub-tareas-nueva select.field-select {
+  width: 100%;
+  box-sizing: border-box;
+  background-color: var(--bg-surface-rebel);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  padding: 14px;
+  color: #fcfdff;
+  font-size: 0.95rem;
+  font-family: inherit;
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva button.nm-hub-input.importance-dropdown__trigger.field-select {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  cursor: pointer;
+  text-align: left;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva button.importance-dropdown__trigger.field-select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .importance-dropdown {
+  position: relative;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .importance-dropdown__chevron {
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .importance-dropdown__panel {
+  position: absolute;
+  z-index: 50;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  margin: 0;
+  padding: 6px;
+  box-sizing: border-box;
+  list-style: none;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--bg-surface-rebel, #14181c);
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(0, 0, 0, 0.25);
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .importance-dropdown__option {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #fcfdff;
+  font-family: inherit;
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .importance-dropdown__option:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .importance-dropdown__option:focus-visible {
+  outline: none;
+  background: rgba(74, 222, 128, 0.1);
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .importance-dropdown__option[aria-selected='true'] {
+  background: rgba(74, 222, 128, 0.12);
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .importance-dropdown__option--low {
+  border-left: 3px solid #a1a9b6;
+  padding-left: 9px;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .importance-dropdown__option--normal {
+  border-left: 3px solid #46cff8;
+  padding-left: 9px;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .importance-dropdown__option--high {
+  border-left: 3px solid #ffab40;
+  padding-left: 9px;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .importance-dropdown__option--urgent {
+  border-left: 3px solid #fb7185;
+  padding-left: 9px;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .field-input:focus,
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .field-textarea:focus,
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .field-select:focus,
+.nm-hub-app--tasks form#nm-hub-tareas-nueva button.importance-dropdown__trigger.field-select:focus-visible {
+  outline: none;
+  border-color: var(--accent-rebel-green);
+  background-color: rgba(74, 222, 128, 0.02);
+  box-shadow: 0 0 10px rgba(74, 222, 128, 0.08);
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .nm-hub-image-picker.upload-zone-rebel {
+  border-radius: 16px;
+  border: 2px dashed rgba(255, 255, 255, 0.1);
+  background-color: var(--bg-surface-rebel);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin-top: 0.35rem;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .upload-zone-title.nm-hub-image-picker-title {
+  margin: 0;
+  padding: 0;
+  text-align: center;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-rebel-primary, #fcfdff);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .upload-buttons-row.nm-hub-image-picker-split {
+  align-items: stretch;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  margin: 0;
+  max-width: none;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .upload-action-btn.nm-hub-image-picker-split__btn {
+  flex: 1;
+  max-width: none;
+  min-height: unset;
+  margin: 0;
+  padding: 16px;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  color: var(--text-rebel-secondary, #9099a3);
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .upload-action-btn.nm-hub-image-picker-split__btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: var(--text-rebel-primary, #fcfdff);
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .upload-action-btn.nm-hub-image-picker-split__btn:focus-visible {
+  outline: 2px solid var(--accent-rebel-blue);
+  outline-offset: 2px;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .upload-action-btn .nm-hub-image-picker-icon {
+  display: block;
+  width: 28px;
+  height: 28px;
+  color: inherit;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .btn-submit-task {
+  width: 100%;
+  background-color: var(--accent-rebel-green);
+  color: var(--bg-main-rebel);
+  font-weight: 800;
+  font-size: 1rem;
+  padding: 16px;
+  border: none;
+  border-radius: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  margin-top: 8px;
+  font-family: inherit;
+  box-shadow: 0 4px 12px rgba(74, 222, 128, 0.15);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .btn-submit-task:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(74, 222, 128, 0.24);
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .btn-submit-task:disabled {
+  opacity: 0.52;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Campos listado / franja día (solo tareas hub) */
+.nm-hub-app--tasks .nm-hub-task-search.field-input {
+  background-color: var(--bg-surface-rebel);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: var(--text-primary);
+  font-size: 0.93rem;
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.nm-hub-app--tasks .date-pager-fullwidth .nm-hub-date-native.field-input.date-pager-native {
+  width: auto;
+  min-height: 40px;
+  padding: 0.35rem 0.58rem;
+  font-size: 0.82rem;
+  border-radius: 10px;
+  background-color: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.nm-hub-app--tasks .nm-hub-task-search.field-input:focus {
+  outline: none;
+  border-color: var(--accent-rebel-blue);
+  background-color: rgba(70, 207, 248, 0.04);
+  box-shadow: 0 0 10px rgba(70, 207, 248, 0.1);
+}
+
+.nm-hub-app--tasks .date-pager-fullwidth .nm-hub-date-native.field-input.date-pager-native:focus {
+  outline: none;
+  border-color: var(--accent-rebel-blue);
+  background-color: rgba(70, 207, 248, 0.06);
+  box-shadow: 0 0 10px rgba(70, 207, 248, 0.12);
+}
+
+/* Faja filtros listado — pista única segmented (Pendientes / Completadas) */
+.nm-hub-app--tasks .tasks-hub-filters-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.nm-hub-app--tasks .tasks-hub-search-wrap.nm-hub-task-search-wrap {
+  margin: 0;
+}
+
+/* Pista de filtros — tareas (2 segmentos 50%) e impresos (varios botones sin solapamiento) */
+.nm-hub-app--tasks .filter-track-rebel,
+.nm-hub-app--printed-files .filter-track-rebel {
+  background-color: #121417;
+  border: 1px solid rgba(255, 255, 255, 0.02);
+  border-radius: 14px;
+  padding: 4px;
+  display: flex;
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 16px;
+}
+
+.nm-hub-app--printed-files .filter-track-rebel {
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: stretch;
+}
+
+.nm-hub-app--tasks .filter-tab-item,
+.nm-hub-app--printed-files .filter-tab-item {
+  box-sizing: border-box;
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 12px 0;
+  margin: 0;
+  font: inherit;
+  color: #535a62;
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nm-hub-app--tasks .filter-track-rebel .filter-tab-item {
+  flex: 1;
+}
+
+.nm-hub-app--printed-files .filter-track-rebel .filter-tab-item {
+  flex: 1 1 calc(50% - 3px);
+  min-width: 7.75rem;
+  padding: 10px 8px;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.nm-hub-app--printed-files .filter-tab-item:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.nm-hub-app--tasks .filter-tab-item:focus-visible,
+.nm-hub-app--printed-files .filter-tab-item:focus-visible {
+  outline: 2px solid var(--accent-rebel-blue);
+  outline-offset: 2px;
+}
+
+.nm-hub-app--tasks .filter-tab-item.active-pending,
+.nm-hub-app--printed-files .filter-tab-item.active-pending {
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: #46cff8;
+  text-shadow: 0 0 8px rgba(70, 207, 248, 0.2);
+}
+
+.nm-hub-app--tasks .filter-tab-item.active-completed {
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: #fcfdff;
+}
+
+.nm-hub-app--tasks .nm-hub-section.nm-hub-section--task-list {
+  margin-top: 0;
+}
+
+/* Lista — tarjetas jerarquizadas (--accent-color inline por ítem) */
+.nm-hub-app--tasks ul.nm-hub-task-list.tasks-list-rebel {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.nm-hub-app--tasks .task-card-rebel.nm-hub-task-item {
+  background-color: var(--bg-surface-rebel, #121417);
+  border-radius: 16px;
+  padding: 18px;
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.035);
+  border-left: 4px solid var(--accent-color, var(--accent-rebel-blue));
+  box-sizing: border-box;
+}
+
+.nm-hub-app--tasks ul.tasks-list-rebel .task-card-rebel:last-child {
+  margin-bottom: 0;
+}
+
+.nm-hub-app--tasks .task-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.nm-hub-app--tasks .task-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.nm-hub-app--tasks .task-card-title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--text-rebel-primary, #fcfdff);
+  line-height: 1.2;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.nm-hub-app--tasks .task-badge-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.nm-hub-app--tasks .badge-priority-rebel {
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border: 1px solid currentColor;
+}
+
+.nm-hub-app--tasks .badge-priority-rebel--low {
+  color: #a1a9b6;
+}
+
+.nm-hub-app--tasks .badge-priority-rebel--normal {
+  color: #46cff8;
+}
+
+.nm-hub-app--tasks .badge-priority-rebel--high {
+  color: #ffab40;
+}
+
+.nm-hub-app--tasks .badge-priority-rebel--urgent {
+  color: #fb7185;
+}
+
+.nm-hub-app--tasks .task-assignee-chip {
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: rgba(252, 253, 255, 0.78);
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nm-hub-app--tasks .task-card-header-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.nm-hub-app--tasks .btn-complete-compact {
+  background-color: rgba(74, 222, 128, 0.12);
+  border: 1px solid rgba(74, 222, 128, 0.45);
+  color: var(--accent-rebel-green);
+  font-weight: 700;
+  font-size: 0.78rem;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.nm-hub-app--tasks .btn-complete-compact:hover:not(:disabled) {
+  background-color: rgba(74, 222, 128, 0.22);
+  border-color: var(--accent-rebel-green);
+}
+
+.nm-hub-app--tasks .btn-complete-compact:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.nm-hub-app--tasks .btn-undo-icon {
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--text-rebel-secondary);
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.nm-hub-app--tasks .btn-undo-icon:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-rebel-primary);
+}
+
+.nm-hub-app--tasks .btn-undo-icon:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.nm-hub-app--tasks .btn-undo-icon:focus-visible {
+  outline: 2px solid var(--accent-rebel-blue);
+  outline-offset: 2px;
+}
+
+.nm-hub-app--tasks .task-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nm-hub-app--tasks .task-meta-log {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-rebel-muted, #535a62);
+  font-weight: 500;
+  line-height: 1.38;
+}
+
+.nm-hub-app--tasks .task-meta-log strong {
+  color: rgba(252, 253, 255, 0.65);
+}
+
+.nm-hub-app--tasks .task-description-text {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #d1d5db;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+.nm-hub-app--tasks .task-media-attachment {
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.nm-hub-app--tasks .task-thumb-hit {
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: none;
+  border-radius: 10px;
+  cursor: pointer;
+  line-height: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nm-hub-app--tasks .task-thumb-hit:focus-visible {
+  outline: 2px solid var(--accent-rebel-blue);
+  outline-offset: 2px;
+}
+
+.nm-hub-app--tasks .task-thumb-rebel {
+  width: 64px;
+  height: 64px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  vertical-align: top;
+  display: block;
+  transition: transform 0.15s ease;
+}
+
+.nm-hub-app--tasks .task-thumb-hit:hover .task-thumb-rebel {
+  transform: scale(1.05);
+}
+
+.nm-hub-app--tasks .task-media-attachment .nm-hub-thumb-placeholder {
+  width: 64px;
+  height: 64px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+@media (max-width: 360px) {
+  .nm-hub-app--tasks .task-card-header {
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .nm-hub-app--tasks .btn-complete-compact {
+    width: auto;
+    min-width: 6.75rem;
+  }
 }
 
 /* Fallback otros hub */

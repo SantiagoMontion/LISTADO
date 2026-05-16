@@ -15,6 +15,7 @@ function normalizeHubRole(raw: string | undefined): HubUserRole {
   if (s === 'lista_creator' || s === 'creador_lista' || s === 'lista') return 'lista_creator'
   if (s === 'taller_1' || s === 'operario') return 'taller_1'
   if (s === 'taller_2' || s === 'vista') return 'taller_2'
+  if (s === 'online_1') return 'online_1'
   return 'taller_1'
 }
 

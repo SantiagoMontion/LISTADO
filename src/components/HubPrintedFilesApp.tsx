@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type TouchEvent } from 'react'
 import { HubBrandBar } from './HubBrandBar'
-import { HUB_NAV_EVENT, onHubLinkClick } from '../lib/hubNavigate'
+import { HUB_NAV_EVENT, hubNavigate } from '../lib/hubNavigate'
 import { addDaysToIsoDate, formatDayMonthShort, normalizeCalendarDate, todayIsoLocal } from '../lib/date'
 import { formatSupabaseOrError } from '../lib/errors'
 import {
@@ -128,7 +128,9 @@ export function HubPrintedFilesApp({ configured }: HubPrintedFilesAppProps) {
     if (loading) return
     const avail = NM_PROD_MATERIAL_FAMILIES.filter((f) => counts[f] > 0)
     if (avail.length === 0) return
-    setActiveFamily(avail.includes('classic') ? 'classic' : avail[0])
+    setActiveFamily((prev) =>
+      avail.includes(prev) ? prev : avail.includes('classic') ? 'classic' : avail[0],
+    )
   }, [day, loading, counts])
 
   const filteredRows = useMemo(
@@ -207,56 +209,65 @@ export function HubPrintedFilesApp({ configured }: HubPrintedFilesAppProps) {
   }, [goLightboxNext, goLightboxPrev])
 
   return (
-    <div className="nm-hub-app">
-      <header className="nm-hub-header">
-        <HubBrandBar context="Impresos" />
+    <div className="nm-hub-app nm-hub-app--printed-files">
+      <header className="dashboard-navbar dashboard-navbar-clean nm-hub-header">
+        <HubBrandBar
+          integratedDashboard
+          integratedSubtitle="Archivos impresos"
+          integratedSubtitleTone="muted"
+          trailing={
+            <button
+              type="button"
+              className="nm-hub-brand-bar__btn navbar-global-menu-btn"
+              aria-label="Panel principal"
+              title="Panel principal"
+              onClick={() => hubNavigate('/')}
+            >
+              ☰
+            </button>
+          }
+        />
       </header>
 
-      <p className="nm-hub-footnote" style={{ marginBottom: '0.5rem' }}>
-        <a href="/" className="nm-hub-back" onClick={(e) => onHubLinkClick(e, '/')}>
-          ← Inicio
-        </a>
-      </p>
-
       {error ? (
-        <p className="nm-hub-error" role="alert">
+        <p className="nm-hub-error nm-hub-printed-feedback" role="alert">
           {error}
         </p>
       ) : null}
 
       {!configured ? (
-        <p className="nm-hub-muted">Configurá Supabase en <code>.env</code> para ver archivos.</p>
+        <p className="nm-hub-muted nm-hub-printed-feedback">Configurá Supabase en <code>.env</code> para ver archivos.</p>
       ) : null}
 
-      <section className="nm-hub-date-strip" aria-label="Día de los archivos">
-        <div className="nm-hub-date-nav">
-          <div className="nm-hub-date-nav-prev-wrap">
-            <button
-              type="button"
-              className="nm-hub-btn nm-hub-btn-ghost"
-              onClick={() => applyDay(addDaysToIsoDate(day, -1))}
-              disabled={!configured}
-              aria-label="Día anterior"
-            >
-              ←
-            </button>
-          </div>
-          <div className="nm-hub-date-picker">
-            <span className="nm-hub-date-display">{formatDayMonthShort(day)}</span>
-            <input
-              type="date"
-              className="nm-hub-input nm-hub-date-native"
-              value={day}
-              disabled={!configured}
-              onChange={(e) => applyDay(normalizeCalendarDate(e.target.value))}
-              aria-label="Elegir día"
-            />
-          </div>
+      <section className="date-pager-faja-compacta" aria-label="Día de los archivos">
+        <div className="date-pager-compact-side date-pager-compact-side--start">
           <button
             type="button"
-            className="nm-hub-btn nm-hub-btn-ghost"
+            className="pager-tactic-btn"
+            onClick={() => applyDay(addDaysToIsoDate(day, -1))}
+            disabled={!configured || loading}
+            aria-label="Día anterior"
+          >
+            ←
+          </button>
+        </div>
+        <div className="date-pager-panel-compact nm-hub-date-picker">
+          <span className="date-text-accent-number">{formatDayMonthShort(day)}</span>
+          <input
+            type="date"
+            className="nm-hub-input nm-hub-date-native nm-hub-printed-date-native"
+            value={day}
+            disabled={!configured || loading}
+            onChange={(e) => applyDay(normalizeCalendarDate(e.target.value))}
+            aria-label="Elegir día"
+          />
+        </div>
+        <div className="date-pager-compact-side date-pager-compact-side--end">
+          <button
+            type="button"
+            className="pager-tactic-btn"
             onClick={() => applyDay(addDaysToIsoDate(day, 1))}
-            disabled={!configured}
+            disabled={!configured || loading}
             aria-label="Día siguiente"
           >
             →
@@ -264,10 +275,34 @@ export function HubPrintedFilesApp({ configured }: HubPrintedFilesAppProps) {
         </div>
       </section>
 
+      {configured && (
+        <div className="filter-track-rebel" role="tablist" aria-label="Tipo de diseño">
+          {NM_PROD_MATERIAL_FAMILIES.map((fam) => {
+            const n = counts[fam]
+            const active = fam === activeFamily
+            const empty = n === 0
+            const showHighlight = active && !empty
+            const label = NM_PROD_MATERIAL_FAMILY_LABEL[fam]
+            return (
+              <button
+                key={fam}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                aria-disabled={empty || undefined}
+                disabled={loading || empty}
+                className={`filter-tab-item${showHighlight ? ' active-pending' : ''}`}
+                onClick={() => setActiveFamily(fam)}
+              >
+                {label} ({n})
+              </button>
+            )
+          })}
+        </div>
+      )}
+
       {configured && !loading && rows.length === 0 && !error ? (
-        <p className="nm-hub-muted" style={{ marginTop: '1rem' }}>
-          No hay imágenes cargadas para este día.
-        </p>
+        <p className="nm-hub-muted nm-hub-printed-feedback">No hay imágenes cargadas para este día.</p>
       ) : null}
 
       {configured && loading ? (
@@ -277,51 +312,36 @@ export function HubPrintedFilesApp({ configured }: HubPrintedFilesAppProps) {
         </div>
       ) : null}
 
-      {availableFamilies.length > 0 && !loading ? (
-        <div className="nm-hub-subtabs nm-hub-printed-filters" role="tablist" aria-label="Filtrar por material">
-          {availableFamilies.map((fam) => {
-            const n = counts[fam]
-            const isActive = fam === activeFamily
-            return (
-              <button
-                key={fam}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                className={`nm-hub-subtab${isActive ? ' nm-hub-subtab--active' : ''}`}
-                onClick={() => setActiveFamily(fam)}
-              >
-                {NM_PROD_MATERIAL_FAMILY_LABEL[fam]} ({n})
-              </button>
-            )
-          })}
-        </div>
-      ) : null}
-
-      {configured && !loading && viewableRows.length === 0 && rows.length > 0 ? (
-        <p className="nm-hub-muted" style={{ marginTop: '0.75rem' }}>
+      {configured && !loading && availableFamilies.length > 0 && viewableRows.length === 0 ? (
+        <p className="nm-hub-muted nm-hub-printed-feedback">
           No hay imágenes en esta categoría para el día.
         </p>
       ) : null}
 
-      {!loading ? (
-        <ul className="nm-hub-printed-list" aria-label="Imágenes">
-          {viewableRows.map((r, idx) => {
-            const src = urls[r.id] as string
-            return (
-              <li key={r.id} className="nm-hub-printed-item">
+      {configured && !loading && viewableRows.length > 0 ? (
+        <div className="print-design-feed-container">
+          <div className="design-gallery-feed" aria-label={`Diseños ${NM_PROD_MATERIAL_FAMILY_LABEL[activeFamily]}`}>
+            {viewableRows.map((r, idx) => {
+              const src = urls[r.id] as string
+              const fam = r.material_family
+              const kindLabel = NM_PROD_MATERIAL_FAMILY_LABEL[fam]
+              return (
                 <button
+                  key={r.id}
                   type="button"
-                  className="nm-hub-printed-thumb-btn"
+                  className={`design-item-card design-item-card--${fam}`}
                   onClick={() => setLightboxIndex(idx)}
-                  aria-label={`Ampliar imagen ${NM_PROD_MATERIAL_FAMILY_LABEL[r.material_family]}`}
+                  aria-label={`Ampliar ${kindLabel} ${idx + 1}`}
                 >
-                  <img src={src} alt="" className="nm-hub-printed-thumb-img" decoding="async" />
+                  <div className="design-item-card__media">
+                    <img src={src} alt="" className="design-item-card__img" decoding="async" />
+                  </div>
+                  <p className="design-card-meta">{`${kindLabel} diseño · #${idx + 1}`}</p>
                 </button>
-              </li>
-            )
-          })}
-        </ul>
+              )
+            })}
+          </div>
+        </div>
       ) : null}
 
       {lightboxIndex !== null && viewableRows[lightboxIndex] ? (

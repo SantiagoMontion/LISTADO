@@ -1,8 +1,26 @@
 import { normalizeCalendarDate } from './date'
 import { supabase } from './supabase'
+import type { HubTaskAssignableRole } from './hubTaskAssignable'
 import type { HubImportance, NmHubTask } from './types'
 
 const BUCKET = 'nm-hub-task-images'
+
+function normalizeAssignedRole(raw: unknown): HubTaskAssignableRole {
+  const s = typeof raw === 'string' ? raw : ''
+  if (s === 'online_1' || s === 'taller_1' || s === 'lista_creator') return s
+  return 'taller_1'
+}
+
+function coerceHubTask(row: Record<string, unknown>): NmHubTask {
+  return {
+    ...(row as unknown as NmHubTask),
+    assigned_role: normalizeAssignedRole(row.assigned_role),
+  }
+}
+
+function mapTaskRows(data: unknown): NmHubTask[] {
+  return ((data ?? []) as Record<string, unknown>[]).map((r) => coerceHubTask(r))
+}
 
 function requireClient() {
   if (!supabase) throw new Error('Supabase no configurado.')
@@ -20,7 +38,7 @@ export async function fetchHubTasksPending(forDate: string): Promise<NmHubTask[]
     .order('created_at', { ascending: false })
 
   if (error) throw error
-  return (data ?? []) as NmHubTask[]
+  return mapTaskRows(data)
 }
 
 export async function fetchHubTasksCompleted(forDate: string): Promise<NmHubTask[]> {
@@ -34,7 +52,7 @@ export async function fetchHubTasksCompleted(forDate: string): Promise<NmHubTask
     .order('executed_at', { ascending: false })
 
   if (error) throw error
-  return (data ?? []) as NmHubTask[]
+  return mapTaskRows(data)
 }
 
 /** Hay al menos una tarea pendiente (sin ejecutar) con for_date anterior al día mostrado. */
@@ -71,6 +89,7 @@ export async function createHubTask(input: {
   body: string | null
   importance: HubImportance
   for_date: string
+  assigned_role: HubTaskAssignableRole
   assigned_to?: string | null
 }): Promise<NmHubTask> {
   const sb = requireClient()
@@ -84,13 +103,14 @@ export async function createHubTask(input: {
       for_date: day,
       due_at: null,
       image_paths: [],
+      assigned_role: input.assigned_role,
       assigned_to: input.assigned_to ?? null,
     })
     .select('*')
     .single()
 
   if (error) throw error
-  return data as NmHubTask
+  return coerceHubTask(data as Record<string, unknown>)
 }
 
 export async function updateHubTaskExecuted(id: string, executed: boolean): Promise<void> {

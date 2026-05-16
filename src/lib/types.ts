@@ -1,4 +1,8 @@
+import type { HubTaskAssignableRole } from './hubTaskAssignable'
+
 export type MaterialTab = 'classic' | 'pro' | 'alfombras' | 'bordes_rectos' | 'otros'
+
+export type { HubTaskAssignableRole } from './hubTaskAssignable'
 
 export interface NmProdReport {
   id: string
@@ -51,7 +55,7 @@ export interface ParsedSection {
   items: ParsedLineItem[]
 }
 
-export type HubUserRole = 'admin' | 'lista_creator' | 'taller_1' | 'taller_2'
+export type HubUserRole = 'admin' | 'lista_creator' | 'taller_1' | 'taller_2' | 'online_1'
 
 /** Valor legacy en BD; se normaliza a lista_creator al leer el perfil. */
 export type HubUserRoleLegacy = 'creador_lista'
@@ -79,7 +83,9 @@ export interface NmHubTask {
   executed_by: string | null
   image_paths: string[]
   created_by: string | null
-  /** Usuario asignado; ausente o null = sin asignar (requiere columna en BD). */
+  /** Usuario hub destino (Dani / Juancruz / Tomas). Obligatorio en filas nuevas. */
+  assigned_role: HubTaskAssignableRole
+  /** Usuario asignado (UUID); opcional legacy. */
   assigned_to?: string | null
   created_at: string
   updated_at: string

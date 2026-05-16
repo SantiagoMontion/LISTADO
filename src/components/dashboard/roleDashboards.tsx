@@ -4,10 +4,51 @@ import type { HubPermissions } from '../../lib/hubPermissions'
 import { formatDayMonthShort } from '../../lib/date'
 import { DashboardCard } from './DashboardCard'
 import { DashboardStatusSummary } from './DashboardStatusSummary'
-
 interface RoleDashboardProps {
   stats: HubDashboardStats
   perms: HubPermissions
+}
+
+export function OnlineOperatorDashboard({ stats }: RoleDashboardProps) {
+  const links = hubDashboardLinks(stats.day)
+  return (
+    <>
+      <DashboardStatusSummary
+        items={[
+          { count: stats.pendingHubTasks, label: 'En curso' },
+          { count: stats.urgentHubTasks, label: 'Urgentes' },
+          { count: stats.completedHubTasksToday, label: 'Completadas', completed: true },
+        ]}
+      />
+      <nav className="cards-container-rebel" aria-label="Panel clientes operator">
+        <DashboardCard
+          href={links.createTask}
+          accent="create"
+          icon="✎"
+          title="Crear tarea"
+          description="Alta rápida con destinatario obligatorio"
+        />
+        <DashboardCard
+          href={links.pendingTasks}
+          accent="pending"
+          icon="☰"
+          stat={stats.pendingHubTasks}
+          statLabel="pendientes"
+          title="Ver tareas pendientes"
+          description="Mis tareas del día"
+        />
+        <DashboardCard
+          href={links.completedTasks}
+          accent="completed"
+          icon="✓"
+          stat={stats.completedHubTasksToday}
+          statLabel="completadas"
+          title="Tareas completadas"
+          description="Histórico del día"
+        />
+      </nav>
+    </>
+  )
 }
 
 export function AdminDashboard({ stats }: RoleDashboardProps) {
@@ -51,8 +92,8 @@ export function AdminDashboard({ stats }: RoleDashboardProps) {
           href={links.pendingTasks}
           accent="pending"
           icon="☰"
-          stat={stats.unassignedHubTasks}
-          statLabel="sin asignar"
+          stat={stats.urgentHubTasks}
+          statLabel="urgentes"
           title="Tareas pendientes"
           description="Prioridad y seguimiento"
         />
@@ -85,9 +126,11 @@ export function ListaCreatorDashboard({ stats }: RoleDashboardProps) {
         items={[
           { count: stats.hasListForDay ? 'Sí' : 'No', label: 'lista hoy' },
           { count: stats.pendingCutItems, label: 'pend. corte' },
+          { count: stats.pendingHubTasks, label: 'En curso' },
+          { count: stats.completedHubTasksToday, label: 'Completadas', completed: true },
         ]}
       />
-      <nav className="cards-container-rebel" aria-label="Panel creador de lista">
+      <nav className="cards-container-rebel" aria-label="Panel PDF creator">
         <DashboardCard
           href={links.uploadList}
           accent="create"
@@ -115,6 +158,31 @@ export function ListaCreatorDashboard({ stats }: RoleDashboardProps) {
           title="Ver lista de corte"
           description="Solo lectura del avance del taller"
         />
+        <DashboardCard
+          href={links.createTask}
+          accent="create"
+          icon="✎"
+          title="Crear tarea"
+          description="Asignación obligatoria a operador/cliente"
+        />
+        <DashboardCard
+          href={links.pendingTasks}
+          accent="pending"
+          icon="☰"
+          stat={stats.pendingHubTasks}
+          statLabel="pendientes hub"
+          title="Tareas del taller"
+          description="Mis tareas · seguimiento"
+        />
+        <DashboardCard
+          href={links.completedTasks}
+          accent="completed"
+          icon="✓"
+          stat={stats.completedHubTasksToday}
+          statLabel="completadas"
+          title="Tareas completadas"
+          description="Cerradas este día"
+        />
       </nav>
     </>
   )
@@ -126,9 +194,9 @@ export function Taller1Dashboard({ stats }: RoleDashboardProps) {
     <>
       <DashboardStatusSummary
         items={[
-          { count: stats.pendingHubTasks, label: 'en curso' },
-          { count: stats.unassignedHubTasks, label: 'sin asignar' },
-          { count: stats.completedHubTasksToday, label: 'completadas', completed: true },
+          { count: stats.pendingHubTasks, label: 'En curso' },
+          { count: stats.urgentHubTasks, label: 'Urgentes' },
+          { count: stats.completedHubTasksToday, label: 'Completadas', completed: true },
         ]}
       />
       <nav className="cards-container-rebel" aria-label="Panel supervisor">

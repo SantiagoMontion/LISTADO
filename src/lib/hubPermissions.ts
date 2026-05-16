@@ -34,11 +34,11 @@ export const HUB_PERMISSIONS: Record<HubUserRole, HubPermissions> = {
     viewCutList: true,
     editCutList: false,
     deleteCutList: false,
-    viewHubTasks: false,
-    createHubTasks: false,
-    editHubTasks: false,
+    viewHubTasks: true,
+    createHubTasks: true,
+    editHubTasks: true,
     viewPrintedFiles: false,
-    viewDashboardSummary: false,
+    viewDashboardSummary: true,
   },
   taller_1: {
     uploadProductionList: false,
@@ -50,6 +50,18 @@ export const HUB_PERMISSIONS: Record<HubUserRole, HubPermissions> = {
     createHubTasks: true,
     editHubTasks: true,
     viewPrintedFiles: true,
+    viewDashboardSummary: true,
+  },
+  online_1: {
+    uploadProductionList: false,
+    uploadMaterialImages: false,
+    viewCutList: false,
+    editCutList: false,
+    deleteCutList: false,
+    viewHubTasks: true,
+    createHubTasks: true,
+    editHubTasks: true,
+    viewPrintedFiles: false,
     viewDashboardSummary: true,
   },
   taller_2: {
@@ -67,10 +79,11 @@ export const HUB_PERMISSIONS: Record<HubUserRole, HubPermissions> = {
 }
 
 export const HUB_ROLE_LABEL: Record<HubUserRole, string> = {
-  admin: 'Administración',
-  lista_creator: 'Corte · Lista',
-  taller_1: 'Supervisor de taller',
-  taller_2: 'Operario de corte',
+  admin: 'ADMIN',
+  lista_creator: 'PDF CREATOR',
+  taller_1: 'TALLER OPERATOR',
+  online_1: 'CLIENTES OPERATOR',
+  taller_2: 'CORTE - BORDADO',
 }
 
 export function getHubPermissions(role: HubUserRole | null | undefined): HubPermissions | null {
@@ -125,6 +138,8 @@ export function defaultHubPathForRole(role: HubUserRole | null | undefined): str
       return '/manejador'
     case 'lista_creator':
       return '/'
+    case 'online_1':
+      return '/tareas'
     default:
       return '/'
   }
