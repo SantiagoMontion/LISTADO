@@ -9,6 +9,7 @@ interface TaskCardProps {
   onTogglePriority?: (task: NmProdTask) => void
   onToggleCompleted?: (task: NmProdTask) => void
   showOnlyDecrement?: boolean
+  variant?: 'legacy' | 'rebel'
 }
 
 export function TaskCard({
@@ -20,12 +21,111 @@ export function TaskCard({
   onTogglePriority,
   onToggleCompleted,
   showOnlyDecrement = false,
+  variant = 'legacy',
 }: TaskCardProps) {
   const done = task.is_completed || task.current_qty >= task.total_qty
   const isRectos = task.material_type.trim().toLowerCase() === 'bordes_rectos'
   const showBulkCut = task.total_qty > 1
   const remainingQty = Math.max(task.total_qty - task.current_qty, 0)
   const displayedQty = showOnlyDecrement ? task.current_qty : remainingQty
+  const isAlert = task.from_faltas || task.is_priority
+
+  if (variant === 'rebel') {
+    const rowClass = [
+      'cut-item-row',
+      isAlert ? 'alert-state' : 'normal-state',
+      done ? 'cut-item-row--completed' : '',
+    ]
+      .filter(Boolean)
+      .join(' ')
+
+    return (
+      <article className={rowClass} data-task-id={task.id}>
+        <div className="cut-item-row__body">
+        <div className="cut-info-block" aria-live="polite">
+          <h3 className="cut-measurements">
+            <span>{task.dimensions}</span>
+            {!isRectos ? (
+              <>
+                <span className="cut-qty-sep"> · </span>
+                <span className="cut-qty" title={done ? 'Cortado' : `Falta cortar: ${displayedQty}`}>
+                  ({displayedQty})
+                </span>
+              </>
+            ) : (
+              <span className="cut-qty" title={done ? 'Cortado' : `Falta cortar: ${displayedQty}`}>
+                {' '}
+                ({displayedQty})
+              </span>
+            )}
+          </h3>
+          {task.from_faltas ? (
+            <span className="cut-alert-text" title="Cargado desde LISTA FALTAS">
+              Faltas
+            </span>
+          ) : null}
+        </div>
+        <div className="cut-actions-group">
+          {canEdit ? (
+            showOnlyDecrement ? (
+              <button
+                type="button"
+                className="btn-utility-rebel"
+                disabled={busy || task.current_qty === 0}
+                onClick={() => onDecrement?.(task)}
+                aria-label="Restar una unidad"
+                title="Restar una unidad"
+              >
+                −
+              </button>
+            ) : (
+              <>
+                {showBulkCut ? (
+                  <button
+                    type="button"
+                    className={`btn-utility-rebel${task.is_completed ? ' btn-utility-rebel--active' : ''}`}
+                    disabled={busy}
+                    onClick={() => onToggleCompleted?.(task)}
+                    aria-pressed={task.is_completed}
+                    aria-label={task.is_completed ? 'Desmarcar corte total' : 'Marcar corte total'}
+                    title={task.is_completed ? 'Desmarcar corte total' : 'Marcar corte total'}
+                  >
+                    ✂
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className={`btn-utility-rebel${task.is_priority ? ' btn-utility-rebel--priority' : ''}`}
+                  disabled={busy}
+                  onClick={() => onTogglePriority?.(task)}
+                  aria-pressed={task.is_priority}
+                  aria-label={task.is_priority ? 'Quitar prioridad' : 'Marcar prioridad'}
+                  title={task.is_priority ? 'Quitar prioridad' : 'Marcar prioridad'}
+                >
+                  ★
+                </button>
+                <button
+                  type="button"
+                  className="btn-action-complete-rebel"
+                  disabled={busy || done}
+                  onClick={() => onIncrement?.(task)}
+                  aria-label="Sumar una unidad"
+                  title="Sumar una unidad"
+                >
+                  +
+                </button>
+              </>
+            )
+          ) : (
+            <span className="cut-readonly-label">Solo lectura</span>
+          )}
+        </div>
+        </div>
+        {task.notes ? <p className="cut-item-notes">{task.notes}</p> : null}
+      </article>
+    )
+  }
+
   const cardClass = [
     'nm-prod-task-card',
     task.is_priority ? 'nm-prod-task-card--priority' : '',
@@ -117,11 +217,7 @@ export function TaskCard({
           )}
         </div>
       </div>
-      {task.notes && (
-        <p className="nm-prod-task-meta">
-          {task.notes}
-        </p>
-      )}
+      {task.notes && <p className="nm-prod-task-meta">{task.notes}</p>}
     </article>
   )
 }

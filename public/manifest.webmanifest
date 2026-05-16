@@ -1,0 +1,11 @@
+{
+  "name": "NOT BRAIN",
+  "short_name": "NOT BRAIN",
+  "description": "Panel NOTMID — tareas y taller",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0c0e12",
+  "theme_color": "#46cff8",
+  "lang": "es-AR",
+  "orientation": "portrait-primary"
+}

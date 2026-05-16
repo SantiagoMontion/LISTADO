@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CreadorMaterialImagesModal } from './components/CreadorMaterialImagesModal'
+import { QuickAddMeasureModal } from './components/QuickAddMeasureModal'
 import { HubPrintedFilesApp } from './components/HubPrintedFilesApp'
 import { MaterialTabs } from './components/MaterialTabs'
 import { TaskCard } from './components/TaskCard'
@@ -15,6 +16,7 @@ import { HubBrandBar } from './components/HubBrandBar'
 import { HubLoadingScreen } from './components/HubLoadingScreen'
 import { HubRoleBlocked } from './components/HubRoleBlocked'
 import { HubTasksApp } from './components/HubTasksApp'
+import { HubTaskPushListener } from './components/HubTaskPushListener'
 import { LoginPage } from './components/LoginPage'
 import { HUB_NAV_EVENT, onHubLinkClick } from './lib/hubNavigate'
 import { normalizeCalendarDate, todayIsoLocal } from './lib/date'
@@ -35,8 +37,19 @@ import {
   toggleTaskCompleted,
   toggleTaskPriority,
 } from './lib/supabase'
-import type { MaterialTab, NmProdReport, NmProdTask } from './lib/types'
+import type { MaterialTab, NmHubProfile, NmProdReport, NmProdTask } from './lib/types'
 import { useAuth } from './lib/useAuth'
+
+function hubTaskPushListener(profile: NmHubProfile | null | undefined) {
+  if (!profile || !getHubPermissions(profile.role)?.viewHubTasks) return null
+  return (
+    <HubTaskPushListener
+      profileRole={profile.role}
+      profileId={profile.id}
+      isAdmin={profile.role === 'admin'}
+    />
+  )
+}
 
 const TAB_ORDER: MaterialTab[] = ['classic', 'pro', 'alfombras', 'bordes_rectos', 'otros']
 
@@ -63,32 +76,7 @@ function formatDayMonth(isoDate: string): string {
   return `${Number(day)}/${Number(month)}`
 }
 
-function parseQuickTaskInput(raw: string): { dimensions: string, materialType: MaterialTab } | null {
-  const m = raw.trim().match(/^(\d+)\s*[xX×]\s*(\d+)\s+(.+)$/)
-  if (!m) return null
-  const width = Number(m[1])
-  const height = Number(m[2])
-  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
-    return null
-  }
-
-  const materialRaw = m[3].trim().toLowerCase()
-  let materialType: MaterialTab | null = null
-  if (materialRaw.includes('classic')) materialType = 'classic'
-  else if (/\bpro\b/.test(materialRaw)) materialType = 'pro'
-  else if (materialRaw.includes('alfombra')) materialType = 'alfombras'
-  else if (materialRaw.includes('borde') && materialRaw.includes('rect')) materialType = 'bordes_rectos'
-  else if (materialRaw.includes('otro')) materialType = 'otros'
-  if (!materialType) return null
-
-  return {
-    dimensions: `${width}x${height}`,
-    materialType,
-  }
-}
-
 type TaskFilter = 'all' | 'priority' | 'standard' | 'completed'
-type SizeSortMode = 'default' | 'desc' | 'asc'
 const STANDARD_DIMENSIONS = new Set(['90x40', '82x32', '50x40'])
 function matchesTaskFilter(task: NmProdTask, filter: TaskFilter): boolean {
   const done = task.is_completed || task.current_qty >= task.total_qty
@@ -96,15 +84,6 @@ function matchesTaskFilter(task: NmProdTask, filter: TaskFilter): boolean {
   if (filter === 'priority') return task.is_priority && !done
   if (filter === 'standard') return STANDARD_DIMENSIONS.has(task.dimensions.trim()) && !done
   return !done
-}
-
-function areaFromDimensions(dimensions: string): number {
-  const match = dimensions.match(/(\d+(?:[.,]\d+)?)\s*x\s*(\d+(?:[.,]\d+)?)/i)
-  if (!match) return 0
-  const width = Number(match[1].replace(',', '.'))
-  const height = Number(match[2].replace(',', '.'))
-  if (Number.isNaN(width) || Number.isNaN(height)) return 0
-  return width * height
 }
 
 function reportStorageKey(fecha: string): string {
@@ -189,12 +168,10 @@ export default function App() {
   const [selectedDate, setSelectedDate] = useState(todayIsoLocal)
   const [taskFilter, setTaskFilter] = useState<TaskFilter>('all')
   const [completedSearch, setCompletedSearch] = useState('')
-  const [sizeSortMode, setSizeSortMode] = useState<SizeSortMode>('default')
   const [completedAtById, setCompletedAtById] = useState<Record<string, number>>({})
   const [pendingCutTask, setPendingCutTask] = useState<NmProdTask | null>(null)
   const [pendingDeleteReportId, setPendingDeleteReportId] = useState<string | null>(null)
   const [pendingQuickAdd, setPendingQuickAdd] = useState(false)
-  const [quickAddInput, setQuickAddInput] = useState('')
   const [quickAddError, setQuickAddError] = useState<string | null>(null)
   const [pendingDates, setPendingDates] = useState<Set<string>>(new Set())
   const [reportHasPendingById, setReportHasPendingById] = useState<Record<string, boolean>>({})
@@ -405,35 +382,22 @@ export default function App() {
     const searched =
       taskFilter === 'completed' ? tabbed.filter((t) => nmProdTaskMatchesCompletedSearch(t, q)) : tabbed
 
-    const base = (() => {
-      if (taskFilter !== 'completed') {
-        return sortTasksForDisplay(searched)
+    if (taskFilter !== 'completed') {
+      return sortTasksForDisplay(searched)
+    }
+    return [...searched].sort((a, b) => {
+      if (q) {
+        const ra = nmProdCompletedSearchRank(a, q)
+        const rb = nmProdCompletedSearchRank(b, q)
+        if (ra !== rb) return ra - rb
       }
-      return [...searched].sort((a, b) => {
-        if (q) {
-          const ra = nmProdCompletedSearchRank(a, q)
-          const rb = nmProdCompletedSearchRank(b, q)
-          if (ra !== rb) return ra - rb
-        }
-        const timeA = completedAtById[a.id] ?? Date.parse(a.created_at)
-        const timeB = completedAtById[b.id] ?? Date.parse(b.created_at)
-        const byRecentCut = (Number.isFinite(timeB) ? timeB : 0) - (Number.isFinite(timeA) ? timeA : 0)
-        if (byRecentCut !== 0) return byRecentCut
-        return surfaceFromDimensions(b.dimensions) - surfaceFromDimensions(a.dimensions)
-      })
-    })()
-
-    if (sizeSortMode === 'default') return base
-
-    const withIndex = base.map((task, index) => ({ task, index }))
-    withIndex.sort((a, b) => {
-      const areaA = areaFromDimensions(a.task.dimensions)
-      const areaB = areaFromDimensions(b.task.dimensions)
-      if (areaA === areaB) return a.index - b.index
-      return sizeSortMode === 'asc' ? areaA - areaB : areaB - areaA
+      const timeA = completedAtById[a.id] ?? Date.parse(a.created_at)
+      const timeB = completedAtById[b.id] ?? Date.parse(b.created_at)
+      const byRecentCut = (Number.isFinite(timeB) ? timeB : 0) - (Number.isFinite(timeA) ? timeA : 0)
+      if (byRecentCut !== 0) return byRecentCut
+      return surfaceFromDimensions(b.dimensions) - surfaceFromDimensions(a.dimensions)
     })
-    return withIndex.map((entry) => entry.task)
-  }, [tasksByMainFilter, activeTab, sizeSortMode, taskFilter, completedSearch, completedAtById])
+  }, [tasksByMainFilter, activeTab, taskFilter, completedSearch, completedAtById])
 
   const allCutInActiveTab = useMemo(() => {
     if (taskFilter !== 'all') return false
@@ -662,14 +626,6 @@ export default function App() {
     await runToggleCompleted(task)
   }
 
-  const cycleSizeSortMode = () => {
-    setSizeSortMode((prev) => {
-      if (prev === 'default') return 'desc'
-      if (prev === 'desc') return 'asc'
-      return 'default'
-    })
-  }
-
   const executeDeleteReport = async (id: string) => {
     setError(null)
     setLoading(true)
@@ -694,21 +650,23 @@ export default function App() {
     await executeDeleteReport(id)
   }
 
-  const confirmQuickAdd = async () => {
+  const confirmQuickAdd = async (payload: {
+    dimensions: string
+    materialType: MaterialTab
+    from_faltas: boolean
+    is_priority: boolean
+  }) => {
     setError(null)
     setQuickAddError(null)
-    const parsed = parseQuickTaskInput(quickAddInput)
-    if (!parsed) {
-      setQuickAddError('Formato: 90x40 Classic, 56x40 pro, etc.')
-      return
-    }
 
     setLoading(true)
     try {
       const task = {
-        material_type: parsed.materialType,
-        dimensions: parsed.dimensions.trim(),
+        material_type: payload.materialType,
+        dimensions: payload.dimensions.trim(),
         total_qty: 1,
+        from_faltas: payload.from_faltas,
+        is_priority: payload.is_priority,
       }
 
       const fechaDia = normalizeCalendarDate(selectedDate)
@@ -730,11 +688,11 @@ export default function App() {
 
       setReportId(targetReportId)
       setPendingQuickAdd(false)
-      setQuickAddInput('')
+      setQuickAddError(null)
       await refreshReports()
       await refreshCurrentTasks()
     } catch (e: unknown) {
-      setError(formatSupabaseOrError(e))
+      setQuickAddError(formatSupabaseOrError(e))
     } finally {
       setLoading(false)
     }
@@ -761,7 +719,12 @@ export default function App() {
   }
 
   if (authEnabled && authReady && session && isHubHome) {
-    return <HubHome user={user} profile={profile} profileError={profileError} />
+    return (
+      <>
+        {hubTaskPushListener(profile)}
+        <HubHome user={user} profile={profile} profileError={profileError} />
+      </>
+    )
   }
 
   if (authEnabled && authReady && session && profileReady && profile) {
@@ -790,13 +753,16 @@ export default function App() {
   if (authEnabled && authReady && session && isHubTasks && profileReady && profile) {
     const hubReadOnly = hubTasksReadOnly(profile.role)
     return (
-      <HubTasksApp
-        readOnly={hubReadOnly}
-        profileRole={profile.role}
-        profileId={profile.id}
-        isAdmin={profile.role === 'admin'}
-        showSentTab={Boolean(getHubPermissions(profile.role)?.createHubTasks)}
-      />
+      <>
+        {hubTaskPushListener(profile)}
+        <HubTasksApp
+          readOnly={hubReadOnly}
+          profileRole={profile.role}
+          profileId={profile.id}
+          isAdmin={profile.role === 'admin'}
+          showSentTab={Boolean(getHubPermissions(profile.role)?.createHubTasks)}
+        />
+      </>
     )
   }
 
@@ -847,8 +813,18 @@ export default function App() {
     )
   }
 
+  const isListaUpload = mode === 'creator'
+  const isCutList = mode === 'manager'
+  const hubShellClass = isListaUpload
+    ? 'nm-hub-app nm-hub-app--lista-upload'
+    : isCutList
+      ? 'nm-hub-app nm-hub-app--cut-list'
+      : 'nm-prod-app'
+
   return (
-    <div className="nm-prod-app">
+    <>
+      {hubTaskPushListener(profile)}
+      <div className={hubShellClass}>
       {!configured && (
         <div className="nm-prod-banner" role="status">
           Configura <code>VITE_SUPABASE_URL</code> y <code>VITE_SUPABASE_ANON_KEY</code>{' '}
@@ -856,16 +832,25 @@ export default function App() {
         </div>
       )}
 
-      <header className={`nm-prod-header${mode === 'home' ? ' nm-prod-header--home' : ''}`}>
+      <header
+        className={
+          isListaUpload || isCutList
+            ? 'nm-hub-header dashboard-navbar'
+            : `nm-prod-header${mode === 'home' ? ' nm-prod-header--home' : ''}`
+        }
+      >
         <HubBrandBar
-          context={mode === 'creator' ? 'Lista' : mode === 'manager' ? 'Corte' : undefined}
+          integratedDashboard={isListaUpload || isCutList}
+          integratedSubtitle={
+            isListaUpload ? 'Subir lista de corte' : isCutList ? 'Lista de corte' : undefined
+          }
+          integratedSubtitleTone={isListaUpload || isCutList ? 'default' : undefined}
           trailing={
-            mode === 'manager' && canEditTasks ? (
+            isCutList && canEditTasks ? (
               <button
                 type="button"
-                className="nm-hub-brand-bar__btn"
+                className="nm-hub-brand-bar__btn navbar-trailing-action-btn"
                 onClick={() => {
-                  setQuickAddInput('')
                   setQuickAddError(null)
                   setPendingQuickAdd(true)
                 }}
@@ -896,12 +881,13 @@ export default function App() {
       )}
 
       {canImportReports && (
-        <section className="nm-prod-section" aria-labelledby="nm-prod-import-heading">
-          <h2 id="nm-prod-import-heading" className="nm-prod-label">
+        <section className="lista-upload-container" aria-labelledby="nm-prod-import-label">
+          <label id="nm-prod-import-label" className="field-label-rebel" htmlFor="nm-prod-paste">
             Pegar reporte
-          </h2>
+          </label>
           <textarea
-            className="nm-prod-textarea"
+            id="nm-prod-paste"
+            className="report-textarea-rebel"
             value={paste}
             onChange={(e) => {
               setPaste(e.target.value)
@@ -912,8 +898,7 @@ export default function App() {
           />
           <button
             type="button"
-            className="nm-prod-btn nm-prod-btn-primary"
-            style={{ width: '100%', marginTop: '0.75rem' }}
+            className="btn-primary-upload"
             disabled={!configured || loading || !paste.trim()}
             onClick={() => void onImport()}
           >
@@ -922,8 +907,7 @@ export default function App() {
           {showCreadorMaterialImages ? (
             <button
               type="button"
-              className="nm-prod-btn"
-              style={{ width: '100%', marginTop: '0.65rem' }}
+              className="btn-secondary-media"
               disabled={!configured}
               onClick={() => {
                 setMaterialImgModalOpen(true)
@@ -933,17 +917,22 @@ export default function App() {
               Subir imágenes
             </button>
           ) : null}
-          {success && (
-            <p className="nm-prod-success" role="status">
+          {success ? (
+            <p className="lista-upload-success" role="status">
               {success}
             </p>
-          )}
+          ) : null}
+          {error && isListaUpload ? (
+            <p className="nm-hub-error lista-upload-error" role="alert">
+              {error}
+            </p>
+          ) : null}
         </section>
       )}
 
       {mode === 'manager' && (
-        <section className="nm-prod-section" aria-labelledby="nm-prod-history-heading">
-          <div className="nm-prod-date-nav" role="group" aria-label="Cambiar día del historial">
+        <section className="cut-list-container cut-list-date-section" aria-labelledby="nm-prod-history-heading">
+          <div className="nm-prod-date-nav cut-list-date-nav" role="group" aria-label="Cambiar día del historial">
             <div className="nm-prod-nav-arrow-wrap">
               <button
                 type="button"
@@ -982,11 +971,17 @@ export default function App() {
         </section>
       )}
 
-      {error && (
+      {error && isCutList ? (
+        <p className="nm-hub-error cut-list-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+
+      {error && !isListaUpload && !isCutList ? (
         <p className="nm-prod-error" role="alert">
           {error}
         </p>
-      )}
+      ) : null}
 
       {pendingCutTask && (
         <div className="nm-prod-modal-backdrop" role="presentation">
@@ -1053,57 +1048,28 @@ export default function App() {
         />
       ) : null}
 
-      {pendingQuickAdd && (
-        <div className="nm-prod-modal-backdrop" role="presentation">
-          <section className="nm-prod-modal" role="dialog" aria-modal="true">
-            <h3 className="nm-prod-modal-title">Agregar medida al día {formatDayMonth(selectedDate)}</h3>
-            <p className="nm-prod-modal-text">Ejemplo: 90x40 Classic o 56x40 pro</p>
-            <input
-              type="text"
-              className="nm-prod-modal-input"
-              value={quickAddInput}
-              onChange={(e) => {
-                setQuickAddInput(e.target.value)
-                if (quickAddError) setQuickAddError(null)
-              }}
-              placeholder="90x40 Classic"
-              autoFocus
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-            />
-            {quickAddError && (
-              <p className="nm-prod-error" role="alert">
-                {quickAddError}
-              </p>
-            )}
-            <div className="nm-prod-row">
-              <button
-                type="button"
-                className="nm-prod-btn"
-                onClick={() => setPendingQuickAdd(false)}
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                className="nm-prod-btn nm-prod-btn-primary"
-                disabled={loading || !quickAddInput.trim()}
-                onClick={() => void confirmQuickAdd()}
-              >
-                {loading ? 'Guardando…' : 'Agregar'}
-              </button>
-            </div>
-          </section>
-        </div>
-      )}
+      <QuickAddMeasureModal
+        open={pendingQuickAdd}
+        dayLabel={formatDayMonth(selectedDate)}
+        loading={loading}
+        error={quickAddError}
+        onClose={() => {
+          if (loading) return
+          setPendingQuickAdd(false)
+          setQuickAddError(null)
+        }}
+        onConfirm={(payload) => void confirmQuickAdd(payload)}
+      />
 
       {mode === 'manager' && reportId && (
-        <section className="nm-prod-section" aria-labelledby="nm-prod-tasks-heading">
-          <div className="nm-prod-row">
+        <section className="cut-list-container" aria-labelledby="nm-prod-tasks-heading">
+          <div className="cut-list-filter-wrap">
+            <label className="nm-hub-sr-only" htmlFor="nm-prod-task-filter">
+              Filtrar tareas
+            </label>
             <select
               id="nm-prod-task-filter"
-              className="nm-prod-select nm-prod-select-filter"
+              className="select-filter-rebel"
               value={taskFilter}
               onChange={(e) => {
                 const next = e.target.value
@@ -1120,68 +1086,50 @@ export default function App() {
               <option value="completed">Cortados</option>
             </select>
           </div>
-          <div className="nm-prod-tabs-wrap">
-                <div className="nm-prod-tabs-row">
-                  <MaterialTabs
-                    available={
-                      materialsAvailable.length ? materialsAvailable : TAB_ORDER
-                    }
-                    active={activeTab}
-                    counts={counts}
-                    onChange={setActiveTab}
-                  />
-                  {taskFilter === 'all' && (
-                    <button
-                      type="button"
-                      className="nm-prod-btn nm-prod-btn-icon nm-prod-sort-btn"
-                      onClick={cycleSizeSortMode}
-                      aria-label="Cambiar orden de medidas"
-                      title={
-                        sizeSortMode === 'default'
-                          ? 'Orden actual'
-                          : sizeSortMode === 'desc'
-                            ? 'Mayor a menor'
-                            : 'Menor a mayor'
-                      }
-                    >
-                      {sizeSortMode === 'default' ? '-' : sizeSortMode === 'desc' ? '↑' : '↓'}
-                    </button>
-                  )}
-                  {taskFilter === 'completed' && (
-                    <label className="nm-prod-completed-search-inline nm-prod-sort-btn">
-                      <span className="nm-prod-completed-search-inline-icon" aria-hidden="true">
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
-                          <path
-                            d="M20 20 16.65 16.65"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                      </span>
-                      <input
-                        type="text"
-                        inputMode="search"
-                        className="nm-prod-completed-search-inline-input"
-                        value={completedSearch}
-                        onChange={(e) => setCompletedSearch(e.target.value)}
-                        placeholder="Medida o notas…"
-                        aria-label="Filtrar por medida o notas en cortados"
-                        autoCapitalize="none"
-                        autoCorrect="off"
-                      />
-                    </label>
-                  )}
-                </div>
-              </div>
-          <div className="nm-prod-task-list">
+          <div className="cut-list-tabs-toolbar">
+            <MaterialTabs
+              available={materialsAvailable.length ? materialsAvailable : TAB_ORDER}
+              active={activeTab}
+              counts={counts}
+              onChange={setActiveTab}
+              variant="rebel"
+            />
+          </div>
+          {taskFilter === 'completed' && (
+            <div className="cut-list-search-row">
+              <label className="nm-prod-completed-search-inline cut-list-search">
+                <span className="nm-prod-completed-search-inline-icon" aria-hidden="true">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
+                    <path
+                      d="M20 20 16.65 16.65"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </span>
+                <input
+                  type="text"
+                  inputMode="search"
+                  className="nm-prod-completed-search-inline-input"
+                  value={completedSearch}
+                  onChange={(e) => setCompletedSearch(e.target.value)}
+                  placeholder="Medida o notas…"
+                  aria-label="Filtrar por medida o notas en cortados"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                />
+              </label>
+            </div>
+          )}
+          <div className="cut-list-items">
             {!tasksLoaded && tasks.length === 0 ? (
               <p className="nm-prod-task-meta">Cargando tareas…</p>
             ) : tasks.length === 0 ? (
@@ -1214,6 +1162,7 @@ export default function App() {
                       onTogglePriority={onTogglePriority}
                       onToggleCompleted={onToggleCompleted}
                       showOnlyDecrement={taskFilter === 'completed'}
+                      variant="rebel"
                     />
                   ))
             )}
@@ -1233,5 +1182,6 @@ export default function App() {
         </section>
       )}
     </div>
+    </>
   )
 }

@@ -115,31 +115,39 @@ export function CreadorMaterialImagesModal({ open, configured, onClose, onDone }
     }
   }, [fecha, rows, onClose, onDone])
 
+  const canSubmit = configured && rows.length > 0 && !busy
+
   if (!open) return null
 
   return (
-    <div className="nm-prod-modal-backdrop" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && handleClose()}>
+    <div
+      className="upload-images-modal-backdrop"
+      role="presentation"
+      onMouseDown={(e) => e.target === e.currentTarget && handleClose()}
+    >
       <section
-        className="nm-prod-modal nm-prod-modal--wide"
+        className="upload-images-modal"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
       >
-        <h3 className="nm-prod-modal-title" id={titleId}>
+        <h3 className="modal-title-rebel" id={titleId}>
           Subir imágenes
         </h3>
-        <label className="nm-prod-label" htmlFor="nm-prod-material-img-date" style={{ display: 'block', marginBottom: '0.35rem' }}>
-          Día
-        </label>
-        <input
-          id="nm-prod-material-img-date"
-          type="date"
-          className="nm-prod-modal-input"
-          style={{ minHeight: '2.5rem', marginBottom: '0.85rem' }}
-          value={fecha}
-          disabled={!configured || busy}
-          onChange={(e) => setFecha(e.target.value)}
-        />
+
+        <div className="modal-field-group">
+          <label className="modal-field-label" htmlFor="nm-prod-material-img-date">
+            Día
+          </label>
+          <input
+            id="nm-prod-material-img-date"
+            type="date"
+            className="modal-date-input"
+            value={fecha}
+            disabled={!configured || busy}
+            onChange={(e) => setFecha(e.target.value)}
+          />
+        </div>
 
         <input
           ref={fileInputRef}
@@ -150,58 +158,59 @@ export function CreadorMaterialImagesModal({ open, configured, onClose, onDone }
           disabled={!configured || busy}
           onChange={onFileInput}
         />
-        <div className="nm-prod-material-img-modal-actions">
-          <button
-            type="button"
-            className="nm-prod-btn nm-prod-btn-primary nm-prod-material-img-examinar"
-            disabled={!configured || busy}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            Examinar
-          </button>
-        </div>
+        <button
+          type="button"
+          className="btn-browse-rebel"
+          disabled={!configured || busy}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          Examinar
+        </button>
 
         {rows.length > 0 ? (
-          <ul className="nm-prod-material-img-preview-list" aria-label="Imágenes a subir">
-            {rows.map((r) => (
-              <li key={r.localId} className="nm-prod-material-img-preview-item">
-                <div className="nm-prod-material-img-preview-thumb-wrap">
-                  <img src={r.objectUrl} alt="" className="nm-prod-material-img-preview-thumb" />
-                </div>
-                <div className="nm-prod-material-img-preview-meta">
-                  <span className="nm-prod-material-img-preview-family">{NM_PROD_MATERIAL_FAMILY_LABEL[r.family]}</span>
-                  <button
-                    type="button"
-                    className="nm-prod-btn nm-prod-material-img-remove"
-                    disabled={busy}
-                    onClick={() => removeRow(r.localId)}
-                  >
-                    Quitar
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <>
+            <p className="upload-status-text upload-status-text--active">
+              {rows.length} imagen{rows.length === 1 ? '' : 'es'} lista{rows.length === 1 ? '' : 's'} para subir
+            </p>
+            <ul className="upload-images-preview-list" aria-label="Imágenes a subir">
+              {rows.map((r) => (
+                <li key={r.localId} className="upload-images-preview-item">
+                  <div className="upload-images-preview-thumb-wrap">
+                    <img src={r.objectUrl} alt="" className="upload-images-preview-thumb" />
+                  </div>
+                  <div className="upload-images-preview-meta">
+                    <span className="upload-images-preview-family">{NM_PROD_MATERIAL_FAMILY_LABEL[r.family]}</span>
+                    <button
+                      type="button"
+                      className="upload-images-preview-remove"
+                      disabled={busy}
+                      onClick={() => removeRow(r.localId)}
+                    >
+                      Quitar
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </>
         ) : (
-          <p className="nm-prod-task-meta" style={{ marginTop: '0.75rem' }}>
-            Todavía no agregaste imágenes.
-          </p>
+          <p className="upload-status-text">Todavía no agregaste imágenes.</p>
         )}
 
         {error ? (
-          <p className="nm-prod-error" role="alert">
+          <p className="upload-images-error" role="alert">
             {error}
           </p>
         ) : null}
 
-        <div className="nm-prod-row" style={{ marginTop: '1rem' }}>
-          <button type="button" className="nm-prod-btn" disabled={busy} onClick={handleClose}>
+        <div className="modal-actions-row">
+          <button type="button" className="btn-modal-cancel" disabled={busy} onClick={handleClose}>
             Cancelar
           </button>
           <button
             type="button"
-            className="nm-prod-btn nm-prod-btn-primary"
-            disabled={busy || !configured || rows.length === 0}
+            className={canSubmit ? 'btn-modal-submit-active' : 'btn-modal-submit-inactive'}
+            disabled={!canSubmit}
             onClick={() => void submit()}
           >
             {busy ? 'Subiendo…' : 'Subir todas'}

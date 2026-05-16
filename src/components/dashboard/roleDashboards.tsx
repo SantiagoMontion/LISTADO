@@ -172,7 +172,7 @@ export function ListaCreatorDashboard({ stats }: RoleDashboardProps) {
           stat={stats.pendingHubTasks}
           statLabel="pendientes hub"
           title="Tareas del taller"
-          description="Mis tareas · seguimiento"
+          description="Mis tareas · asignadas"
         />
         <DashboardCard
           href={links.completedTasks}

@@ -16,6 +16,7 @@ import {
   Taller1Dashboard,
   Taller2Dashboard,
 } from './roleDashboards'
+import { HubPushNotificationSetup } from '../HubPushNotificationSetup'
 
 interface DashboardContainerProps {
   user?: User | null
@@ -113,6 +114,10 @@ export function DashboardContainer({
           <p className="welcome-text-rebel">{displayName ? `Hola, ${displayName}` : 'Hola'}</p>
           <span className="role-badge-sticker">{roleLabel}</span>
         </div>
+      ) : null}
+
+      {!guestMode && profile && getHubPermissions(profile.role)?.viewHubTasks ? (
+        <HubPushNotificationSetup userId={profile.id} />
       ) : null}
 
       {guestMode ? (

@@ -14,6 +14,7 @@ import { addDaysToIsoDate, formatDayMonthShort, normalizeCalendarDate, todayIsoL
 import { supabase } from '../lib/supabase'
 import type { HubImportance, HubUserRole, NmHubTask } from '../lib/types'
 import { HubBrandBar } from './HubBrandBar'
+import { HubPushNotificationSetup } from './HubPushNotificationSetup'
 import { HUB_NAV_EVENT } from '../lib/hubNavigate'
 import {
   HUB_TASK_ASSIGNEE_LABEL,
@@ -183,7 +184,9 @@ function AssigneeRoleSelect({
         aria-invalid={value === null && !disabled}
         onClick={() => !disabled && setOpen((o) => !o)}
       >
-        <span className="importance-dropdown__value">
+        <span
+          className={`importance-dropdown__value${value ? '' : ' importance-dropdown__value--placeholder'}`}
+        >
           {value ? HUB_TASK_ASSIGNEE_LABEL[value] : 'Elegí a quién va'}
         </span>
         <svg
@@ -235,13 +238,13 @@ function readHubListScope(): HubListScope {
   if (typeof window === 'undefined') return 'inbox'
   const hub = new URLSearchParams(window.location.search).get('hub')
   if (hub === 'completadas') return 'completadas'
-  if (hub === 'seguimiento') return 'sent'
+  if (hub === 'asignadas' || hub === 'seguimiento') return 'sent'
   /** Compatibilidad con enlaces viejos `hub=pendientes`. */
   if (hub === 'pendientes') return 'inbox'
   return 'inbox'
 }
 
-/** Tareas que creé y asigné a otro rol (seguimiento), o a Dani/Juanc/Tomas cuando no coincide con mi perfil hub. */
+/** Tareas que creé y asigné a otro rol (pestaña Asignadas). */
 function isDelegatedByMe(t: NmHubTask, myRole: HubUserRole, myId: string): boolean {
   if (t.created_by !== myId) return false
   return t.assigned_role !== myRole
@@ -307,7 +310,7 @@ function setListScopeInUrl(scope: HubListScope) {
   if (scope === 'completadas') {
     u.searchParams.set('hub', 'completadas')
   } else if (scope === 'sent') {
-    u.searchParams.set('hub', 'seguimiento')
+    u.searchParams.set('hub', 'asignadas')
   } else {
     u.searchParams.delete('hub')
   }
@@ -345,6 +348,23 @@ function sortCompletedTasks(list: NmHubTask[]): NmHubTask[] {
     const ea = a.executed_at ? Date.parse(a.executed_at) : 0
     const eb = b.executed_at ? Date.parse(b.executed_at) : 0
     return eb - ea
+  })
+}
+
+/** Asignadas: pendientes arriba; completadas por el destinatario abajo. */
+function sortAssignedByMeTasks(list: NmHubTask[]): NmHubTask[] {
+  return [...list].sort((a, b) => {
+    const aDone = Boolean(a.executed_at)
+    const bDone = Boolean(b.executed_at)
+    if (aDone !== bDone) return aDone ? 1 : -1
+    if (aDone && bDone) {
+      const eb = b.executed_at ? Date.parse(b.executed_at) : 0
+      const ea = a.executed_at ? Date.parse(a.executed_at) : 0
+      if (eb !== ea) return eb - ea
+    }
+    const ir = importanceRank(b.importance) - importanceRank(a.importance)
+    if (ir !== 0) return ir
+    return Date.parse(b.created_at) - Date.parse(a.created_at)
   })
 }
 
@@ -486,7 +506,7 @@ export type HubTasksAppProps = {
   profileRole: HubUserRole
   profileId: string
   isAdmin: boolean
-  /** Pestaña «Seguimiento» (delegadas por mí); útil cuando `createHubTasks`. */
+  /** Pestaña «Asignadas» (delegadas por mí); útil cuando `createHubTasks`. */
   showSentTab?: boolean
 }
 
@@ -581,15 +601,21 @@ export function HubTasksApp({
     setListScope(scope)
     setRawPending(pendingRows)
     setRawCompleted(completedRows)
-    if (scope === 'completadas') {
-      const ids = completedRows.map((t) => t.executed_by).filter((x): x is string => Boolean(x))
+    if (scope === 'completadas' || scope === 'sent') {
+      const ids = completedRows
+        .filter((t) => {
+          if (!t.executed_by) return false
+          if (scope === 'sent') return isDelegatedByMe(t, profileRole, profileId)
+          return true
+        })
+        .map((t) => t.executed_by as string)
       const names = await fetchHubProfileDisplayNames(ids)
       if (seq !== tasksLoadSeqRef.current) return
       setExecutorNames(names)
     } else {
       setExecutorNames({})
     }
-  }, [taskDay, hubDataGen])
+  }, [taskDay, hubDataGen, profileRole, profileId])
 
   const load = useCallback(async () => {
     setError(null)
@@ -729,32 +755,35 @@ export function HubTasksApp({
     () => rawPending.filter((t) => !t.executed_at && taskInAssignedInbox(t, profileRole, isAdmin)),
     [rawPending, profileRole, isAdmin],
   )
-  const sentPendingTasks = useMemo(
-    () => rawPending.filter((t) => !t.executed_at && isDelegatedByMe(t, profileRole, profileId)),
-    [rawPending, profileRole, profileId],
-  )
-  /** Completadas accesibles: asignadas a mi rol / delegadas por mí. */
+  /** Tareas que asigné a otro rol (pendientes y completadas por el destinatario). */
+  const assignedByMeTasks = useMemo(() => {
+    const pending = rawPending.filter((t) => isDelegatedByMe(t, profileRole, profileId))
+    const completed = rawCompleted.filter((t) => isDelegatedByMe(t, profileRole, profileId))
+    return [...pending, ...completed]
+  }, [rawPending, rawCompleted, profileRole, profileId])
+
+  /** Completadas: solo las de mi bandeja (rol asignado a mí), no las que delegué. */
   const mergedCompletedTasks = useMemo(
     () =>
       rawCompleted.filter((t) => {
         if (!t.executed_at) return false
-        if (isAdmin) return true
-        return taskInAssignedInbox(t, profileRole, false) || isDelegatedByMe(t, profileRole, profileId)
+        if (isAdmin) return !isDelegatedByMe(t, profileRole, profileId)
+        return taskInAssignedInbox(t, profileRole, false)
       }),
     [rawCompleted, profileRole, profileId, isAdmin],
   )
 
   const scopedForSorting = useMemo(() => {
     if (listScope === 'completadas') return mergedCompletedTasks
-    if (listScope === 'sent') return sentPendingTasks
+    if (listScope === 'sent') return assignedByMeTasks
     return inboxPendingTasks
-  }, [listScope, mergedCompletedTasks, sentPendingTasks, inboxPendingTasks])
+  }, [listScope, mergedCompletedTasks, assignedByMeTasks, inboxPendingTasks])
 
-  const sorted = useMemo(
-    () =>
-      listScope === 'completadas' ? sortCompletedTasks(scopedForSorting) : sortPendingTasks(scopedForSorting),
-    [scopedForSorting, listScope],
-  )
+  const sorted = useMemo(() => {
+    if (listScope === 'completadas') return sortCompletedTasks(scopedForSorting)
+    if (listScope === 'sent') return sortAssignedByMeTasks(scopedForSorting)
+    return sortPendingTasks(scopedForSorting)
+  }, [scopedForSorting, listScope])
 
   const filteredSorted = useMemo(() => {
     const q = taskQuery.trim().toLowerCase()
@@ -774,6 +803,25 @@ export function HubTasksApp({
       return taskInAssignedInbox(t, profileRole, false)
     },
     [readOnly, isAdmin, listScope, profileRole],
+  )
+
+  const canMarkComplete = useCallback(
+    (t: NmHubTask) => {
+      if (readOnly || t.executed_at) return false
+      if (listScope === 'sent') return false
+      return canToggleExecuted(t)
+    },
+    [readOnly, listScope, canToggleExecuted],
+  )
+
+  const canUndoComplete = useCallback(
+    (t: NmHubTask) => {
+      if (readOnly || !t.executed_at) return false
+      if (listScope === 'sent') return isDelegatedByMe(t, profileRole, profileId)
+      if (listScope === 'completadas') return canToggleExecuted(t)
+      return false
+    },
+    [readOnly, listScope, profileRole, profileId, canToggleExecuted],
   )
 
   useEffect(() => {
@@ -846,11 +894,17 @@ export function HubTasksApp({
       : listScope === 'completadas'
         ? 'Tareas completadas'
         : listScope === 'sent'
-          ? 'Seguimiento'
+          ? 'Asignadas'
           : 'Mis tareas'
 
   const integratedSubtitleTone =
-    panel === 'create' ? 'accent' : listScope === 'completadas' ? 'completed' : 'pending'
+    panel === 'create'
+      ? 'accent'
+      : listScope === 'completadas'
+        ? 'completed'
+        : listScope === 'sent'
+          ? 'completed'
+          : 'pending'
 
   const showCreateBtn = !readOnly && (panel === 'create' || panel === 'list')
 
@@ -894,6 +948,8 @@ export function HubTasksApp({
           {error}
         </p>
       ) : null}
+
+      {!readOnly ? <HubPushNotificationSetup userId={profileId} compact /> : null}
 
       <section className="nm-hub-date-strip date-pager-fullwidth" aria-label="Día de las tareas">
         <div className="date-pager-side date-pager-side--start">
@@ -1103,7 +1159,7 @@ export function HubTasksApp({
                   className={`filter-tab-item${listScope === 'sent' ? ' active-pending' : ''}`}
                   onClick={() => setListScopeInUrl('sent')}
                 >
-                  Seguimiento
+                  Asignadas
                 </button>
               ) : null}
               <button
@@ -1140,7 +1196,7 @@ export function HubTasksApp({
               {listScope === 'completadas'
                 ? 'No hay tareas completadas este día.'
                 : listScope === 'sent'
-                  ? 'No hay tareas delegadas pendientes este día.'
+                  ? 'No hay tareas asignadas a otros este día.'
                   : 'No hay tareas pendientes para vos este día.'}
             </p>
           ) : null}
@@ -1148,13 +1204,15 @@ export function HubTasksApp({
             <p className="nm-hub-muted">Ninguna tarea coincide con la búsqueda.</p>
           ) : null}
           <ul className="nm-hub-task-list tasks-list-rebel" aria-busy={loading}>
-            {filteredSorted.map((t) => (
+            {filteredSorted.map((t) => {
+              const assignedDone = listScope === 'sent' && Boolean(t.executed_at)
+              return (
               <li
                 key={t.id}
-                className="task-card-rebel nm-hub-task-item"
+                className={`task-card-rebel nm-hub-task-item${assignedDone ? ' task-card-rebel--assigned-done' : ''}`}
                 style={
                   {
-                    '--accent-color': PRIORITY_ACCENT[t.importance],
+                    '--accent-color': assignedDone ? '#535a62' : PRIORITY_ACCENT[t.importance],
                   } as CSSProperties
                 }
               >
@@ -1173,7 +1231,7 @@ export function HubTasksApp({
                     </div>
                   </div>
                   <div className="task-card-header-actions">
-                    {!readOnly && listScope !== 'completadas' && canToggleExecuted(t) ? (
+                    {!readOnly && canMarkComplete(t) ? (
                       <button
                         type="button"
                         className="btn-complete-compact"
@@ -1183,14 +1241,14 @@ export function HubTasksApp({
                         Completar
                       </button>
                     ) : null}
-                    {!readOnly && listScope === 'completadas' && canToggleExecuted(t) ? (
+                    {!readOnly && canUndoComplete(t) ? (
                       <button
                         type="button"
                         className="btn-undo-icon"
                         disabled={busy}
                         onClick={() => void onSetExecuted(t, false)}
-                        aria-label="Descompletar"
-                        title="Descompletar"
+                        aria-label="Devolver a pendiente"
+                        title="Devolver a pendiente"
                       >
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                           <path
@@ -1212,14 +1270,14 @@ export function HubTasksApp({
                     ) : null}
                   </div>
                 </header>
-                {(listScope === 'completadas' && t.executed_at) || t.body ? (
+                {assignedDone || (listScope === 'completadas' && t.executed_at) || t.body ? (
                   <div className="task-card-body">
-                    {listScope === 'completadas' && t.executed_at ? (
+                    {assignedDone || (listScope === 'completadas' && t.executed_at) ? (
                       <p className="task-meta-log">
                         Completada por{' '}
                         <strong>{t.executed_by ? executorNames[t.executed_by] ?? '…' : '—'}</strong>
                         {' · '}
-                        {formatExecutedLabel(t.executed_at)}
+                        {t.executed_at ? formatExecutedLabel(t.executed_at) : '—'}
                       </p>
                     ) : null}
                     {t.body ? <p className="task-description-text">{t.body}</p> : null}
@@ -1227,7 +1285,8 @@ export function HubTasksApp({
                 ) : null}
                 <TaskThumbnails paths={t.image_paths ?? []} rebel />
               </li>
-            ))}
+              )
+            })}
           </ul>
         </section>
       ) : null}
