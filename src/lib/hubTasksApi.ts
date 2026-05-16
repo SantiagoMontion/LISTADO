@@ -27,6 +27,38 @@ function requireClient() {
   return supabase
 }
 
+function parseRpcTaskRow(data: unknown): NmHubTask | null {
+  const raw = Array.isArray(data) ? data[0] : data
+  if (!raw || typeof raw !== 'object') return null
+  return coerceHubTask(raw as Record<string, unknown>)
+}
+
+/** Si el RPC insertó pero el cliente falló al leer, recuperar la fila recién creada. */
+async function recoverRecentlyCreatedHubTask(
+  forDate: string,
+  title: string,
+): Promise<NmHubTask | null> {
+  const sb = requireClient()
+  const { data: userData } = await sb.auth.getUser()
+  const uid = userData.user?.id
+  if (!uid) return null
+
+  const day = normalizeCalendarDate(forDate)
+  const trimmed = title.trim()
+  const { data, error } = await sb
+    .from('nm_hub_tasks')
+    .select('*')
+    .eq('for_date', day)
+    .eq('created_by', uid)
+    .eq('title', trimmed)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (error || !data) return null
+  return coerceHubTask(data as Record<string, unknown>)
+}
+
 export async function fetchHubTasksPending(forDate: string): Promise<NmHubTask[]> {
   const sb = requireClient()
   const day = normalizeCalendarDate(forDate)
@@ -104,23 +136,23 @@ export async function createHubTask(input: {
     p_assigned_to: input.assigned_to ?? null,
   })
 
-  if (error) {
-    const msg = [error.message, error.code, error.details].filter(Boolean).join(' — ')
-    if (
-      error.code === '42501' ||
-      /row-level security|permission denied|permiso/i.test(msg) ||
-      /nm_hub_create_task/i.test(msg)
-    ) {
-      throw new Error(
-        'No se pudo crear la tarea. Ejecutá sql/nm_hub_tasks_assigned_admin.sql en Supabase (incluye nm_hub_create_task) y verificá que tu perfil tenga role = admin.',
-      )
-    }
-    throw error
+  const parsed = parseRpcTaskRow(data)
+  if (!error && parsed) return parsed
+
+  const msg = error
+    ? [error.message, error.code, error.details].filter(Boolean).join(' — ')
+    : ''
+  const rlsLike =
+    !parsed &&
+    (error?.code === '42501' || /row-level security|permission denied|permiso/i.test(msg))
+
+  if (rlsLike) {
+    const recovered = await recoverRecentlyCreatedHubTask(day, input.title)
+    if (recovered) return recovered
   }
 
-  const row = (Array.isArray(data) ? data[0] : data) as Record<string, unknown> | null
-  if (!row) throw new Error('La tarea se creó pero no se pudo leer la respuesta.')
-  return coerceHubTask(row)
+  if (error) throw error
+  throw new Error('La tarea se creó pero no se pudo leer la respuesta.')
 }
 
 export async function deleteHubTask(taskId: string): Promise<void> {
@@ -165,7 +197,11 @@ export async function updateHubTaskExecuted(id: string, executed: boolean): Prom
   if (error) throw error
 }
 
-export async function appendTaskImages(taskId: string, files: File[]): Promise<string[]> {
+export async function appendTaskImages(
+  taskId: string,
+  files: File[],
+  existingPaths: string[] = [],
+): Promise<string[]> {
   if (files.length === 0) return []
   const sb = requireClient()
   const uploaded: string[] = []
@@ -181,12 +217,21 @@ export async function appendTaskImages(taskId: string, files: File[]): Promise<s
     uploaded.push(path)
   }
 
-  const { data: row, error: fetchErr } = await sb.from('nm_hub_tasks').select('image_paths').eq('id', taskId).single()
-  if (fetchErr) throw fetchErr
-  const prev = (row?.image_paths as string[] | undefined) ?? []
+  let prev = existingPaths
+  if (prev.length === 0) {
+    const { data: prevRow } = await sb
+      .from('nm_hub_tasks')
+      .select('image_paths')
+      .eq('id', taskId)
+      .maybeSingle()
+    prev = (prevRow?.image_paths as string[] | undefined) ?? []
+  }
   const next = [...prev, ...uploaded]
 
-  const { error: upErr } = await sb.from('nm_hub_tasks').update({ image_paths: next }).eq('id', taskId)
+  const { error: upErr } = await sb.rpc('nm_hub_set_task_image_paths', {
+    p_task_id: taskId,
+    p_image_paths: next,
+  })
   if (upErr) throw upErr
 
   return uploaded

@@ -851,16 +851,17 @@ export function HubTasksApp({
     if (readOnly || !title.trim() || assignedRoleCreate === null) return
     setBusy(true)
     setError(null)
+    const titleDraft = title.trim()
     try {
       const created = await createHubTask({
-        title: title.trim(),
+        title: titleDraft,
         body: body.trim() || null,
         importance,
         for_date: taskDay,
         assigned_role: assignedRoleCreate,
       })
       if (files.length > 0) {
-        await appendTaskImages(created.id, files)
+        await appendTaskImages(created.id, files, created.image_paths ?? [])
       }
       void notifyTaskAssignedPush(created)
       setTitle('')
@@ -873,7 +874,21 @@ export function HubTasksApp({
       replaceListPanelUrl()
       setPanel('list')
     } catch (err: unknown) {
-      setError(formatSupabaseOrError(err))
+      const msg = formatSupabaseOrError(err)
+      if (/row-level security/i.test(msg)) {
+        markLocalHubMutation()
+        await loadSilent()
+        setError(null)
+        setTitle('')
+        setBody('')
+        setImportance('normal')
+        setAssignedRoleCreate(null)
+        setFiles([])
+        replaceListPanelUrl()
+        setPanel('list')
+      } else {
+        setError(msg)
+      }
     } finally {
       setBusy(false)
     }

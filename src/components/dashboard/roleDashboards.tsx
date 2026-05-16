@@ -67,8 +67,6 @@ export function AdminDashboard({ stats }: RoleDashboardProps) {
           href={links.createTask}
           accent="create"
           icon="✎"
-          stat={stats.pendingHubTasks}
-          statLabel="pendientes"
           title="Crear tarea"
           description="Nueva tarea con detalle e imágenes"
         />
