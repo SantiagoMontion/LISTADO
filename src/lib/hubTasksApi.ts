@@ -94,23 +94,39 @@ export async function createHubTask(input: {
 }): Promise<NmHubTask> {
   const sb = requireClient()
   const day = normalizeCalendarDate(input.for_date)
-  const { data, error } = await sb
-    .from('nm_hub_tasks')
-    .insert({
-      title: input.title.trim(),
-      body: input.body?.trim() || null,
-      importance: input.importance,
-      for_date: day,
-      due_at: null,
-      image_paths: [],
-      assigned_role: input.assigned_role,
-      assigned_to: input.assigned_to ?? null,
-    })
-    .select('*')
-    .single()
 
+  const { data, error } = await sb.rpc('nm_hub_create_task', {
+    p_title: input.title.trim(),
+    p_body: input.body?.trim() || null,
+    p_importance: input.importance,
+    p_for_date: day,
+    p_assigned_role: input.assigned_role,
+    p_assigned_to: input.assigned_to ?? null,
+  })
+
+  if (error) {
+    const msg = [error.message, error.code, error.details].filter(Boolean).join(' — ')
+    if (
+      error.code === '42501' ||
+      /row-level security|permission denied|permiso/i.test(msg) ||
+      /nm_hub_create_task/i.test(msg)
+    ) {
+      throw new Error(
+        'No se pudo crear la tarea. Ejecutá sql/nm_hub_tasks_assigned_admin.sql en Supabase (incluye nm_hub_create_task) y verificá que tu perfil tenga role = admin.',
+      )
+    }
+    throw error
+  }
+
+  const row = (Array.isArray(data) ? data[0] : data) as Record<string, unknown> | null
+  if (!row) throw new Error('La tarea se creó pero no se pudo leer la respuesta.')
+  return coerceHubTask(row)
+}
+
+export async function deleteHubTask(taskId: string): Promise<void> {
+  const sb = requireClient()
+  const { error } = await sb.rpc('nm_hub_delete_task', { p_task_id: taskId })
   if (error) throw error
-  return coerceHubTask(data as Record<string, unknown>)
 }
 
 /** Dispara push a quien tenga el rol asignado (Edge Function; respaldo del webhook DB). */

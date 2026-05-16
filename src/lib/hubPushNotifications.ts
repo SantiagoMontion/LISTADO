@@ -17,7 +17,10 @@ export type HubPushSupportReason =
   | 'no-window'
   | 'no-vapid'
   | 'browser'
-  | 'safari-ios-pwa'
+  /** iPhone/iPad: hace falta PWA en pantalla de inicio (Safari); Chrome en iOS no sirve. */
+  | 'ios-pwa-required'
+  /** PWA instalada pero sin APIs (iOS viejo o acceso creado desde Chrome). */
+  | 'ios-pwa-unsupported'
   | 'safari-mac-old'
 
 export type HubPushSupport = {
@@ -44,20 +47,37 @@ function isStandaloneDisplay(): boolean {
   )
 }
 
+/** Pasos para activar push en iPhone/iPad (solo cuando `ios-pwa-required`). */
+export function getHubPushIosInstallSteps(): string[] {
+  return [
+    'En iPhone, Chrome no puede enviar avisos (limitación de Apple). Usá Safari.',
+    'En Safari: botón Compartir (cuadrado con flecha ↑) → «Agregar a pantalla de inicio».',
+    'Abrí NOT BRAIN desde el ícono nuevo en el inicio (no desde Chrome ni una pestaña).',
+    'En el inicio del panel, tocá «Permitir avisos cuando te asignen tareas».',
+    'Necesitás iOS 16.4 o superior (Ajustes → General → Actualización de software).',
+  ]
+}
+
 /** Texto de ayuda cuando push no está disponible en este navegador. */
 export function getHubPushUnsupportedHint(reason?: HubPushSupportReason): string {
   switch (reason) {
     case 'no-vapid':
       return 'Avisos no configurados en el servidor (falta VITE_VAPID_PUBLIC_KEY en el deploy).'
-    case 'safari-ios-pwa':
-      return 'En iPhone/iPad: Compartir → «Agregar a pantalla de inicio». Abrí la app desde el ícono, andá al inicio y activá avisos ahí. En Safari normal (pestaña) iOS no permite push.'
+    case 'ios-pwa-required':
+      return 'En iPhone/iPad los avisos solo funcionan si agregás el sitio a la pantalla de inicio con Safari (no con Chrome).'
+    case 'ios-pwa-unsupported':
+      return 'Este acceso directo no admite avisos. Borralo, abrí el sitio en Safari, volvé a «Agregar a pantalla de inicio» y activá avisos desde el ícono del inicio.'
     case 'safari-mac-old':
       return 'En Mac necesitás macOS 13+ y Safari 16+. Luego: Safari → Ajustes para este sitio web → Notificaciones → Permitir.'
     case 'browser':
-      return 'Este navegador no admite avisos push. Probá Chrome, Edge o Safari actualizado.'
+      return 'Este navegador no admite avisos push. En Android usá Chrome; en iPhone usá Safari y agregá el sitio al inicio.'
     default:
       return 'Avisos no disponibles en este navegador.'
   }
+}
+
+export function isHubPushIosDevice(): boolean {
+  return typeof window !== 'undefined' && isIosDevice()
 }
 
 export function getHubPushSupport(): HubPushSupport {
@@ -73,12 +93,17 @@ export function getHubPushSupport(): HubPushSupport {
   const ios = isIosDevice()
   const standalone = isStandaloneDisplay()
 
-  if (ios && safari && !standalone) {
-    return { supported: false, reason: 'safari-ios-pwa' }
+  /** Cualquier navegador en iOS (Chrome, Firefox, etc.) = WebKit; push solo en PWA desde Safari. */
+  if (ios && !standalone) {
+    return { supported: false, reason: 'ios-pwa-required' }
+  }
+
+  if (ios && standalone && (!hasNotification || !hasServiceWorker || !hasPushManager)) {
+    return { supported: false, reason: 'ios-pwa-unsupported' }
   }
 
   if (!hasNotification || !hasServiceWorker || !hasPushManager) {
-    if (safari) return { supported: false, reason: 'safari-mac-old' }
+    if (safari && !ios) return { supported: false, reason: 'safari-mac-old' }
     return { supported: false, reason: 'browser' }
   }
 

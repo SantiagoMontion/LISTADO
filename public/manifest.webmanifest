@@ -3,6 +3,7 @@
   "short_name": "NOT BRAIN",
   "description": "Panel NOTMID — tareas y taller",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#0c0e12",
   "theme_color": "#46cff8",

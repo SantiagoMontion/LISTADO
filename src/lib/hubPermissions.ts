@@ -11,6 +11,7 @@ export interface HubPermissions {
   viewHubTasks: boolean
   createHubTasks: boolean
   editHubTasks: boolean
+  deleteHubTasks: boolean
   viewPrintedFiles: boolean
   viewDashboardSummary: boolean
 }
@@ -25,6 +26,7 @@ export const HUB_PERMISSIONS: Record<HubUserRole, HubPermissions> = {
     viewHubTasks: true,
     createHubTasks: true,
     editHubTasks: true,
+    deleteHubTasks: true,
     viewPrintedFiles: true,
     viewDashboardSummary: true,
   },
@@ -37,6 +39,7 @@ export const HUB_PERMISSIONS: Record<HubUserRole, HubPermissions> = {
     viewHubTasks: true,
     createHubTasks: true,
     editHubTasks: true,
+    deleteHubTasks: false,
     viewPrintedFiles: false,
     viewDashboardSummary: true,
   },
@@ -49,6 +52,7 @@ export const HUB_PERMISSIONS: Record<HubUserRole, HubPermissions> = {
     viewHubTasks: true,
     createHubTasks: true,
     editHubTasks: true,
+    deleteHubTasks: false,
     viewPrintedFiles: true,
     viewDashboardSummary: true,
   },
@@ -61,6 +65,7 @@ export const HUB_PERMISSIONS: Record<HubUserRole, HubPermissions> = {
     viewHubTasks: true,
     createHubTasks: true,
     editHubTasks: true,
+    deleteHubTasks: false,
     viewPrintedFiles: false,
     viewDashboardSummary: true,
   },
@@ -73,6 +78,7 @@ export const HUB_PERMISSIONS: Record<HubUserRole, HubPermissions> = {
     viewHubTasks: false,
     createHubTasks: false,
     editHubTasks: false,
+    deleteHubTasks: false,
     viewPrintedFiles: false,
     viewDashboardSummary: false,
   },

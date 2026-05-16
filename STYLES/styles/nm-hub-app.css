@@ -2616,6 +2616,34 @@ body:has(.nm-hub-app--cut-list) {
   outline-offset: 2px;
 }
 
+.nm-hub-app--tasks .btn-delete-task {
+  box-sizing: border-box;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: rgba(252, 165, 165, 0.95);
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.nm-hub-app--tasks .btn-delete-task:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.18);
+  color: #fff;
+}
+
+.nm-hub-app--tasks .btn-delete-task:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .nm-hub-app--tasks .task-card-body {
   display: flex;
   flex-direction: column;
@@ -3758,6 +3786,24 @@ body:has(.nm-hub-app--cut-list) {
 .nm-hub-push-footer__link:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+.nm-hub-push-footer__steps,
+.nm-hub-push-setup__steps {
+  margin: 0.65rem 0 0;
+  padding-left: 1.15rem;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: rgba(248, 250, 252, 0.62);
+}
+
+.nm-hub-push-footer__steps li + li,
+.nm-hub-push-setup__steps li + li {
+  margin-top: 0.35rem;
+}
+
+.nm-hub-push-setup--unsupported {
+  padding: 0.75rem 0;
 }
 
 .nm-hub-push-footer__muted,

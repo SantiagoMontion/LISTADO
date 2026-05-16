@@ -2,6 +2,7 @@ import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState, type
 import {
   appendTaskImages,
   createHubTask,
+  deleteHubTask,
   notifyTaskAssignedPush,
   fetchHasPendingHubTasksBefore,
   fetchHubProfileDisplayNames,
@@ -531,6 +532,7 @@ export function HubTasksApp({
   const [hasOlderPending, setHasOlderPending] = useState(false)
   const [executorNames, setExecutorNames] = useState<Record<string, string>>({})
   const [taskQuery, setTaskQuery] = useState('')
+  const [pendingDeleteTask, setPendingDeleteTask] = useState<NmHubTask | null>(null)
 
   const [hubDataGen, setHubDataGen] = useState(0)
   useEffect(() => {
@@ -870,6 +872,22 @@ export function HubTasksApp({
       await loadSilent()
       replaceListPanelUrl()
       setPanel('list')
+    } catch (err: unknown) {
+      setError(formatSupabaseOrError(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const onDeleteTask = async (t: NmHubTask) => {
+    if (!isAdmin || readOnly) return
+    setBusy(true)
+    setError(null)
+    try {
+      await deleteHubTask(t.id)
+      markLocalHubMutation()
+      setPendingDeleteTask(null)
+      await loadSilent()
     } catch (err: unknown) {
       setError(formatSupabaseOrError(err))
     } finally {
@@ -1274,6 +1292,18 @@ export function HubTasksApp({
                         </svg>
                       </button>
                     ) : null}
+                    {isAdmin && !readOnly ? (
+                      <button
+                        type="button"
+                        className="btn-delete-task"
+                        disabled={busy}
+                        onClick={() => setPendingDeleteTask(t)}
+                        aria-label="Eliminar tarea"
+                        title="Eliminar tarea"
+                      >
+                        ×
+                      </button>
+                    ) : null}
                   </div>
                 </header>
                 {assignedDone || (listScope === 'completadas' && t.executed_at) || t.body ? (
@@ -1298,6 +1328,35 @@ export function HubTasksApp({
       ) : null}
 
       {!readOnly ? <HubPushNotificationSetup userId={profileId} variant="footer" /> : null}
+
+      {pendingDeleteTask ? (
+        <div className="nm-prod-modal-backdrop" role="presentation">
+          <section className="nm-prod-modal" role="dialog" aria-modal="true">
+            <h3 className="nm-prod-modal-title">Eliminar tarea</h3>
+            <p className="nm-prod-modal-text">
+              ¿Eliminar «{pendingDeleteTask.title}»? No se puede deshacer.
+            </p>
+            <div className="nm-prod-row">
+              <button
+                type="button"
+                className="nm-prod-btn"
+                disabled={busy}
+                onClick={() => setPendingDeleteTask(null)}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="nm-prod-btn nm-prod-btn-primary"
+                disabled={busy}
+                onClick={() => void onDeleteTask(pendingDeleteTask)}
+              >
+                {busy ? 'Eliminando…' : 'Eliminar'}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </div>
   )
 }

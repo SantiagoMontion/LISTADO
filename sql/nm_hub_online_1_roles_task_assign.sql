@@ -28,7 +28,7 @@ ALTER TABLE public.nm_hub_tasks
 ALTER TABLE public.nm_hub_tasks DROP CONSTRAINT IF EXISTS nm_hub_tasks_assigned_role_check;
 ALTER TABLE public.nm_hub_tasks
   ADD CONSTRAINT nm_hub_tasks_assigned_role_check
-  CHECK (assigned_role IN ('online_1', 'taller_1', 'lista_creator'));
+  CHECK (assigned_role IN ('online_1', 'taller_1', 'lista_creator', 'admin'));
 
 CREATE INDEX IF NOT EXISTS idx_nm_hub_tasks_assigned_role ON public.nm_hub_tasks (assigned_role);
 
@@ -67,7 +67,16 @@ CREATE POLICY nm_hub_tasks_insert
       WHERE p.id = auth.uid()
         AND p.role::text IN ('admin', 'lista_creator', 'taller_1', 'online_1')
     )
-    AND assigned_role IN ('online_1', 'taller_1', 'lista_creator')
+    AND (
+      assigned_role IN ('online_1', 'taller_1', 'lista_creator')
+      OR (
+        assigned_role = 'admin'
+        AND EXISTS (
+          SELECT 1 FROM public.nm_hub_profiles p
+          WHERE p.id = auth.uid() AND trim(lower(p.role::text)) = 'admin'
+        )
+      )
+    )
   );
 
 CREATE POLICY nm_hub_tasks_update
@@ -83,7 +92,16 @@ CREATE POLICY nm_hub_tasks_update
         )
     )
   )
-  WITH CHECK (assigned_role IN ('online_1', 'taller_1', 'lista_creator'));
+  WITH CHECK (
+    assigned_role IN ('online_1', 'taller_1', 'lista_creator')
+    OR (
+      assigned_role = 'admin'
+      AND EXISTS (
+        SELECT 1 FROM public.nm_hub_profiles p
+        WHERE p.id = auth.uid() AND trim(lower(p.role::text)) = 'admin'
+      )
+    )
+  );
 
 CREATE POLICY nm_hub_tasks_delete
   ON public.nm_hub_tasks FOR DELETE TO authenticated
@@ -91,6 +109,6 @@ CREATE POLICY nm_hub_tasks_delete
     EXISTS (
       SELECT 1 FROM public.nm_hub_profiles p
       WHERE p.id = auth.uid()
-        AND (p.role::text = 'admin' OR nm_hub_tasks.created_by = auth.uid())
+        AND p.role::text = 'admin'
     )
   );

@@ -3,6 +3,7 @@ import { formatSupabaseOrError } from '../lib/errors'
 import {
   disableHubPushNotifications,
   enableHubPushNotifications,
+  getHubPushIosInstallSteps,
   getHubPushSupport,
   getHubPushUnsupportedHint,
   getNotificationPermission,
@@ -63,11 +64,23 @@ export function HubPushNotificationSetup({ userId, variant = 'default' }: Props)
 
   const active = permission === 'granted' && enabled
 
+  const iosSteps =
+    support.reason === 'ios-pwa-required' || support.reason === 'ios-pwa-unsupported'
+      ? getHubPushIosInstallSteps()
+      : null
+
   if (variant === 'footer') {
     if (!support.supported) {
       return (
         <footer className="nm-hub-push-footer" aria-live="polite">
           <p className="nm-hub-push-footer__muted">{getHubPushUnsupportedHint(support.reason)}</p>
+          {iosSteps ? (
+            <ol className="nm-hub-push-footer__steps">
+              {iosSteps.map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ol>
+          ) : null}
         </footer>
       )
     }
@@ -118,9 +131,19 @@ export function HubPushNotificationSetup({ userId, variant = 'default' }: Props)
   if (!support.supported) {
     if (support.reason === 'no-vapid') return null
     return (
-      <p className={`nm-hub-push-setup${variant === 'compact' ? ' nm-hub-push-setup--compact' : ''}`}>
-        <span className="nm-hub-muted">{getHubPushUnsupportedHint(support.reason)}</span>
-      </p>
+      <section
+        className={`nm-hub-push-setup nm-hub-push-setup--unsupported${variant === 'compact' ? ' nm-hub-push-setup--compact' : ''}`}
+        aria-live="polite"
+      >
+        <p className="nm-hub-muted nm-hub-push-setup__hint">{getHubPushUnsupportedHint(support.reason)}</p>
+        {iosSteps ? (
+          <ol className="nm-hub-push-setup__steps">
+            {iosSteps.map((step) => (
+              <li key={step}>{step}</li>
+            ))}
+          </ol>
+        ) : null}
+      </section>
     )
   }
 
@@ -134,8 +157,8 @@ export function HubPushNotificationSetup({ userId, variant = 'default' }: Props)
           <p className="nm-hub-push-setup__title">Avisos en el celular</p>
           {variant !== 'compact' ? (
             <p className="nm-hub-muted nm-hub-push-setup__hint">
-              Cuando te asignen una tarea, sonará una notificación. En iPhone: agregá el sitio a la pantalla de inicio
-              y activá avisos aquí.
+              Cuando te asignen una tarea, sonará una notificación. En Android: Chrome. En iPhone: solo con Safari →
+              agregar a pantalla de inicio → abrir desde el ícono.
             </p>
           ) : null}
         </div>
