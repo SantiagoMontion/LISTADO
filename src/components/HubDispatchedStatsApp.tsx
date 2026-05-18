@@ -138,28 +138,17 @@ export function HubDispatchedStatsApp({
           integratedSubtitle="Pedidos despachados"
           integratedSubtitleTone="muted"
           trailing={
-            <div className="nm-hub-brand-bar__trailing-group">
-              {isAdmin ? (
-                <button
-                  type="button"
-                  className="nm-hub-brand-bar__btn navbar-trailing-action-btn"
-                  aria-label="Cargar pedidos despachados"
-                  title="Cargar pedidos"
-                  onClick={() => goCargar(today)}
-                >
-                  +
-                </button>
-              ) : null}
+            isAdmin ? (
               <button
                 type="button"
-                className="nm-hub-brand-bar__btn navbar-global-menu-btn"
-                aria-label="Panel principal"
-                title="Panel principal"
-                onClick={() => hubNavigate('/')}
+                className="nm-hub-brand-bar__btn navbar-trailing-action-btn"
+                aria-label="Cargar pedidos despachados"
+                title="Cargar pedidos"
+                onClick={() => goCargar(today)}
               >
-                ☰
+                +
               </button>
-            </div>
+            ) : undefined
           }
         />
       </header>
