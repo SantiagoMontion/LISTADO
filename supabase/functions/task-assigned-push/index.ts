@@ -111,20 +111,21 @@ Deno.serve(async (req) => {
   const payload = body as WebhookPayload
   const task = extractTaskRecord(body)
 
-  if (payload.type && payload.type !== 'INSERT') {
-    return new Response(JSON.stringify({ skipped: true, sent: 0, reason: 'not-insert' }), {
+  const logResult = (result: Record<string, unknown>) => {
+    console.log('[task-assigned-push]', JSON.stringify(result))
+    return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
+  }
+
+  if (payload.type && payload.type !== 'INSERT') {
+    return logResult({ skipped: true, sent: 0, reason: 'not-insert' })
   }
   if (payload.table && payload.table !== 'nm_hub_tasks') {
-    return new Response(JSON.stringify({ skipped: true, sent: 0, reason: 'wrong-table' }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    return logResult({ skipped: true, sent: 0, reason: 'wrong-table' })
   }
   if (!task) {
-    return new Response(JSON.stringify({ skipped: true, sent: 0, reason: 'no-record' }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    return logResult({ skipped: true, sent: 0, reason: 'no-record' })
   }
 
   const assignedRole = typeof task.assigned_role === 'string' ? task.assigned_role : ''
@@ -134,9 +135,7 @@ Deno.serve(async (req) => {
   const taskId = typeof task.id === 'string' ? task.id : 'task'
 
   if (!assignedRole) {
-    return new Response(JSON.stringify({ skipped: true, sent: 0, reason: 'no-assigned-role' }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    return logResult({ skipped: true, sent: 0, reason: 'no-assigned-role' })
   }
 
   const supabase = createClient(
@@ -163,8 +162,12 @@ Deno.serve(async (req) => {
     .map((p) => p.id as string)
     .filter((id) => id && id !== createdBy)
   if (userIds.length === 0) {
-    return new Response(JSON.stringify({ sent: 0, reason: 'no-target-users', assignedRole }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    return logResult({
+      sent: 0,
+      reason: 'no-target-users',
+      assignedRole: roleNorm,
+      hint: 'Creador = destinatario, o no hay usuarios con ese rol',
+      createdBy,
     })
   }
 
@@ -181,10 +184,13 @@ Deno.serve(async (req) => {
   }
 
   if (!subs?.length) {
-    return new Response(
-      JSON.stringify({ sent: 0, reason: 'no-subscriptions', targetUsers: userIds.length }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-    )
+    return logResult({
+      sent: 0,
+      reason: 'no-subscriptions',
+      targetUsers: userIds.length,
+      assignedRole: roleNorm,
+      hint: 'El operador asignado debe pulsar Permitir avisos en SU celular',
+    })
   }
 
   const url = forDate.match(/^\d{4}-\d{2}-\d{2}$/)
@@ -220,13 +226,12 @@ Deno.serve(async (req) => {
     }
   }
 
-  return new Response(
-    JSON.stringify({
-      sent,
-      targets: userIds.length,
-      subscriptions: subs.length,
-      errors: errors.slice(0, 3),
-    }),
-    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-  )
+  return logResult({
+    ok: sent > 0,
+    sent,
+    targets: userIds.length,
+    subscriptions: subs.length,
+    assignedRole: roleNorm,
+    errors: errors.slice(0, 5),
+  })
 })

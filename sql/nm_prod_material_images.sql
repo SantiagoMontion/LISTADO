@@ -26,7 +26,9 @@ CREATE POLICY nm_prod_material_images_select_auth
 DROP POLICY IF EXISTS nm_prod_material_images_insert_auth ON public.nm_prod_material_images;
 CREATE POLICY nm_prod_material_images_insert_auth
   ON public.nm_prod_material_images FOR INSERT TO authenticated
-  WITH CHECK (public.nm_hub_profile_role() = 'creador_lista');
+  WITH CHECK (
+    public.nm_hub_profile_role() IN ('admin', 'lista_creator', 'creador_lista')
+  );
 
 -- Bucket privado (objetos con URL firmada desde la app)
 INSERT INTO storage.buckets (id, name, public)
@@ -44,7 +46,7 @@ CREATE POLICY nm_prod_material_storage_insert
   ON storage.objects FOR INSERT TO authenticated
   WITH CHECK (
     bucket_id = 'nm-prod-material-images'
-    AND public.nm_hub_profile_role() = 'creador_lista'
+    AND public.nm_hub_profile_role() IN ('admin', 'lista_creator', 'creador_lista')
   );
 
 DO $$

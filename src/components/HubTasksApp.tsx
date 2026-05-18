@@ -863,7 +863,10 @@ export function HubTasksApp({
       if (files.length > 0) {
         await appendTaskImages(created.id, files, created.image_paths ?? [])
       }
-      void notifyTaskAssignedPush(created)
+      const pushResult = await notifyTaskAssignedPush(created)
+      if (!pushResult.ok && pushResult.reason === 'no-subscriptions') {
+        console.warn('[nm-hub] Sin suscripción push del destinatario:', pushResult)
+      }
       setTitle('')
       setBody('')
       setImportance('normal')

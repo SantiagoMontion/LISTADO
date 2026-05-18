@@ -42,7 +42,14 @@ LIMIT 10;
 --      - Activar avisos en SU celular con SU cuenta
 --      - Tener fila en nm_hub_push_subscriptions (consulta 1)
 -- F) Probar: admin asigna tarea a Dani → Dani con app cerrada o en segundo plano
--- G) Edge Functions → Logs → task-assigned-push → buscar { "sent": 1 }
---    sent:0 + no-subscriptions = Dani no activó avisos en ese celular
---    sent:0 + errors 401 = VAPID de Vercel y Supabase no coinciden
+-- G) Edge Functions → Logs → task-assigned-push
+--    "booted" solo = arranque en frío, NO significa que envió push.
+--    Creá una tarea y buscá línea: [task-assigned-push] {"sent":1,...}
+--    sent:0 + no-subscriptions = el DESTINATARIO no activó avisos en su celular
+--    sent:0 + no-target-users = asignaste a tu mismo rol siendo el creador (no avisa al creador)
+--    errors 401 = VAPID pública (Vercel) ≠ privada (Supabase)
+--
+-- H) Probar en el celular correcto:
+--    Admin asigna a Juancruz → aviso en celular de Juancruz (taller_1), NO en el del admin.
+--    Para probar en tu celular: otra cuenta te asigna a Admin, o usá cuenta Juancruz en ese teléfono.
 -- -----------------------------------------------------------------------------
