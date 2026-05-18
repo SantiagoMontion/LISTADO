@@ -90,18 +90,18 @@ function TaskNoteItem({ note, authorName, canManage, busy, onEdit, onDelete }: T
       {editing ? (
         <form className="nm-hub-task-note-edit" onSubmit={(e) => void saveEdit(e)}>
           <textarea
-            className="nm-hub-input nm-hub-task-notes-input"
+            className="field-textarea nm-hub-textarea nm-hub-task-notes-field"
             rows={3}
             value={editDraft}
             disabled={busy}
             onChange={(e) => setEditDraft(e.target.value)}
             aria-label="Editar nota"
           />
-          <div className="nm-hub-task-note-edit__actions">
-            <button type="button" className="nm-hub-btn nm-hub-btn-ghost" disabled={busy} onClick={cancelEdit}>
+          <div className="modal-actions-row nm-hub-task-note-edit__actions">
+            <button type="button" className="btn-modal-cancel" disabled={busy} onClick={cancelEdit}>
               Cancelar
             </button>
-            <button type="submit" className="nm-hub-btn nm-hub-btn-primary" disabled={busy || !editDraft.trim()}>
+            <button type="submit" className="btn-modal-submit-active" disabled={busy || !editDraft.trim()}>
               {busy ? 'Guardando…' : 'Guardar'}
             </button>
           </div>
@@ -109,12 +109,15 @@ function TaskNoteItem({ note, authorName, canManage, busy, onEdit, onDelete }: T
       ) : (
         <>
           <div className="nm-hub-task-note__head">
-            <header className="nm-hub-task-note__meta">
-              <span className="nm-hub-task-note__author">{authorName}</span>
+            <p className="nm-hub-task-note__meta-line task-meta-log">
+              <span className="task-assignee-chip nm-hub-task-note__author">{authorName}</span>
+              <span className="nm-hub-task-note__time-sep" aria-hidden="true">
+                {' · '}
+              </span>
               <time className="nm-hub-task-note__time" dateTime={note.created_at}>
                 {formatNoteWhen(note.created_at)}
               </time>
-            </header>
+            </p>
             {canManage ? (
               <div className="nm-hub-task-note__menu-wrap" ref={menuWrapRef}>
                 <button
@@ -182,7 +185,7 @@ function TaskNoteItem({ note, authorName, canManage, busy, onEdit, onDelete }: T
               </div>
             ) : null}
           </div>
-          <p className="nm-hub-task-note__body">{note.body}</p>
+          <p className="nm-hub-task-note__body task-description-text">{note.body}</p>
         </>
       )}
     </article>
@@ -342,20 +345,31 @@ export function HubTaskNotesPanel({
   }
 
   return (
-    <div className="nm-hub-task-notes-backdrop" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <section className="nm-hub-task-notes-panel" role="dialog" aria-modal="true" aria-labelledby="nm-hub-task-notes-title">
+    <div
+      className="upload-images-modal-backdrop nm-hub-task-notes-backdrop"
+      role="presentation"
+      onMouseDown={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <section
+        className="upload-images-modal nm-hub-task-notes-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="nm-hub-task-notes-title"
+      >
         <header className="nm-hub-task-notes-panel__head">
-          <button type="button" className="nm-hub-btn nm-hub-btn-ghost nm-hub-task-notes-panel__back" onClick={onClose} aria-label="Volver">
-            ←
-          </button>
           <div className="nm-hub-task-notes-panel__titles">
-            <h2 id="nm-hub-task-notes-title" className="nm-hub-task-notes-panel__title">
+            <h2 id="nm-hub-task-notes-title" className="modal-title-rebel">
               Notas
             </h2>
             <p className="nm-hub-task-notes-panel__subtitle">{task.title}</p>
           </div>
-          <button type="button" className="nm-hub-btn nm-hub-btn-primary nm-hub-task-notes-panel__close" onClick={onClose}>
-            Cerrar
+          <button
+            type="button"
+            className="pager-tactic-btn nm-hub-task-notes-panel__close-icon"
+            onClick={onClose}
+            aria-label="Cerrar"
+          >
+            ×
           </button>
         </header>
 
@@ -385,23 +399,28 @@ export function HubTaskNotesPanel({
           </p>
         ) : null}
 
-        <form className="nm-hub-task-notes-compose" onSubmit={(e) => void onSubmit(e)}>
-          <label className="nm-hub-sr-only" htmlFor="nm-hub-task-note-draft">
+        <form className="nm-hub-task-notes-compose modal-field-group" onSubmit={(e) => void onSubmit(e)}>
+          <label className="modal-field-label" htmlFor="nm-hub-task-note-draft">
             Nueva nota
           </label>
           <textarea
             id="nm-hub-task-note-draft"
             ref={textareaRef}
-            className="nm-hub-input nm-hub-task-notes-input"
+            className="field-textarea nm-hub-textarea nm-hub-task-notes-field"
             rows={3}
             placeholder="Escribí una nota…"
             value={draft}
             disabled={saving}
             onChange={(e) => setDraft(e.target.value)}
           />
-          <button type="submit" className="nm-hub-btn nm-hub-btn-primary" disabled={saving || !draft.trim()}>
-            {saving ? 'Enviando…' : 'Agregar nota'}
-          </button>
+          <div className="modal-actions-row">
+            <button type="button" className="btn-modal-cancel" disabled={saving} onClick={onClose}>
+              Cerrar
+            </button>
+            <button type="submit" className="btn-modal-submit-active" disabled={saving || !draft.trim()}>
+              {saving ? 'Enviando…' : 'Agregar nota'}
+            </button>
+          </div>
         </form>
       </section>
     </div>
