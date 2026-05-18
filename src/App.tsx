@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CreadorMaterialImagesModal } from './components/CreadorMaterialImagesModal'
 import { QuickAddMeasureModal } from './components/QuickAddMeasureModal'
+import { HubDispatchedOrdersApp } from './components/HubDispatchedOrdersApp'
 import { HubPrintedFilesApp } from './components/HubPrintedFilesApp'
 import { MaterialTabs } from './components/MaterialTabs'
 import { TaskCard } from './components/TaskCard'
@@ -136,6 +137,7 @@ export default function App() {
   const isLogin = path === '/entrar'
   const isHubTasks = path === '/tareas'
   const isHubPrintedFiles = path === '/archivos-impresos'
+  const isHubDispatchedOrders = path === '/pedidos-despachados'
   const isHubHome = path === '/' || path === ''
 
   const [reports, setReports] = useState<NmProdReport[]>([])
@@ -750,6 +752,10 @@ export default function App() {
     return <HubLoadingScreen label="Cargando perfil…" />
   }
 
+  if (authEnabled && authReady && session && isHubDispatchedOrders && !profileReady) {
+    return <HubLoadingScreen label="Cargando perfil…" />
+  }
+
   if (authEnabled && authReady && session && isHubTasks && profileReady && profile) {
     const hubReadOnly = hubTasksReadOnly(profile.role)
     return (
@@ -779,6 +785,28 @@ export default function App() {
     )
   }
 
+  if (authEnabled && authReady && session && isHubDispatchedOrders && profileReady && !profile) {
+    return <HubLoadingScreen label="No se pudo cargar el perfil del hub." />
+  }
+
+  if (
+    authEnabled &&
+    authReady &&
+    session &&
+    isHubDispatchedOrders &&
+    profileReady &&
+    profile &&
+    getHubPermissions(profile.role)?.viewDispatchedOrders
+  ) {
+    return (
+      <HubDispatchedOrdersApp
+        configured={configured}
+        isAdmin={profile.role === 'admin'}
+        adminSignOut={profile.role === 'admin'}
+      />
+    )
+  }
+
   if (!authEnabled && isHubHome) {
     return <HubHome guestMode />
   }
@@ -787,6 +815,24 @@ export default function App() {
     return (
       <div className="nm-hub-app">
         <p className="nm-hub-muted">Configurá Supabase en <code>.env</code> para usar tareas.</p>
+        <a
+          href="/"
+          className="nm-hub-back"
+          style={{ display: 'inline-block', marginTop: '1rem' }}
+          onClick={(e) => onHubLinkClick(e, '/')}
+        >
+          ← Inicio
+        </a>
+      </div>
+    )
+  }
+
+  if (!authEnabled && isHubDispatchedOrders) {
+    return (
+      <div className="nm-hub-app">
+        <p className="nm-hub-muted">
+          Configurá Supabase en <code>.env</code> para ver pedidos despachados.
+        </p>
         <a
           href="/"
           className="nm-hub-back"

@@ -1,5 +1,7 @@
 import { normalizeCalendarDate, todayIsoLocal } from './date'
+import { fetchHubDispatchedCount } from './hubDispatchedOrdersApi'
 import { fetchReportsWithTasksProgress, supabase, taskProgressRowDone } from './supabase'
+import type { HubUserRole } from './types'
 
 export interface HubDashboardStats {
   /** Día ISO (local) sobre el que agrupan las métricas de tareas hub. */
@@ -12,6 +14,8 @@ export interface HubDashboardStats {
   /** Completadas del mismo día (`for_date`, con `executed_at`). */
   completedHubTasksToday: number
   hasListForDay: boolean
+  /** Pedidos despachados del día (admin / taller_1). */
+  dispatchedOrdersToday: number
 }
 
 function requireClient() {
@@ -19,7 +23,10 @@ function requireClient() {
   return supabase
 }
 
-export async function fetchHubDashboardStats(forDate?: string): Promise<HubDashboardStats> {
+export async function fetchHubDashboardStats(
+  forDate?: string,
+  role?: HubUserRole | null,
+): Promise<HubDashboardStats> {
   const day = normalizeCalendarDate(forDate ?? todayIsoLocal())
   const sb = requireClient()
 
@@ -69,6 +76,15 @@ export async function fetchHubDashboardStats(forDate?: string): Promise<HubDashb
     }
   }
 
+  let dispatchedOrdersToday = 0
+  if (role === 'admin' || role === 'taller_1') {
+    try {
+      dispatchedOrdersToday = await fetchHubDispatchedCount(day)
+    } catch {
+      dispatchedOrdersToday = 0
+    }
+  }
+
   return {
     day,
     pendingCutItems,
@@ -76,5 +92,6 @@ export async function fetchHubDashboardStats(forDate?: string): Promise<HubDashb
     urgentHubTasks: urgentRes.count ?? 0,
     completedHubTasksToday: completedRes.count ?? 0,
     hasListForDay: (listRes.count ?? 0) > 0,
+    dispatchedOrdersToday,
   }
 }

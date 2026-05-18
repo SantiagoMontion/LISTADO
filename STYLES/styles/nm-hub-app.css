@@ -1398,6 +1398,182 @@ a.nm-hub-brand-bar__btn:hover {
   font-weight: 600;
 }
 
+/* Pedidos despachados (/pedidos-despachados) */
+.nm-hub-app.nm-hub-app--dispatched-orders .dashboard-navbar.dashboard-navbar-clean {
+  background-color: #121417;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-orders .nm-hub-dispatched-feedback {
+  margin: 0 0 0.85rem;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-orders .nm-hub-header.dashboard-navbar {
+  margin-bottom: 0;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-orders .date-pager-faja-compacta {
+  background-color: #121417;
+  border-radius: 16px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 16px;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-orders .date-pager-faja-compacta .date-pager-compact-side {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-orders .date-pager-faja-compacta .date-pager-compact-side--start {
+  justify-content: flex-start;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-orders .date-pager-faja-compacta .date-pager-compact-side--end {
+  justify-content: flex-end;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-orders .pager-tactic-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-rebel-primary, #f8fafc);
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-orders .pager-tactic-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.nm-hub-app.nm-hub-app--dispatched-orders .pager-tactic-btn:focus-visible {
+  outline: 2px solid var(--accent-rebel-blue, #3b82f6);
+  outline-offset: 2px;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-orders .pager-tactic-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-orders .date-pager-panel-compact.nm-hub-date-picker {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-orders .date-text-accent-number {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--text-rebel-primary, #f8fafc);
+  line-height: 1.1;
+  font-family: var(--font-rebel-count, inherit);
+}
+
+.nm-hub-app.nm-hub-app--dispatched-orders .nm-hub-printed-date-native.nm-hub-date-native {
+  font-size: 0.72rem;
+  color: var(--text-rebel-muted, #9099a3);
+  background: transparent;
+  border: none;
+  text-align: center;
+  padding: 0;
+  cursor: pointer;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-hero {
+  margin-top: 0.5rem;
+  padding: 1.75rem 1.25rem 2rem;
+  border-radius: 20px;
+  background: linear-gradient(165deg, rgba(24, 28, 34, 0.98) 0%, rgba(14, 16, 20, 0.98) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.35rem;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-hero__label {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-rebel-muted, #9099a3);
+}
+
+.nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-hero__count {
+  margin: 0.15rem 0 0;
+  font-size: clamp(4.5rem, 22vw, 6.5rem);
+  font-weight: 800;
+  line-height: 0.95;
+  font-family: var(--font-rebel-count, inherit);
+  color: var(--accent-rebel-green, #22c55e);
+  font-variant-numeric: tabular-nums;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-hero__actions {
+  margin-top: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-add-btn {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  background: rgba(34, 197, 94, 0.12);
+  color: var(--accent-rebel-green, #22c55e);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.12s ease;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-add-btn:hover:not(:disabled) {
+  background: rgba(34, 197, 94, 0.22);
+  transform: scale(1.04);
+}
+
+.nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-add-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-add-btn:focus-visible {
+  outline: 2px solid var(--accent-rebel-green, #22c55e);
+  outline-offset: 2px;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-hero__hint {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--text-rebel-muted, #535a62);
+}
+
 .nm-hub-printed-loading {
   display: flex;
   flex-direction: column;
@@ -3045,6 +3221,33 @@ body:has(.nm-hub-app--cut-list) {
   color: var(--text-rebel-muted, #535a62);
   font-weight: 500;
   line-height: 1.38;
+}
+
+.nm-hub-app--tasks .task-meta-log--completed {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+.nm-hub-app--tasks .task-meta-log__who {
+  margin: 0;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.nm-hub-app--tasks .task-meta-log__who strong {
+  color: rgba(252, 253, 255, 0.82);
+  font-weight: 700;
+  white-space: normal;
+}
+
+.nm-hub-app--tasks .task-meta-log__when {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-rebel-muted, #535a62);
+  line-height: 1.35;
 }
 
 .nm-hub-app--tasks .task-meta-log strong {

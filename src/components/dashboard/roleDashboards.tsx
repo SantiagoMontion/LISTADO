@@ -74,6 +74,14 @@ export function AdminDashboard({ stats }: RoleDashboardProps) {
         />
         <DashboardCard href={links.printedFiles} accent="files" icon="▣" title="Archivos impresos" />
         <DashboardCard
+          href={links.dispatchedOrders}
+          accent="files"
+          icon="↗"
+          stat={stats.dispatchedOrdersToday}
+          statLabel="despachados hoy"
+          title="Pedidos despachados"
+        />
+        <DashboardCard
           href={links.completedTasks}
           accent="completed"
           icon="✓"
@@ -153,6 +161,14 @@ export function Taller1Dashboard({ stats }: RoleDashboardProps) {
           title="Ver tareas pendientes"
         />
         <DashboardCard href={links.printedFiles} accent="files" icon="▣" title="Ver archivos impresos" />
+        <DashboardCard
+          href={links.dispatchedOrders}
+          accent="files"
+          icon="↗"
+          stat={stats.dispatchedOrdersToday}
+          statLabel="despachados hoy"
+          title="Pedidos despachados"
+        />
         <DashboardCard
           href={links.completedTasks}
           accent="completed"

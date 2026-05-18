@@ -216,35 +216,61 @@ export function HubTaskNotesPanel({
   const threadRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const historyPushedRef = useRef(true)
+  const initialLoadDoneRef = useRef(false)
+  const skipRealtimeUntilRef = useRef(0)
 
   const scrollToEnd = useCallback(() => {
     const el = threadRef.current
     if (el) el.scrollTop = el.scrollHeight
   }, [])
 
-  const loadNotes = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const list = await fetchHubTaskNotes(task.id)
-      setNotes(list)
-      const ids = [...new Set(list.map((n) => n.author_id))]
-      const names = await fetchHubProfileDisplayNames(ids)
-      setAuthorNames(names)
-    } catch (e: unknown) {
-      setError(formatSupabaseOrError(e))
-    } finally {
-      setLoading(false)
-    }
-  }, [task.id])
+  const markLocalNoteMutation = useCallback(() => {
+    skipRealtimeUntilRef.current = Date.now() + 2500
+  }, [])
+
+  const loadNotes = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      const silent = opts?.silent ?? initialLoadDoneRef.current
+      const el = threadRef.current
+      const prevScrollTop = el?.scrollTop ?? 0
+      const wasNearEnd = el ? el.scrollHeight - el.scrollTop - el.clientHeight < 80 : true
+
+      if (!silent) setLoading(true)
+      setError(null)
+      try {
+        const list = await fetchHubTaskNotes(task.id)
+        setNotes(list)
+        const ids = [...new Set(list.map((n) => n.author_id))]
+        const names = await fetchHubProfileDisplayNames(ids)
+        setAuthorNames(names)
+        initialLoadDoneRef.current = true
+
+        requestAnimationFrame(() => {
+          const box = threadRef.current
+          if (!box) return
+          if (!silent) {
+            scrollToEnd()
+            return
+          }
+          if (wasNearEnd) {
+            box.scrollTop = box.scrollHeight
+          } else {
+            box.scrollTop = prevScrollTop
+          }
+        })
+      } catch (e: unknown) {
+        setError(formatSupabaseOrError(e))
+      } finally {
+        if (!silent) setLoading(false)
+      }
+    },
+    [task.id, scrollToEnd],
+  )
 
   useEffect(() => {
-    void loadNotes()
-  }, [loadNotes])
-
-  useEffect(() => {
-    if (!loading) scrollToEnd()
-  }, [loading, notes.length, scrollToEnd])
+    initialLoadDoneRef.current = false
+    void loadNotes({ silent: false })
+  }, [task.id, loadNotes])
 
   useEffect(() => {
     const prev = document.body.style.overflow
@@ -280,7 +306,8 @@ export function HubTaskNotesPanel({
         'postgres_changes',
         { event: '*', schema: 'public', table: 'nm_hub_task_notes', filter: `task_id=eq.${task.id}` },
         () => {
-          void loadNotes()
+          if (Date.now() < skipRealtimeUntilRef.current) return
+          void loadNotes({ silent: true })
         },
       )
       .subscribe()
@@ -296,22 +323,23 @@ export function HubTaskNotesPanel({
     setSaving(true)
     setError(null)
     try {
+      markLocalNoteMutation()
       const created = await createHubTaskNote(task.id, text)
-      if (!notes.some((n) => n.id === created.id)) {
-        setNotes((prev) => [...prev, created])
-      }
+      setNotes((prev) => (prev.some((n) => n.id === created.id) ? prev : [...prev, created]))
       if (!authorNames[created.author_id]) {
         const names = await fetchHubProfileDisplayNames([created.author_id])
         setAuthorNames((prev) => ({ ...prev, ...names }))
       }
       setDraft('')
       onNoteAdded?.()
-      requestAnimationFrame(scrollToEnd)
+      requestAnimationFrame(() => {
+        scrollToEnd()
+        textareaRef.current?.focus({ preventScroll: true })
+      })
     } catch (err: unknown) {
       setError(formatSupabaseOrError(err))
     } finally {
       setSaving(false)
-      textareaRef.current?.focus()
     }
   }
 
@@ -319,6 +347,7 @@ export function HubTaskNotesPanel({
     setSaving(true)
     setError(null)
     try {
+      markLocalNoteMutation()
       const updated = await updateHubTaskNote(noteId, body)
       setNotes((prev) => prev.map((n) => (n.id === noteId ? updated : n)))
     } catch (err: unknown) {
@@ -333,6 +362,7 @@ export function HubTaskNotesPanel({
     setSaving(true)
     setError(null)
     try {
+      markLocalNoteMutation()
       await deleteHubTaskNote(noteId)
       setNotes((prev) => prev.filter((n) => n.id !== noteId))
       onNoteRemoved?.()

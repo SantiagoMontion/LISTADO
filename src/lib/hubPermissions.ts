@@ -13,6 +13,8 @@ export interface HubPermissions {
   editHubTasks: boolean
   deleteHubTasks: boolean
   viewPrintedFiles: boolean
+  viewDispatchedOrders: boolean
+  editDispatchedOrders: boolean
   viewDashboardSummary: boolean
 }
 
@@ -28,6 +30,8 @@ export const HUB_PERMISSIONS: Record<HubUserRole, HubPermissions> = {
     editHubTasks: true,
     deleteHubTasks: true,
     viewPrintedFiles: true,
+    viewDispatchedOrders: true,
+    editDispatchedOrders: true,
     viewDashboardSummary: true,
   },
   lista_creator: {
@@ -41,6 +45,8 @@ export const HUB_PERMISSIONS: Record<HubUserRole, HubPermissions> = {
     editHubTasks: true,
     deleteHubTasks: false,
     viewPrintedFiles: false,
+    viewDispatchedOrders: false,
+    editDispatchedOrders: false,
     viewDashboardSummary: true,
   },
   taller_1: {
@@ -54,6 +60,8 @@ export const HUB_PERMISSIONS: Record<HubUserRole, HubPermissions> = {
     editHubTasks: true,
     deleteHubTasks: false,
     viewPrintedFiles: true,
+    viewDispatchedOrders: true,
+    editDispatchedOrders: false,
     viewDashboardSummary: true,
   },
   online_1: {
@@ -67,6 +75,8 @@ export const HUB_PERMISSIONS: Record<HubUserRole, HubPermissions> = {
     editHubTasks: true,
     deleteHubTasks: false,
     viewPrintedFiles: false,
+    viewDispatchedOrders: false,
+    editDispatchedOrders: false,
     viewDashboardSummary: true,
   },
   taller_2: {
@@ -80,6 +90,8 @@ export const HUB_PERMISSIONS: Record<HubUserRole, HubPermissions> = {
     editHubTasks: false,
     deleteHubTasks: false,
     viewPrintedFiles: false,
+    viewDispatchedOrders: false,
+    editDispatchedOrders: false,
     viewDashboardSummary: false,
   },
 }
@@ -97,7 +109,14 @@ export function getHubPermissions(role: HubUserRole | null | undefined): HubPerm
   return HUB_PERMISSIONS[role] ?? null
 }
 
-export type HubAppPath = '/' | '/creador' | '/manejador' | '/tareas' | '/archivos-impresos' | '/entrar'
+export type HubAppPath =
+  | '/'
+  | '/creador'
+  | '/manejador'
+  | '/tareas'
+  | '/archivos-impresos'
+  | '/pedidos-despachados'
+  | '/entrar'
 
 export function canAccessHubPath(
   path: string,
@@ -120,6 +139,8 @@ export function canAccessHubPath(
       return perms.viewHubTasks
     case '/archivos-impresos':
       return perms.viewPrintedFiles
+    case '/pedidos-despachados':
+      return perms.viewDispatchedOrders
     default:
       return false
   }
@@ -133,6 +154,7 @@ export function normalizeHubPath(path: string): HubAppPath | string {
   if (p === '/manejador') return '/manejador'
   if (p === '/tareas') return '/tareas'
   if (p === '/archivos-impresos') return '/archivos-impresos'
+  if (p === '/pedidos-despachados') return '/pedidos-despachados'
   if (p === '' || p === '/') return '/'
   return p
 }
@@ -158,6 +180,7 @@ export function hubPathBlockedMessage(path: string, role: HubUserRole | null | u
   if (p === '/manejador') return `El perfil «${label}» no accede a la lista de corte.`
   if (p === '/tareas') return `El perfil «${label}» no usa tareas del taller.`
   if (p === '/archivos-impresos') return `El perfil «${label}» no ve archivos impresos.`
+  if (p === '/pedidos-despachados') return `El perfil «${label}» no ve pedidos despachados.`
   return 'No tenés permiso para esta pantalla.'
 }
 
@@ -172,5 +195,6 @@ export function hubDashboardLinks(day: string = todayIsoLocal()) {
     pendingTasks: `/tareas?d=${d}#nm-hub-tareas-lista`,
     completedTasks: `/tareas?d=${d}&hub=completadas#nm-hub-tareas-lista`,
     printedFiles: `/archivos-impresos?d=${d}`,
+    dispatchedOrders: `/pedidos-despachados?d=${d}`,
   } as const
 }

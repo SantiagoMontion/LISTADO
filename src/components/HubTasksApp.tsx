@@ -471,6 +471,7 @@ export function HubTasksApp({
   )
   const [hasOlderPending, setHasOlderPending] = useState(false)
   const [executorNames, setExecutorNames] = useState<Record<string, string>>({})
+  const [executorNamesReady, setExecutorNamesReady] = useState(false)
   const [taskQuery, setTaskQuery] = useState('')
   const [pendingDeleteTask, setPendingDeleteTask] = useState<NmHubTask | null>(null)
   const [notesTask, setNotesTask] = useState<NmHubTask | null>(null)
@@ -557,26 +558,34 @@ export function HubTasksApp({
         if (seq !== tasksLoadSeqRef.current) return
         setNoteCounts({})
       })
-    if (scope === 'completadas' || scope === 'sent') {
-      const ids = completedRows
-        .filter((t) => {
-          if (!t.executed_by) return false
-          if (scope === 'sent') {
-            if (profileRole === 'admin') {
-              return taskInAdminAssignedOverview(t)
-            }
-            return isDelegatedByMe(t, profileRole, profileId)
-          }
-          return true
-        })
-        .map((t) => t.executed_by as string)
-      const names = await fetchHubProfileDisplayNames(ids)
-      if (seq !== tasksLoadSeqRef.current) return
-      setExecutorNames(names)
-    } else {
-      setExecutorNames({})
-    }
   }, [taskDay, hubDataGen, profileRole, profileId])
+
+  useEffect(() => {
+    let cancelled = false
+    const ids = [
+      ...new Set(
+        [...rawPending, ...rawCompleted]
+          .filter((t) => t.executed_at && t.executed_by)
+          .map((t) => t.executed_by as string),
+      ),
+    ]
+    if (ids.length === 0) {
+      setExecutorNames({})
+      setExecutorNamesReady(true)
+      return
+    }
+    setExecutorNamesReady(false)
+    void fetchHubProfileDisplayNames(ids)
+      .then((names) => {
+        if (!cancelled) setExecutorNames(names)
+      })
+      .finally(() => {
+        if (!cancelled) setExecutorNamesReady(true)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [rawPending, rawCompleted, hubDataGen])
 
   const load = useCallback(async () => {
     setError(null)
@@ -1310,12 +1319,22 @@ export function HubTasksApp({
                 {assignedDone || (listScope === 'completadas' && t.executed_at) || t.body ? (
                   <div className="task-card-body">
                     {assignedDone || (listScope === 'completadas' && t.executed_at) ? (
-                      <p className="task-meta-log">
-                        Completada por{' '}
-                        <strong>{t.executed_by ? executorNames[t.executed_by] ?? '…' : '—'}</strong>
-                        {' · '}
-                        {t.executed_at ? formatExecutedLabel(t.executed_at) : '—'}
-                      </p>
+                      <div className="task-meta-log task-meta-log--completed">
+                        <p className="task-meta-log__who">
+                          Completada por{' '}
+                          <strong>
+                            {t.executed_by
+                              ? executorNames[t.executed_by] ??
+                                (executorNamesReady ? 'Usuario' : '…')
+                              : '—'}
+                          </strong>
+                        </p>
+                        {t.executed_at ? (
+                          <time className="task-meta-log__when" dateTime={t.executed_at}>
+                            {formatExecutedLabel(t.executed_at)}
+                          </time>
+                        ) : null}
+                      </div>
                     ) : null}
                     {t.body ? <p className="task-description-text">{t.body}</p> : null}
                   </div>

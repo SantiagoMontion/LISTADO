@@ -32,6 +32,7 @@ const EMPTY_STATS: HubDashboardStats = {
   urgentHubTasks: 0,
   completedHubTasksToday: 0,
   hasListForDay: false,
+  dispatchedOrdersToday: 0,
 }
 
 function RoleDashboardView({
@@ -86,7 +87,7 @@ export function DashboardContainer({
     }
     let cancelled = false
     setStatsLoading(true)
-    fetchHubDashboardStats()
+    fetchHubDashboardStats(undefined, role)
       .then((s) => {
         if (!cancelled) setStats(s)
       })
@@ -99,7 +100,7 @@ export function DashboardContainer({
     return () => {
       cancelled = true
     }
-  }, [guestMode, noProfileRow, profile?.id])
+  }, [guestMode, noProfileRow, profile?.id, role])
 
   const roleLabel = role ? HUB_ROLE_LABEL[role] : 'Invitado'
 
