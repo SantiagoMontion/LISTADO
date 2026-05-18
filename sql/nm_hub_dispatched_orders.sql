@@ -5,7 +5,7 @@
 -- CÓMO: Supabase → SQL Editor → pegar TODO → Run
 --
 -- • admin y taller_1: leen el conteo de cualquier día
--- • solo admin: incrementa con nm_hub_increment_dispatched(for_date)
+-- • solo admin: fija el total con nm_hub_set_dispatched(for_date, count)
 -- =============================================================================
 
 CREATE TABLE IF NOT EXISTS public.nm_hub_dispatched_orders (
@@ -44,7 +44,7 @@ AS $$
   SELECT public.nm_hub_profile_role() IN ('admin', 'taller_1');
 $$;
 
-CREATE OR REPLACE FUNCTION public.nm_hub_increment_dispatched(p_for_date date)
+CREATE OR REPLACE FUNCTION public.nm_hub_set_dispatched(p_for_date date, p_count integer)
 RETURNS integer
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -64,10 +64,14 @@ BEGIN
     RAISE EXCEPTION 'for_date requerido' USING ERRCODE = '22023';
   END IF;
 
+  IF p_count IS NULL OR p_count < 0 THEN
+    RAISE EXCEPTION 'count debe ser >= 0' USING ERRCODE = '22023';
+  END IF;
+
   INSERT INTO public.nm_hub_dispatched_orders (for_date, count, updated_by)
-  VALUES (p_for_date, 1, auth.uid())
+  VALUES (p_for_date, p_count, auth.uid())
   ON CONFLICT (for_date) DO UPDATE
-    SET count = public.nm_hub_dispatched_orders.count + 1,
+    SET count = EXCLUDED.count,
         updated_by = auth.uid()
   RETURNING count INTO out_count;
 
@@ -85,4 +89,4 @@ CREATE POLICY nm_hub_dispatched_select
   USING (public.nm_hub_can_view_dispatched_orders());
 
 GRANT SELECT ON public.nm_hub_dispatched_orders TO authenticated;
-GRANT EXECUTE ON FUNCTION public.nm_hub_increment_dispatched(date) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.nm_hub_set_dispatched(date, integer) TO authenticated;

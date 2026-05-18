@@ -116,6 +116,7 @@ export type HubAppPath =
   | '/tareas'
   | '/archivos-impresos'
   | '/pedidos-despachados'
+  | '/pedidos-despachados/estadisticas'
   | '/entrar'
 
 export function canAccessHubPath(
@@ -141,6 +142,8 @@ export function canAccessHubPath(
       return perms.viewPrintedFiles
     case '/pedidos-despachados':
       return perms.viewDispatchedOrders
+    case '/pedidos-despachados/estadisticas':
+      return perms.viewDispatchedOrders
     default:
       return false
   }
@@ -154,6 +157,7 @@ export function normalizeHubPath(path: string): HubAppPath | string {
   if (p === '/manejador') return '/manejador'
   if (p === '/tareas') return '/tareas'
   if (p === '/archivos-impresos') return '/archivos-impresos'
+  if (p === '/pedidos-despachados/estadisticas') return '/pedidos-despachados/estadisticas'
   if (p === '/pedidos-despachados') return '/pedidos-despachados'
   if (p === '' || p === '/') return '/'
   return p
@@ -180,7 +184,9 @@ export function hubPathBlockedMessage(path: string, role: HubUserRole | null | u
   if (p === '/manejador') return `El perfil «${label}» no accede a la lista de corte.`
   if (p === '/tareas') return `El perfil «${label}» no usa tareas del taller.`
   if (p === '/archivos-impresos') return `El perfil «${label}» no ve archivos impresos.`
-  if (p === '/pedidos-despachados') return `El perfil «${label}» no ve pedidos despachados.`
+  if (p === '/pedidos-despachados' || p === '/pedidos-despachados/estadisticas') {
+    return `El perfil «${label}» no ve pedidos despachados.`
+  }
   return 'No tenés permiso para esta pantalla.'
 }
 
@@ -196,5 +202,6 @@ export function hubDashboardLinks(day: string = todayIsoLocal()) {
     completedTasks: `/tareas?d=${d}&hub=completadas#nm-hub-tareas-lista`,
     printedFiles: `/archivos-impresos?d=${d}`,
     dispatchedOrders: `/pedidos-despachados?d=${d}`,
+    dispatchedStats: `/pedidos-despachados/estadisticas?m=${d.slice(0, 7)}`,
   } as const
 }

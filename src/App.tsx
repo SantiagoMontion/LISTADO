@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CreadorMaterialImagesModal } from './components/CreadorMaterialImagesModal'
 import { QuickAddMeasureModal } from './components/QuickAddMeasureModal'
 import { HubDispatchedOrdersApp } from './components/HubDispatchedOrdersApp'
+import { HubDispatchedStatsApp } from './components/HubDispatchedStatsApp'
 import { HubPrintedFilesApp } from './components/HubPrintedFilesApp'
 import { MaterialTabs } from './components/MaterialTabs'
 import { TaskCard } from './components/TaskCard'
@@ -137,6 +138,7 @@ export default function App() {
   const isLogin = path === '/entrar'
   const isHubTasks = path === '/tareas'
   const isHubPrintedFiles = path === '/archivos-impresos'
+  const isHubDispatchedStats = path === '/pedidos-despachados/estadisticas'
   const isHubDispatchedOrders = path === '/pedidos-despachados'
   const isHubHome = path === '/' || path === ''
 
@@ -756,6 +758,10 @@ export default function App() {
     return <HubLoadingScreen label="Cargando perfil…" />
   }
 
+  if (authEnabled && authReady && session && isHubDispatchedStats && !profileReady) {
+    return <HubLoadingScreen label="Cargando perfil…" />
+  }
+
   if (authEnabled && authReady && session && isHubTasks && profileReady && profile) {
     const hubReadOnly = hubTasksReadOnly(profile.role)
     return (
@@ -785,8 +791,32 @@ export default function App() {
     )
   }
 
-  if (authEnabled && authReady && session && isHubDispatchedOrders && profileReady && !profile) {
+  if (
+    authEnabled &&
+    authReady &&
+    session &&
+    (isHubDispatchedOrders || isHubDispatchedStats) &&
+    profileReady &&
+    !profile
+  ) {
     return <HubLoadingScreen label="No se pudo cargar el perfil del hub." />
+  }
+
+  if (
+    authEnabled &&
+    authReady &&
+    session &&
+    isHubDispatchedStats &&
+    profileReady &&
+    profile &&
+    getHubPermissions(profile.role)?.viewDispatchedOrders
+  ) {
+    return (
+      <HubDispatchedStatsApp
+        configured={configured}
+        adminSignOut={profile.role === 'admin'}
+      />
+    )
   }
 
   if (
@@ -815,6 +845,24 @@ export default function App() {
     return (
       <div className="nm-hub-app">
         <p className="nm-hub-muted">Configurá Supabase en <code>.env</code> para usar tareas.</p>
+        <a
+          href="/"
+          className="nm-hub-back"
+          style={{ display: 'inline-block', marginTop: '1rem' }}
+          onClick={(e) => onHubLinkClick(e, '/')}
+        >
+          ← Inicio
+        </a>
+      </div>
+    )
+  }
+
+  if (!authEnabled && isHubDispatchedStats) {
+    return (
+      <div className="nm-hub-app">
+        <p className="nm-hub-muted">
+          Configurá Supabase en <code>.env</code> para ver estadísticas de despachos.
+        </p>
         <a
           href="/"
           className="nm-hub-back"

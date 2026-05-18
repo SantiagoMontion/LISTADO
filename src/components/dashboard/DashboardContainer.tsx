@@ -33,6 +33,7 @@ const EMPTY_STATS: HubDashboardStats = {
   completedHubTasksToday: 0,
   hasListForDay: false,
   dispatchedOrdersToday: 0,
+  dispatchedOrdersMonthTotal: 0,
 }
 
 function RoleDashboardView({

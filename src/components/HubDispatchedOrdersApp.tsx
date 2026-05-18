@@ -1,12 +1,15 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { HubBrandBar } from './HubBrandBar'
-import { HUB_NAV_EVENT, hubNavigate } from '../lib/hubNavigate'
-import { addDaysToIsoDate, formatDayMonthShort, normalizeCalendarDate, todayIsoLocal } from '../lib/date'
-import { formatSupabaseOrError } from '../lib/errors'
+import { HUB_NAV_EVENT, hubNavigate, onHubLinkClick } from '../lib/hubNavigate'
 import {
-  fetchHubDispatchedCount,
-  incrementHubDispatchedCount,
-} from '../lib/hubDispatchedOrdersApi'
+  addDaysToIsoDate,
+  currentYearMonthLocal,
+  formatDayMonthShort,
+  normalizeCalendarDate,
+  todayIsoLocal,
+} from '../lib/date'
+import { formatSupabaseOrError } from '../lib/errors'
+import { fetchHubDispatchedCount, setHubDispatchedCount } from '../lib/hubDispatchedOrdersApi'
 
 function normalizePathname(): string {
   let p = (window.location.pathname || '/').toLowerCase()
@@ -18,6 +21,14 @@ function readDayFromUrl(): string {
   if (typeof window === 'undefined') return ''
   const d = normalizeCalendarDate(new URLSearchParams(window.location.search).get('d'))
   return /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : ''
+}
+
+function parseDraftCount(raw: string): number | null {
+  const t = raw.trim()
+  if (t === '') return null
+  const n = Number(t)
+  if (!Number.isFinite(n) || n < 0 || !Number.isInteger(n)) return null
+  return n
 }
 
 interface HubDispatchedOrdersAppProps {
@@ -38,11 +49,15 @@ export function HubDispatchedOrdersApp({
   const [loading, setLoading] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const applyDay = useCallback((next: string) => {
     const d = normalizeCalendarDate(next)
     if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return
     setDay(d)
+    setEditing(false)
     const u = new URL(window.location.href)
     u.pathname = '/pedidos-despachados'
     u.searchParams.set('d', d)
@@ -92,16 +107,42 @@ export function HubDispatchedOrdersApp({
   }, [day])
 
   useEffect(() => {
+    setEditing(false)
     void loadCount(day)
   }, [day, loadCount])
 
-  const onIncrement = async () => {
+  useEffect(() => {
+    if (!editing) return
+    const t = window.setTimeout(() => inputRef.current?.focus(), 0)
+    return () => window.clearTimeout(t)
+  }, [editing])
+
+  const openEditor = () => {
+    if (!isAdmin || !configured || busy || loading) return
+    setDraft(String(count))
+    setEditing(true)
+    setError(null)
+  }
+
+  const closeEditor = () => {
+    setEditing(false)
+    setDraft('')
+  }
+
+  const onSave = async () => {
     if (!isAdmin || !configured || busy) return
+    const next = parseDraftCount(draft)
+    if (next === null) {
+      setError('Ingresá un número entero mayor o igual a 0.')
+      return
+    }
     setBusy(true)
     setError(null)
     try {
-      const next = await incrementHubDispatchedCount(day)
-      setCount(next)
+      const saved = await setHubDispatchedCount(day, next)
+      setCount(saved)
+      setEditing(false)
+      setDraft('')
     } catch (err: unknown) {
       setError(formatSupabaseOrError(err))
       await loadCount(day, true)
@@ -119,15 +160,31 @@ export function HubDispatchedOrdersApp({
           integratedSubtitle="Pedidos despachados"
           integratedSubtitleTone="muted"
           trailing={
-            <button
-              type="button"
-              className="nm-hub-brand-bar__btn navbar-global-menu-btn"
-              aria-label="Panel principal"
-              title="Panel principal"
-              onClick={() => hubNavigate('/')}
-            >
-              ☰
-            </button>
+            <div className="nm-hub-brand-bar__trailing-group">
+              <a
+                href={`/pedidos-despachados/estadisticas?m=${day.slice(0, 7) || currentYearMonthLocal()}`}
+                className="nm-hub-brand-bar__btn navbar-global-menu-btn"
+                aria-label="Estadísticas del mes"
+                title="Estadísticas del mes"
+                onClick={(e) =>
+                  onHubLinkClick(
+                    e,
+                    `/pedidos-despachados/estadisticas?m=${day.slice(0, 7) || currentYearMonthLocal()}`,
+                  )
+                }
+              >
+                ▦
+              </a>
+              <button
+                type="button"
+                className="nm-hub-brand-bar__btn navbar-global-menu-btn"
+                aria-label="Panel principal"
+                title="Panel principal"
+                onClick={() => hubNavigate('/')}
+              >
+                ☰
+              </button>
+            </div>
           }
         />
       </header>
@@ -184,26 +241,71 @@ export function HubDispatchedOrdersApp({
         <p id="hub-dispatched-hero-label" className="hub-dispatched-hero__label">
           Pedidos despachados
         </p>
-        <p
-          className="hub-dispatched-hero__count"
-          aria-live="polite"
-          aria-busy={loading || busy}
-        >
-          {loading && configured ? '…' : count}
-        </p>
-        {isAdmin && configured ? (
+
+        {editing ? (
+          <form
+            className="hub-dispatched-edit"
+            onSubmit={(e) => {
+              e.preventDefault()
+              void onSave()
+            }}
+          >
+            <label className="hub-dispatched-edit__label" htmlFor="hub-dispatched-count-input">
+              Total del día
+            </label>
+            <input
+              ref={inputRef}
+              id="hub-dispatched-count-input"
+              type="number"
+              inputMode="numeric"
+              min={0}
+              step={1}
+              className="hub-dispatched-edit__input nm-hub-input field-input"
+              value={draft}
+              disabled={busy}
+              onChange={(e) => setDraft(e.target.value)}
+              aria-label="Cantidad final de pedidos despachados"
+            />
+            <div className="hub-dispatched-edit__actions">
+              <button
+                type="submit"
+                className="hub-dispatched-edit__save nm-prod-btn nm-prod-btn-primary"
+                disabled={busy}
+              >
+                Guardar
+              </button>
+              <button
+                type="button"
+                className="hub-dispatched-edit__cancel nm-prod-btn"
+                disabled={busy}
+                onClick={closeEditor}
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        ) : (
+          <p
+            className="hub-dispatched-hero__count"
+            aria-live="polite"
+            aria-busy={loading || busy}
+          >
+            {loading && configured ? '…' : count}
+          </p>
+        )}
+
+        {isAdmin && configured && !editing ? (
           <div className="hub-dispatched-hero__actions">
             <button
               type="button"
               className="hub-dispatched-add-btn navbar-trailing-action-btn"
-              onClick={() => void onIncrement()}
+              onClick={openEditor}
               disabled={busy || loading}
-              aria-label="Sumar un pedido despachado para este día"
-              title="Sumar pedido despachado"
+              aria-label="Editar cantidad de pedidos despachados"
+              title="Editar total"
             >
               +
             </button>
-            <p className="hub-dispatched-hero__hint">Solo administración puede sumar</p>
           </div>
         ) : null}
       </section>

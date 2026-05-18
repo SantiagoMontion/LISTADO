@@ -1,5 +1,9 @@
 import { normalizeCalendarDate, todayIsoLocal } from './date'
-import { fetchHubDispatchedCount } from './hubDispatchedOrdersApi'
+import {
+  fetchHubDispatchedCount,
+  fetchHubDispatchedCountsForMonth,
+  sumHubDispatchedCounts,
+} from './hubDispatchedOrdersApi'
 import { fetchReportsWithTasksProgress, supabase, taskProgressRowDone } from './supabase'
 import type { HubUserRole } from './types'
 
@@ -16,6 +20,7 @@ export interface HubDashboardStats {
   hasListForDay: boolean
   /** Pedidos despachados del día (admin / taller_1). */
   dispatchedOrdersToday: number
+  dispatchedOrdersMonthTotal: number
 }
 
 function requireClient() {
@@ -77,11 +82,18 @@ export async function fetchHubDashboardStats(
   }
 
   let dispatchedOrdersToday = 0
+  let dispatchedOrdersMonthTotal = 0
   if (role === 'admin' || role === 'taller_1') {
     try {
       dispatchedOrdersToday = await fetchHubDispatchedCount(day)
     } catch {
       dispatchedOrdersToday = 0
+    }
+    try {
+      const monthMap = await fetchHubDispatchedCountsForMonth(day.slice(0, 7))
+      dispatchedOrdersMonthTotal = sumHubDispatchedCounts(monthMap)
+    } catch {
+      dispatchedOrdersMonthTotal = 0
     }
   }
 
@@ -93,5 +105,6 @@ export async function fetchHubDashboardStats(
     completedHubTasksToday: completedRes.count ?? 0,
     hasListForDay: (listRes.count ?? 0) > 0,
     dispatchedOrdersToday,
+    dispatchedOrdersMonthTotal,
   }
 }

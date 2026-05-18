@@ -82,6 +82,14 @@ export function AdminDashboard({ stats }: RoleDashboardProps) {
           title="Pedidos despachados"
         />
         <DashboardCard
+          href={links.dispatchedStats}
+          accent="completed"
+          icon="▦"
+          stat={stats.dispatchedOrdersMonthTotal}
+          statLabel="en el mes"
+          title="Estadísticas despachos"
+        />
+        <DashboardCard
           href={links.completedTasks}
           accent="completed"
           icon="✓"
@@ -168,6 +176,14 @@ export function Taller1Dashboard({ stats }: RoleDashboardProps) {
           stat={stats.dispatchedOrdersToday}
           statLabel="despachados hoy"
           title="Pedidos despachados"
+        />
+        <DashboardCard
+          href={links.dispatchedStats}
+          accent="completed"
+          icon="▦"
+          stat={stats.dispatchedOrdersMonthTotal}
+          statLabel="en el mes"
+          title="Estadísticas despachos"
         />
         <DashboardCard
           href={links.completedTasks}

@@ -17,6 +17,74 @@ export function addDaysToIsoDate(isoDate: string, days: number): string {
   return `${y2}-${m2}-${d2}`
 }
 
+const MONTH_LABELS_ES = [
+  'Enero',
+  'Febrero',
+  'Marzo',
+  'Abril',
+  'Mayo',
+  'Junio',
+  'Julio',
+  'Agosto',
+  'Septiembre',
+  'Octubre',
+  'Noviembre',
+  'Diciembre',
+] as const
+
+/** Año-mes actual en zona local (`YYYY-MM`). */
+export function currentYearMonthLocal(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+/** Valida y devuelve año (1–12 mes) desde `YYYY-MM`. */
+export function parseYearMonth(value: string): { year: number; month: number } | null {
+  const t = value.trim()
+  const m = /^(\d{4})-(\d{2})$/.exec(t)
+  if (!m) return null
+  const year = Number(m[1])
+  const month = Number(m[2])
+  if (!Number.isFinite(year) || !Number.isFinite(month) || month < 1 || month > 12) return null
+  return { year, month }
+}
+
+export function formatMonthYearLabel(yearMonth: string): string {
+  const parsed = parseYearMonth(yearMonth)
+  if (!parsed) return yearMonth
+  return `${MONTH_LABELS_ES[parsed.month - 1]} ${parsed.year}`
+}
+
+export function addMonthsToYearMonth(yearMonth: string, delta: number): string {
+  const parsed = parseYearMonth(yearMonth)
+  if (!parsed) return currentYearMonthLocal()
+  const base = new Date(parsed.year, parsed.month - 1 + delta, 1)
+  return `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, '0')}`
+}
+
+export function daysInCalendarMonth(year: number, month: number): number {
+  return new Date(year, month, 0).getDate()
+}
+
+export function isoDateFromParts(year: number, month: number, day: number): string {
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+}
+
+export type MonthCalendarCell = { iso: string; day: number } | { iso: null; day: null }
+
+/** Grilla lun–dom con celdas vacías al inicio/fin. */
+export function buildMonthCalendarGrid(year: number, month: number): MonthCalendarCell[] {
+  const firstWeekdayMon0 = (new Date(year, month - 1, 1).getDay() + 6) % 7
+  const totalDays = daysInCalendarMonth(year, month)
+  const cells: MonthCalendarCell[] = []
+  for (let i = 0; i < firstWeekdayMon0; i++) cells.push({ iso: null, day: null })
+  for (let d = 1; d <= totalDays; d++) {
+    cells.push({ iso: isoDateFromParts(year, month, d), day: d })
+  }
+  while (cells.length % 7 !== 0) cells.push({ iso: null, day: null })
+  return cells
+}
+
 /** Etiqueta corta dd/mm para cabeceras. */
 export function formatDayMonthShort(isoDate: string): string {
   const parts = isoDate.split('-')

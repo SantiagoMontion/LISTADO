@@ -1567,11 +1567,220 @@ a.nm-hub-brand-bar__btn:hover {
   outline-offset: 2px;
 }
 
-.nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-hero__hint {
+.nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-edit {
+  width: 100%;
+  max-width: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.65rem;
+  margin-top: 0.35rem;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-edit__label {
   margin: 0;
-  font-size: 0.7rem;
-  font-weight: 500;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-rebel-muted, #9099a3);
+  text-align: center;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-edit__input {
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  font-size: clamp(2.25rem, 12vw, 3.25rem);
+  font-weight: 800;
+  font-family: var(--font-rebel-count, inherit);
+  font-variant-numeric: tabular-nums;
+  padding: 0.65rem 0.75rem;
+  border-radius: 14px;
+  color: var(--accent-rebel-green, #22c55e);
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+}
+
+.nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-edit__input:focus {
+  outline: none;
+  border-color: rgba(34, 197, 94, 0.65);
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.18);
+}
+
+.nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-edit__actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-edit__save,
+.nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-edit__cancel {
+  min-width: 7rem;
+  font-size: 0.85rem;
+  padding: 0.55rem 1rem;
+  border-radius: 12px;
+}
+
+.nm-hub-app--dispatched-orders .nm-hub-brand-bar__trailing-group,
+.nm-hub-app--dispatched-stats .nm-hub-brand-bar__trailing-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.nm-hub-app--dispatched-orders .nm-hub-brand-bar__trailing-group a.nm-hub-brand-bar__btn {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Estadísticas despachos (/pedidos-despachados/estadisticas) */
+.nm-hub-app.nm-hub-app--dispatched-stats .dashboard-navbar.dashboard-navbar-clean {
+  background-color: #121417;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-stats .hub-dispatched-stats-feedback {
+  margin: 0 0 0.85rem;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-stats .hub-dispatched-stats-month-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.65rem 0.5rem;
+  background: #121417;
+  border-radius: 16px;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-stats .hub-dispatched-stats-month-title {
+  margin: 0;
+  flex: 1;
+  text-align: center;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-rebel-primary, #f8fafc);
+  letter-spacing: 0.02em;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-stats .hub-dispatched-stats-total {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  margin-bottom: 0.85rem;
+  padding: 1.1rem 1rem;
+  border-radius: 18px;
+  background: linear-gradient(165deg, rgba(24, 28, 34, 0.98) 0%, rgba(14, 16, 20, 0.98) 100%);
+  border: 1px solid rgba(34, 197, 94, 0.22);
+}
+
+.nm-hub-app.nm-hub-app--dispatched-stats .hub-dispatched-stats-total__label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-rebel-muted, #9099a3);
+}
+
+.nm-hub-app.nm-hub-app--dispatched-stats .hub-dispatched-stats-total__value {
+  font-size: clamp(2.5rem, 14vw, 3.5rem);
+  font-weight: 800;
+  line-height: 1;
+  font-family: var(--font-rebel-count, inherit);
+  color: var(--accent-rebel-green, #22c55e);
+  font-variant-numeric: tabular-nums;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-stats .hub-dispatched-stats-nav {
+  margin: 0 0 1rem;
+  text-align: center;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-stats .hub-dispatched-stats-nav .nm-hub-back {
+  font-size: 0.82rem;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-stats .hub-dispatched-stats-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-stats .hub-dispatched-stats-weekday {
+  text-align: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--text-rebel-muted, #535a62);
+}
+
+.nm-hub-app.nm-hub-app--dispatched-stats .hub-dispatched-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-stats .hub-dispatched-stats-cell {
+  min-height: 3.35rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.03);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 0.35rem 0.2rem;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-stats .hub-dispatched-stats-cell--empty {
+  border-color: transparent;
+  background: transparent;
+  pointer-events: none;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-stats .hub-dispatched-stats-cell--today {
+  border-color: rgba(59, 130, 246, 0.45);
+  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.2);
+}
+
+.nm-hub-app.nm-hub-app--dispatched-stats .hub-dispatched-stats-cell--has-data {
+  border-color: rgba(34, 197, 94, 0.28);
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.nm-hub-app.nm-hub-app--dispatched-stats .hub-dispatched-stats-cell:hover:not(.hub-dispatched-stats-cell--empty) {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.nm-hub-app.nm-hub-app--dispatched-stats .hub-dispatched-stats-cell__day {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-rebel-muted, #9099a3);
+  line-height: 1;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-stats .hub-dispatched-stats-cell__count {
+  font-size: 1rem;
+  font-weight: 800;
+  font-family: var(--font-rebel-count, inherit);
+  color: var(--text-rebel-primary, #f8fafc);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-stats .hub-dispatched-stats-cell--has-data .hub-dispatched-stats-cell__count {
+  color: var(--accent-rebel-green, #22c55e);
 }
 
 .nm-hub-printed-loading {
