@@ -46,10 +46,32 @@ export async function fetchMaterialImagesByFecha(fecha: string): Promise<NmProdM
 }
 
 export async function signedMaterialImageUrl(path: string, expiresSec = 60 * 45): Promise<string | null> {
+  const map = await signedMaterialImageUrlsByPath([path], expiresSec)
+  return map[path] ?? null
+}
+
+/** Una sola llamada para muchas rutas (más rápido que firmar una por una). */
+export async function signedMaterialImageUrlsByPath(
+  paths: string[],
+  expiresSec = 60 * 45,
+): Promise<Record<string, string>> {
   const sb = requireClient()
-  const { data, error } = await sb.storage.from(NM_PROD_MATERIAL_IMAGE_BUCKET).createSignedUrl(path, expiresSec)
-  if (error) return null
-  return data.signedUrl
+  const uniq = [...new Set(paths.filter(Boolean))]
+  if (uniq.length === 0) return {}
+
+  const { data, error } = await sb.storage
+    .from(NM_PROD_MATERIAL_IMAGE_BUCKET)
+    .createSignedUrls(uniq, expiresSec)
+
+  if (error) throw error
+
+  const out: Record<string, string> = {}
+  for (const row of data ?? []) {
+    const path = row?.path
+    const url = row?.signedUrl
+    if (path && url && !row?.error) out[path] = url
+  }
+  return out
 }
 
 export async function uploadMaterialDayImages(

@@ -2,8 +2,9 @@ import { useCallback, useEffect, useRef, useState, type TouchEvent } from 'react
 
 const LIGHTBOX_MIN_SCALE = 1
 const LIGHTBOX_MAX_SCALE = 4
-const LIGHTBOX_DISMISS_PX = 72
-const LIGHTBOX_GALLERY_SWIPE_PX = 48
+const LIGHTBOX_DISMISS_PX = 110
+const LIGHTBOX_GALLERY_SWIPE_PX = 56
+const LIGHTBOX_TAP_MOVE_PX = 14
 
 function clampLightboxScale(s: number): number {
   return Math.min(LIGHTBOX_MAX_SCALE, Math.max(LIGHTBOX_MIN_SCALE, s))
@@ -37,9 +38,11 @@ export function HubImageLightbox({
   const [dismissY, setDismissY] = useState(0)
   const [dragging, setDragging] = useState(false)
 
-  const historyPushedRef = useRef(true)
+  const historyPushedRef = useRef(false)
   const dismissYRef = useRef(0)
+  const scaleRef = useRef(1)
   const galleryRef = useRef(gallery)
+  const onCloseRef = useRef(onClose)
   const stageRef = useRef<HTMLDivElement>(null)
   const touchRef = useRef({
     mode: 'none' as 'none' | 'pan' | 'pinch' | 'swipe',
@@ -49,9 +52,12 @@ export function HubImageLightbox({
     startScale: 1,
     startDist: 0,
     lastTap: 0,
+    moved: 0,
   })
 
   galleryRef.current = gallery
+  onCloseRef.current = onClose
+  scaleRef.current = scale
 
   const hasGalleryNav = Boolean(gallery && gallery.total > 1)
   const canPrev = hasGalleryNav && (gallery?.index ?? 0) > 0
@@ -62,11 +68,25 @@ export function HubImageLightbox({
     setOffset({ x: 0, y: 0 })
     setDismissY(0)
     dismissYRef.current = 0
+    scaleRef.current = 1
+  }, [])
+
+  const requestClose = useCallback(() => {
+    if (historyPushedRef.current && window.history.state?.nmHubLightbox) {
+      historyPushedRef.current = false
+      history.back()
+      return
+    }
+    onCloseRef.current()
   }, [])
 
   useEffect(() => {
     resetView()
   }, [src, resetView])
+
+  useEffect(() => {
+    scaleRef.current = scale
+  }, [scale])
 
   useEffect(() => {
     const prev = document.body.style.overflow
@@ -81,22 +101,18 @@ export function HubImageLightbox({
     history.pushState({ nmHubLightbox: true }, '')
     const onPop = () => {
       historyPushedRef.current = false
-      onClose()
+      onCloseRef.current()
     }
     window.addEventListener('popstate', onPop)
     return () => {
       window.removeEventListener('popstate', onPop)
-      if (historyPushedRef.current) {
-        historyPushedRef.current = false
-        history.back()
-      }
     }
-  }, [onClose])
+  }, [])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose()
+        requestClose()
         return
       }
       const g = galleryRef.current
@@ -112,14 +128,18 @@ export function HubImageLightbox({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }, [requestClose])
 
   useEffect(() => {
     const el = stageRef.current
     if (!el) return
     const onWheel = (e: WheelEvent) => {
       e.preventDefault()
-      setScale((s) => clampLightboxScale(s - e.deltaY * 0.002))
+      setScale((s) => {
+        const next = clampLightboxScale(s - e.deltaY * 0.002)
+        scaleRef.current = next
+        return next
+      })
     }
     el.addEventListener('wheel', onWheel, { passive: false })
     return () => el.removeEventListener('wheel', onWheel)
@@ -127,10 +147,12 @@ export function HubImageLightbox({
 
   const onTouchStart = (e: TouchEvent) => {
     const t = touchRef.current
+    t.moved = 0
     if (e.touches.length === 2) {
+      e.preventDefault()
       t.mode = 'pinch'
       t.startDist = touchDistance(e.touches)
-      t.startScale = scale
+      t.startScale = scaleRef.current
       setDragging(true)
       return
     }
@@ -138,27 +160,51 @@ export function HubImageLightbox({
     t.startY = e.touches[0].clientY
     t.startX = e.touches[0].clientX
     t.startOffset = { ...offset }
-    t.mode = scale > 1.02 ? 'pan' : 'swipe'
+    t.mode = scaleRef.current > 1.02 ? 'pan' : 'swipe'
     setDragging(true)
   }
 
   const onTouchMove = (e: TouchEvent) => {
     const t = touchRef.current
-    if (t.mode === 'pinch' && e.touches.length >= 2 && t.startDist > 0) {
-      setScale(clampLightboxScale(t.startScale * (touchDistance(e.touches) / t.startDist)))
+
+    if (e.touches.length >= 2) {
+      e.preventDefault()
+      if (t.mode !== 'pinch' || t.startDist <= 0) {
+        t.mode = 'pinch'
+        t.startDist = touchDistance(e.touches)
+        t.startScale = scaleRef.current
+      }
+      const next = clampLightboxScale(t.startScale * (touchDistance(e.touches) / t.startDist))
+      scaleRef.current = next
+      setScale(next)
       return
     }
+
     if (t.mode === 'pan' && e.touches.length === 1) {
+      e.preventDefault()
+      const dx = e.touches[0].clientX - t.startX
+      const dy = e.touches[0].clientY - t.startY
+      t.moved = Math.max(t.moved, Math.hypot(dx, dy))
       setOffset({
-        x: t.startOffset.x + (e.touches[0].clientX - t.startX),
-        y: t.startOffset.y + (e.touches[0].clientY - t.startY),
+        x: t.startOffset.x + dx,
+        y: t.startOffset.y + dy,
       })
       return
     }
+
     if (t.mode === 'swipe' && e.touches.length === 1) {
       const dx = e.touches[0].clientX - t.startX
       const dy = e.touches[0].clientY - t.startY
-      if (Math.abs(dy) > Math.abs(dx) && dy > 0) {
+      t.moved = Math.max(t.moved, Math.hypot(dx, dy))
+
+      if (Math.abs(dx) > Math.abs(dy) * 1.25 && scaleRef.current <= 1.02) {
+        e.preventDefault()
+        dismissYRef.current = 0
+        setDismissY(0)
+        return
+      }
+
+      if (dy > 0 && dy > Math.abs(dx) * 1.35) {
         dismissYRef.current = dy
         setDismissY(dy)
       } else {
@@ -171,37 +217,57 @@ export function HubImageLightbox({
   const onTouchEnd = (e: TouchEvent) => {
     const t = touchRef.current
     const end = e.changedTouches[0]
+
+    if (t.mode === 'pinch' && e.touches.length >= 1) {
+      t.mode = scaleRef.current > 1.02 ? 'pan' : 'swipe'
+      t.startX = e.touches[0].clientX
+      t.startY = e.touches[0].clientY
+      t.startOffset = { ...offset }
+      return
+    }
+
     if (t.mode === 'swipe' && end) {
       const dx = end.clientX - t.startX
       const dy = end.clientY - t.startY
-      if (dismissYRef.current >= LIGHTBOX_DISMISS_PX) {
-        onClose()
-      } else if (scale <= 1.02 && galleryRef.current && galleryRef.current.total > 1) {
-        if (Math.abs(dx) > Math.abs(dy) * 1.15 && Math.abs(dx) >= LIGHTBOX_GALLERY_SWIPE_PX) {
-          if (dx < 0) galleryRef.current.onNext?.()
-          else galleryRef.current.onPrev?.()
-        }
+
+      if (dismissYRef.current >= LIGHTBOX_DISMISS_PX && dy > Math.abs(dx) * 1.2) {
+        requestClose()
+      } else if (
+        scaleRef.current <= 1.02 &&
+        galleryRef.current &&
+        galleryRef.current.total > 1 &&
+        Math.abs(dx) > Math.abs(dy) * 1.35 &&
+        Math.abs(dx) >= LIGHTBOX_GALLERY_SWIPE_PX
+      ) {
+        if (dx < 0) galleryRef.current.onNext?.()
+        else galleryRef.current.onPrev?.()
       }
+
       dismissYRef.current = 0
       setDismissY(0)
     }
+
     t.mode = 'none'
     setDragging(false)
   }
 
   const onImgPointerDown = () => {
+    const t = touchRef.current
+    if (t.moved > LIGHTBOX_TAP_MOVE_PX) return
     const now = Date.now()
-    if (now - touchRef.current.lastTap < 320) {
+    if (now - t.lastTap < 320) {
       setScale((s) => {
         if (s > 1.05) {
           setOffset({ x: 0, y: 0 })
+          scaleRef.current = 1
           return 1
         }
+        scaleRef.current = 2
         return 2
       })
-      touchRef.current.lastTap = 0
+      t.lastTap = 0
     } else {
-      touchRef.current.lastTap = now
+      t.lastTap = now
     }
   }
 
@@ -219,11 +285,16 @@ export function HubImageLightbox({
       aria-label="Vista previa de imagen"
       style={{ background: `rgba(5, 5, 8, ${0.94 * backdropOpacity})` }}
       onClick={(e) => {
-        if (e.target === e.currentTarget && scale <= 1.02 && dismissY < 8) onClose()
+        if (e.target === e.currentTarget && scale <= 1.02 && dismissY < 8) requestClose()
       }}
     >
       <div className="nm-hub-lightbox__toolbar">
-        <button type="button" className="nm-hub-btn nm-hub-btn-ghost nm-hub-lightbox__back" onClick={onClose} aria-label="Volver">
+        <button
+          type="button"
+          className="nm-hub-btn nm-hub-btn-ghost nm-hub-lightbox__back"
+          onClick={requestClose}
+          aria-label="Volver"
+        >
           ←
         </button>
         {hasGalleryNav ? (
@@ -237,7 +308,13 @@ export function HubImageLightbox({
           <button
             type="button"
             className="nm-hub-btn nm-hub-btn-ghost nm-hub-lightbox__tool"
-            onClick={() => setScale((s) => clampLightboxScale(s + 0.35))}
+            onClick={() =>
+              setScale((s) => {
+                const next = clampLightboxScale(s + 0.35)
+                scaleRef.current = next
+                return next
+              })
+            }
             aria-label="Acercar"
           >
             +
@@ -245,7 +322,13 @@ export function HubImageLightbox({
           <button
             type="button"
             className="nm-hub-btn nm-hub-btn-ghost nm-hub-lightbox__tool"
-            onClick={() => setScale((s) => clampLightboxScale(s - 0.35))}
+            onClick={() =>
+              setScale((s) => {
+                const next = clampLightboxScale(s - 0.35)
+                scaleRef.current = next
+                return next
+              })
+            }
             aria-label="Alejar"
           >
             −
@@ -254,7 +337,7 @@ export function HubImageLightbox({
             1:1
           </button>
         </div>
-        <button type="button" className="nm-hub-btn nm-hub-btn-primary nm-hub-lightbox__close" onClick={onClose}>
+        <button type="button" className="nm-hub-btn nm-hub-btn-primary nm-hub-lightbox__close" onClick={requestClose}>
           Cerrar
         </button>
       </div>

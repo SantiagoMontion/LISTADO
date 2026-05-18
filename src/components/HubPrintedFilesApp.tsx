@@ -9,6 +9,7 @@ import {
   NM_PROD_MATERIAL_FAMILY_LABEL,
   fetchMaterialImagesByFecha,
   signedMaterialImageUrl,
+  signedMaterialImageUrlsByPath,
 } from '../lib/nmProdMaterialImages'
 import type { NmProdMaterialFamily, NmProdMaterialImageRow } from '../lib/types'
 
@@ -35,7 +36,8 @@ export function HubPrintedFilesApp({ configured, adminSignOut = false }: HubPrin
   )
   const [rows, setRows] = useState<NmProdMaterialImageRow[]>([])
   const [urls, setUrls] = useState<Record<string, string>>({})
-  const [loading, setLoading] = useState(false)
+  const [rowsLoading, setRowsLoading] = useState(false)
+  const [urlsLoading, setUrlsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [activeFamily, setActiveFamily] = useState<NmProdMaterialFamily>('classic')
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
@@ -80,35 +82,60 @@ export function HubPrintedFilesApp({ configured, adminSignOut = false }: HubPrin
     if (!configured) {
       setRows([])
       setUrls({})
+      setRowsLoading(false)
+      setUrlsLoading(false)
       return
     }
     let cancelled = false
-    setLoading(true)
+    setRowsLoading(true)
+    setUrlsLoading(false)
     setError(null)
     setRows([])
     setUrls({})
-    fetchMaterialImagesByFecha(day)
+
+    void fetchMaterialImagesByFecha(day)
       .then(async (list) => {
         if (cancelled) return
         setRows(list)
-        const next: Record<string, string> = {}
-        for (const r of list) {
-          const u = await signedMaterialImageUrl(r.storage_path)
+        setRowsLoading(false)
+        if (list.length === 0) return
+
+        setUrlsLoading(true)
+        try {
+          const byPath = await signedMaterialImageUrlsByPath(list.map((r) => r.storage_path))
           if (cancelled) return
-          if (u) next[r.id] = u
+          const next: Record<string, string> = {}
+          for (const r of list) {
+            const u = byPath[r.storage_path]
+            if (u) next[r.id] = u
+          }
+          setUrls(next)
+        } catch (batchErr: unknown) {
+          const next: Record<string, string> = {}
+          await Promise.all(
+            list.map(async (r) => {
+              const u = await signedMaterialImageUrl(r.storage_path)
+              if (u) next[r.id] = u
+            }),
+          )
+          if (!cancelled) setUrls(next)
+          if (!cancelled && Object.keys(next).length === 0) {
+            setError(formatSupabaseOrError(batchErr))
+          }
+        } finally {
+          if (!cancelled) setUrlsLoading(false)
         }
-        if (!cancelled) setUrls(next)
       })
       .catch((e: unknown) => {
         if (!cancelled) {
           setRows([])
           setUrls({})
           setError(formatSupabaseOrError(e))
+          setRowsLoading(false)
+          setUrlsLoading(false)
         }
       })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
+
     return () => {
       cancelled = true
     }
@@ -126,13 +153,13 @@ export function HubPrintedFilesApp({ configured, adminSignOut = false }: HubPrin
   )
 
   useEffect(() => {
-    if (loading) return
+    if (rowsLoading) return
     const avail = NM_PROD_MATERIAL_FAMILIES.filter((f) => counts[f] > 0)
     if (avail.length === 0) return
     setActiveFamily((prev) =>
       avail.includes(prev) ? prev : avail.includes('classic') ? 'classic' : avail[0],
     )
-  }, [day, loading, counts])
+  }, [day, rowsLoading, counts])
 
   const filteredRows = useMemo(
     () => rows.filter((r) => r.material_family === activeFamily),
@@ -142,6 +169,9 @@ export function HubPrintedFilesApp({ configured, adminSignOut = false }: HubPrin
   const viewableRows = useMemo(() => filteredRows.filter((r) => Boolean(urls[r.id])), [filteredRows, urls])
 
   filteredLenRef.current = viewableRows.length
+
+  const showGlobalSpinner = rowsLoading
+  const showGallerySpinner = !rowsLoading && urlsLoading && rows.length > 0
 
   useEffect(() => {
     setLightboxIndex(null)
@@ -195,7 +225,7 @@ export function HubPrintedFilesApp({ configured, adminSignOut = false }: HubPrin
             type="button"
             className="pager-tactic-btn"
             onClick={() => applyDay(addDaysToIsoDate(day, -1))}
-            disabled={!configured || loading}
+            disabled={!configured || rowsLoading}
             aria-label="Día anterior"
           >
             ←
@@ -207,7 +237,7 @@ export function HubPrintedFilesApp({ configured, adminSignOut = false }: HubPrin
             type="date"
             className="nm-hub-input nm-hub-date-native nm-hub-printed-date-native"
             value={day}
-            disabled={!configured || loading}
+            disabled={!configured || rowsLoading}
             onChange={(e) => applyDay(normalizeCalendarDate(e.target.value))}
             aria-label="Elegir día"
           />
@@ -217,7 +247,7 @@ export function HubPrintedFilesApp({ configured, adminSignOut = false }: HubPrin
             type="button"
             className="pager-tactic-btn"
             onClick={() => applyDay(addDaysToIsoDate(day, 1))}
-            disabled={!configured || loading}
+            disabled={!configured || rowsLoading}
             aria-label="Día siguiente"
           >
             →
@@ -240,7 +270,7 @@ export function HubPrintedFilesApp({ configured, adminSignOut = false }: HubPrin
                 role="tab"
                 aria-selected={active}
                 aria-disabled={empty || undefined}
-                disabled={loading || empty}
+                disabled={rowsLoading || empty}
                 className={`filter-tab-item${showHighlight ? ' active-pending' : ''}`}
                 onClick={() => setActiveFamily(fam)}
               >
@@ -251,24 +281,31 @@ export function HubPrintedFilesApp({ configured, adminSignOut = false }: HubPrin
         </div>
       )}
 
-      {configured && !loading && rows.length === 0 && !error ? (
+      {configured && !rowsLoading && rows.length === 0 && !error ? (
         <p className="nm-hub-muted nm-hub-printed-feedback">No hay imágenes cargadas para este día.</p>
       ) : null}
 
-      {configured && loading ? (
+      {configured && showGlobalSpinner ? (
         <div className="nm-hub-printed-loading" role="status" aria-live="polite">
           <div className="nm-hub-spinner" aria-hidden="true" />
-          <p className="nm-hub-loading-label">Cargando imágenes…</p>
+          <p className="nm-hub-loading-label">Buscando archivos…</p>
         </div>
       ) : null}
 
-      {configured && !loading && availableFamilies.length > 0 && viewableRows.length === 0 ? (
+      {configured && !rowsLoading && availableFamilies.length > 0 && !showGallerySpinner && viewableRows.length === 0 ? (
         <p className="nm-hub-muted nm-hub-printed-feedback">
           No hay imágenes en esta categoría para el día.
         </p>
       ) : null}
 
-      {configured && !loading && viewableRows.length > 0 ? (
+      {configured && showGallerySpinner ? (
+        <div className="nm-hub-printed-loading nm-hub-printed-loading--inline" role="status" aria-live="polite">
+          <div className="nm-hub-spinner" aria-hidden="true" />
+          <p className="nm-hub-loading-label">Preparando vistas previas…</p>
+        </div>
+      ) : null}
+
+      {configured && !rowsLoading && !showGallerySpinner && viewableRows.length > 0 ? (
         <div className="print-design-feed-container">
           <div className="design-gallery-feed" aria-label={`Diseños ${NM_PROD_MATERIAL_FAMILY_LABEL[activeFamily]}`}>
             {viewableRows.map((r, idx) => {
@@ -284,7 +321,7 @@ export function HubPrintedFilesApp({ configured, adminSignOut = false }: HubPrin
                   aria-label={`Ampliar ${kindLabel} ${idx + 1}`}
                 >
                   <div className="design-item-card__media">
-                    <img src={src} alt="" className="design-item-card__img" decoding="async" />
+                    <img src={src} alt="" className="design-item-card__img" decoding="async" loading="lazy" />
                   </div>
                   <p className="design-card-meta">{`${kindLabel} diseño · #${idx + 1}`}</p>
                 </button>
