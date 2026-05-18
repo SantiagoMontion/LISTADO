@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type TouchEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { HubBrandBar } from './HubBrandBar'
+import { HubImageLightbox } from './HubImageLightbox'
 import { HUB_NAV_EVENT, hubNavigate } from '../lib/hubNavigate'
 import { addDaysToIsoDate, formatDayMonthShort, normalizeCalendarDate, todayIsoLocal } from '../lib/date'
 import { formatSupabaseOrError } from '../lib/errors'
@@ -38,7 +39,6 @@ export function HubPrintedFilesApp({ configured, adminSignOut = false }: HubPrin
   const [error, setError] = useState<string | null>(null)
   const [activeFamily, setActiveFamily] = useState<NmProdMaterialFamily>('classic')
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
-  const touchStartRef = useRef<{ x: number; y: number } | null>(null)
   const filteredLenRef = useRef(0)
 
   const applyDay = useCallback((next: string) => {
@@ -158,29 +158,6 @@ export function HubPrintedFilesApp({ configured, adminSignOut = false }: HubPrin
     }
   }, [lightboxIndex, viewableRows.length])
 
-  useEffect(() => {
-    if (lightboxIndex === null) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setLightboxIndex(null)
-        return
-      }
-      if (e.key === 'ArrowRight') {
-        e.preventDefault()
-        setLightboxIndex((i) =>
-          i !== null && i < filteredLenRef.current - 1 ? i + 1 : i,
-        )
-        return
-      }
-      if (e.key === 'ArrowLeft') {
-        e.preventDefault()
-        setLightboxIndex((i) => (i !== null && i > 0 ? i - 1 : i))
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [lightboxIndex])
-
   const goLightboxNext = useCallback(() => {
     setLightboxIndex((i) =>
       i !== null && i < filteredLenRef.current - 1 ? i + 1 : i,
@@ -190,24 +167,6 @@ export function HubPrintedFilesApp({ configured, adminSignOut = false }: HubPrin
   const goLightboxPrev = useCallback(() => {
     setLightboxIndex((i) => (i !== null && i > 0 ? i - 1 : i))
   }, [])
-
-  const onLightboxTouchStart = useCallback((e: TouchEvent) => {
-    const t = e.touches[0]
-    touchStartRef.current = { x: t.clientX, y: t.clientY }
-  }, [])
-
-  const onLightboxTouchEnd = useCallback((e: TouchEvent) => {
-    const start = touchStartRef.current
-    touchStartRef.current = null
-    if (!start) return
-    const t = e.changedTouches[0]
-    const dx = t.clientX - start.x
-    const dy = t.clientY - start.y
-    if (Math.abs(dx) < Math.abs(dy) * 1.15) return
-    const threshold = 48
-    if (dx < -threshold) goLightboxNext()
-    else if (dx > threshold) goLightboxPrev()
-  }, [goLightboxNext, goLightboxPrev])
 
   return (
     <div className="nm-hub-app nm-hub-app--printed-files">
@@ -347,60 +306,20 @@ export function HubPrintedFilesApp({ configured, adminSignOut = false }: HubPrin
       ) : null}
 
       {lightboxIndex !== null && viewableRows[lightboxIndex] ? (
-        <div
-          className="nm-hub-printed-lightbox-backdrop"
-          role="presentation"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setLightboxIndex(null)
-          }}
-        >
-          <div className="nm-hub-printed-lightbox" role="dialog" aria-modal="true" aria-label="Vista ampliada">
-            <div className="nm-hub-printed-lightbox-top">
-              <button type="button" className="nm-hub-btn nm-hub-printed-lightbox-close" onClick={() => setLightboxIndex(null)}>
-                Cerrar
-              </button>
-            </div>
-            {viewableRows.length > 1 ? (
-              <p className="nm-hub-printed-lightbox-counter" aria-live="polite">
-                {lightboxIndex + 1} / {viewableRows.length}
-              </p>
-            ) : null}
-            <div
-              className="nm-hub-printed-lightbox-swipe"
-              onTouchStart={onLightboxTouchStart}
-              onTouchEnd={onLightboxTouchEnd}
-            >
-              {viewableRows.length > 1 ? (
-                <>
-                  <button
-                    type="button"
-                    className="nm-hub-printed-lightbox-nav nm-hub-printed-lightbox-nav--prev"
-                    aria-label="Imagen anterior"
-                    disabled={lightboxIndex <= 0}
-                    onClick={goLightboxPrev}
-                  >
-                    ‹
-                  </button>
-                  <button
-                    type="button"
-                    className="nm-hub-printed-lightbox-nav nm-hub-printed-lightbox-nav--next"
-                    aria-label="Imagen siguiente"
-                    disabled={lightboxIndex >= viewableRows.length - 1}
-                    onClick={goLightboxNext}
-                  >
-                    ›
-                  </button>
-                </>
-              ) : null}
-              <img
-                src={urls[viewableRows[lightboxIndex].id] ?? ''}
-                alt=""
-                className="nm-hub-printed-lightbox-img"
-                draggable={false}
-              />
-            </div>
-          </div>
-        </div>
+        <HubImageLightbox
+          src={urls[viewableRows[lightboxIndex].id] ?? ''}
+          onClose={() => setLightboxIndex(null)}
+          gallery={
+            viewableRows.length > 1
+              ? {
+                  index: lightboxIndex,
+                  total: viewableRows.length,
+                  onPrev: goLightboxPrev,
+                  onNext: goLightboxNext,
+                }
+              : undefined
+          }
+        />
       ) : null}
     </div>
   )

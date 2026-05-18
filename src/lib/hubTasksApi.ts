@@ -1,7 +1,7 @@
 import { normalizeCalendarDate } from './date'
 import { supabase } from './supabase'
 import type { HubTaskAssignableRole } from './hubTaskAssignable'
-import type { HubImportance, NmHubTask } from './types'
+import type { HubImportance, NmHubTask, NmHubTaskNote } from './types'
 
 const BUCKET = 'nm-hub-task-images'
 
@@ -260,4 +260,80 @@ export async function signedImageUrl(path: string, expiresSec = 60 * 30): Promis
   const { data, error } = await sb.storage.from(BUCKET).createSignedUrl(path, expiresSec)
   if (error) return null
   return data.signedUrl
+}
+
+function mapTaskNoteRow(row: Record<string, unknown>): NmHubTaskNote {
+  return {
+    id: row.id as string,
+    task_id: row.task_id as string,
+    author_id: row.author_id as string,
+    body: String(row.body ?? ''),
+    created_at: String(row.created_at ?? ''),
+  }
+}
+
+export async function fetchHubTaskNotes(taskId: string): Promise<NmHubTaskNote[]> {
+  const sb = requireClient()
+  const { data, error } = await sb
+    .from('nm_hub_task_notes')
+    .select('id, task_id, author_id, body, created_at')
+    .eq('task_id', taskId)
+    .order('created_at', { ascending: true })
+
+  if (error) throw error
+  return ((data ?? []) as Record<string, unknown>[]).map(mapTaskNoteRow)
+}
+
+export async function fetchHubTaskNoteCounts(taskIds: string[]): Promise<Record<string, number>> {
+  const uniq = [...new Set(taskIds.filter(Boolean))]
+  if (uniq.length === 0) return {}
+  const sb = requireClient()
+  const { data, error } = await sb.from('nm_hub_task_notes').select('task_id').in('task_id', uniq)
+  if (error) throw error
+  const out: Record<string, number> = {}
+  for (const row of data ?? []) {
+    const tid = row.task_id as string
+    out[tid] = (out[tid] ?? 0) + 1
+  }
+  return out
+}
+
+export async function createHubTaskNote(taskId: string, body: string): Promise<NmHubTaskNote> {
+  const sb = requireClient()
+  const trimmed = body.trim()
+  if (!trimmed) throw new Error('Escribí una nota.')
+  const { data: userData } = await sb.auth.getUser()
+  const uid = userData.user?.id
+  if (!uid) throw new Error('Sesión requerida.')
+
+  const { data, error } = await sb
+    .from('nm_hub_task_notes')
+    .insert({ task_id: taskId, author_id: uid, body: trimmed })
+    .select('id, task_id, author_id, body, created_at')
+    .single()
+
+  if (error) throw error
+  return mapTaskNoteRow(data as Record<string, unknown>)
+}
+
+export async function updateHubTaskNote(noteId: string, body: string): Promise<NmHubTaskNote> {
+  const sb = requireClient()
+  const trimmed = body.trim()
+  if (!trimmed) throw new Error('Escribí una nota.')
+
+  const { data, error } = await sb
+    .from('nm_hub_task_notes')
+    .update({ body: trimmed })
+    .eq('id', noteId)
+    .select('id, task_id, author_id, body, created_at')
+    .single()
+
+  if (error) throw error
+  return mapTaskNoteRow(data as Record<string, unknown>)
+}
+
+export async function deleteHubTaskNote(noteId: string): Promise<void> {
+  const sb = requireClient()
+  const { error } = await sb.from('nm_hub_task_notes').delete().eq('id', noteId)
+  if (error) throw error
 }

@@ -70,6 +70,14 @@ export interface NmHubProfile {
 
 export type HubImportance = 'low' | 'normal' | 'high' | 'urgent'
 
+export interface NmHubTaskNote {
+  id: string
+  task_id: string
+  author_id: string
+  body: string
+  created_at: string
+}
+
 export interface NmHubTask {
   id: string
   title: string

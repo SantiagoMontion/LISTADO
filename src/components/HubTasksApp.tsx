@@ -6,6 +6,7 @@ import {
   notifyTaskAssignedPush,
   fetchHasPendingHubTasksBefore,
   fetchHubProfileDisplayNames,
+  fetchHubTaskNoteCounts,
   fetchHubTasksCompleted,
   fetchHubTasksPending,
   signedImageUrl,
@@ -16,6 +17,8 @@ import { addDaysToIsoDate, formatDayMonthShort, normalizeCalendarDate, todayIsoL
 import { supabase } from '../lib/supabase'
 import type { HubImportance, HubUserRole, NmHubTask } from '../lib/types'
 import { HubBrandBar } from './HubBrandBar'
+import { HubImageLightbox } from './HubImageLightbox'
+import { HubTaskNotesPanel } from './HubTaskNotesPanel'
 import { HubPushNotificationSetup } from './HubPushNotificationSetup'
 import { HUB_NAV_EVENT } from '../lib/hubNavigate'
 import {
@@ -248,10 +251,15 @@ function readHubListScope(): HubListScope {
   return 'inbox'
 }
 
-/** Tareas que creé y asigné a otro rol (pestaña Asignadas). */
+/** Tareas que creé y asigné a otro rol (pestaña Asignadas, no admin). */
 function isDelegatedByMe(t: NmHubTask, myRole: HubUserRole, myId: string): boolean {
   if (t.created_by !== myId) return false
   return t.assigned_role !== myRole
+}
+
+/** Admin — pestaña Asignadas: todas las tareas del equipo (no las de su propia bandeja). */
+function taskInAdminAssignedOverview(t: NmHubTask): boolean {
+  return t.assigned_role !== 'admin'
 }
 
 /** Bandeja «Mis tareas»: solo lo asignado a mi rol (incl. admin → assigned_role admin). */
@@ -388,74 +396,6 @@ function formatExecutedLabel(iso: string): string {
   }
 }
 
-function HubImageLightbox({
-  src,
-  onClose,
-}: {
-  src: string
-  onClose: () => void
-}) {
-  const [scale, setScale] = useState(1)
-
-  useEffect(() => {
-    setScale(1)
-  }, [src])
-
-  useEffect(() => {
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = prev
-    }
-  }, [])
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
-
-  return (
-    <div
-      className="nm-hub-lightbox"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Vista previa de imagen"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose()
-      }}
-    >
-      <div className="nm-hub-lightbox__toolbar">
-        <div className="nm-hub-lightbox__zoom">
-          <button type="button" className="nm-hub-btn nm-hub-btn-ghost nm-hub-lightbox__tool" onClick={() => setScale((s) => Math.min(3, s + 0.25))} aria-label="Acercar">
-            +
-          </button>
-          <button type="button" className="nm-hub-btn nm-hub-btn-ghost nm-hub-lightbox__tool" onClick={() => setScale((s) => Math.max(0.5, s - 0.25))} aria-label="Alejar">
-            −
-          </button>
-          <button type="button" className="nm-hub-btn nm-hub-btn-ghost nm-hub-lightbox__tool" onClick={() => setScale(1)} aria-label="Tamaño original">
-            1:1
-          </button>
-        </div>
-        <button type="button" className="nm-hub-btn nm-hub-btn-primary nm-hub-lightbox__close" onClick={onClose}>
-          Cerrar
-        </button>
-      </div>
-      <div className="nm-hub-lightbox__stage">
-        <img
-          src={src}
-          alt=""
-          className="nm-hub-lightbox__img"
-          style={{ transform: `scale(${scale})` }}
-          onClick={(e) => e.stopPropagation()}
-        />
-      </div>
-    </div>
-  )
-}
-
 function TaskThumbnails({ paths, rebel = false }: { paths: string[]; rebel?: boolean }) {
   const [urls, setUrls] = useState<Record<string, string>>({})
   const [lightbox, setLightbox] = useState<string | null>(null)
@@ -533,6 +473,8 @@ export function HubTasksApp({
   const [executorNames, setExecutorNames] = useState<Record<string, string>>({})
   const [taskQuery, setTaskQuery] = useState('')
   const [pendingDeleteTask, setPendingDeleteTask] = useState<NmHubTask | null>(null)
+  const [notesTask, setNotesTask] = useState<NmHubTask | null>(null)
+  const [noteCounts, setNoteCounts] = useState<Record<string, number>>({})
 
   const [hubDataGen, setHubDataGen] = useState(0)
   useEffect(() => {
@@ -606,11 +548,25 @@ export function HubTasksApp({
     setListScope(scope)
     setRawPending(pendingRows)
     setRawCompleted(completedRows)
+    void fetchHubTaskNoteCounts([...pendingRows, ...completedRows].map((t) => t.id))
+      .then((c) => {
+        if (seq !== tasksLoadSeqRef.current) return
+        setNoteCounts(c)
+      })
+      .catch(() => {
+        if (seq !== tasksLoadSeqRef.current) return
+        setNoteCounts({})
+      })
     if (scope === 'completadas' || scope === 'sent') {
       const ids = completedRows
         .filter((t) => {
           if (!t.executed_by) return false
-          if (scope === 'sent') return isDelegatedByMe(t, profileRole, profileId)
+          if (scope === 'sent') {
+            if (profileRole === 'admin') {
+              return taskInAdminAssignedOverview(t)
+            }
+            return isDelegatedByMe(t, profileRole, profileId)
+          }
           return true
         })
         .map((t) => t.executed_by as string)
@@ -762,12 +718,17 @@ export function HubTasksApp({
     () => rawPending.filter((t) => !t.executed_at && taskInAssignedInbox(t, profileRole)),
     [rawPending, profileRole],
   )
-  /** Tareas que asigné a otro rol (pendientes y completadas por el destinatario). */
+  /** Asignadas: admin ve todo el equipo; el resto solo lo que delegó. */
   const assignedByMeTasks = useMemo(() => {
+    if (isAdmin) {
+      const pending = rawPending.filter(taskInAdminAssignedOverview)
+      const completed = rawCompleted.filter(taskInAdminAssignedOverview)
+      return [...pending, ...completed]
+    }
     const pending = rawPending.filter((t) => isDelegatedByMe(t, profileRole, profileId))
     const completed = rawCompleted.filter((t) => isDelegatedByMe(t, profileRole, profileId))
     return [...pending, ...completed]
-  }, [rawPending, rawCompleted, profileRole, profileId])
+  }, [rawPending, rawCompleted, profileRole, profileId, isAdmin])
 
   /** Completadas: solo las de mi bandeja (rol asignado a mí), no las que delegué. */
   const mergedCompletedTasks = useMemo(
@@ -815,20 +776,23 @@ export function HubTasksApp({
   const canMarkComplete = useCallback(
     (t: NmHubTask) => {
       if (readOnly || t.executed_at) return false
-      if (listScope === 'sent') return false
+      if (listScope === 'sent' && !isAdmin) return false
       return canToggleExecuted(t)
     },
-    [readOnly, listScope, canToggleExecuted],
+    [readOnly, listScope, isAdmin, canToggleExecuted],
   )
 
   const canUndoComplete = useCallback(
     (t: NmHubTask) => {
       if (readOnly || !t.executed_at) return false
-      if (listScope === 'sent') return isDelegatedByMe(t, profileRole, profileId)
+      if (listScope === 'sent') {
+        if (isAdmin) return taskInAdminAssignedOverview(t)
+        return isDelegatedByMe(t, profileRole, profileId)
+      }
       if (listScope === 'completadas') return canToggleExecuted(t)
       return false
     },
-    [readOnly, listScope, profileRole, profileId, canToggleExecuted],
+    [readOnly, listScope, isAdmin, profileRole, profileId, canToggleExecuted],
   )
 
   useEffect(() => {
@@ -1238,7 +1202,9 @@ export function HubTasksApp({
               {listScope === 'completadas'
                 ? 'No hay tareas completadas este día.'
                 : listScope === 'sent'
-                  ? 'No hay tareas asignadas a otros este día.'
+                  ? isAdmin
+                    ? 'No hay tareas del equipo este día (fuera de tu bandeja Admin).'
+                    : 'No hay tareas asignadas a otros este día.'
                   : 'No hay tareas pendientes para vos este día.'}
             </p>
           ) : null}
@@ -1273,6 +1239,23 @@ export function HubTasksApp({
                     </div>
                   </div>
                   <div className="task-card-header-actions">
+                    <button
+                      type="button"
+                      className="btn-task-notes"
+                      onClick={() => setNotesTask(t)}
+                      aria-label={
+                        noteCounts[t.id]
+                          ? `Notas (${noteCounts[t.id]})`
+                          : 'Notas de la tarea'
+                      }
+                    >
+                      Notas
+                      {noteCounts[t.id] ? (
+                        <span className="btn-task-notes__count" aria-hidden="true">
+                          {noteCounts[t.id]}
+                        </span>
+                      ) : null}
+                    </button>
                     {!readOnly && canMarkComplete(t) ? (
                       <button
                         type="button"
@@ -1346,6 +1329,29 @@ export function HubTasksApp({
       ) : null}
 
       {!readOnly ? <HubPushNotificationSetup userId={profileId} variant="footer" /> : null}
+
+      {notesTask ? (
+        <HubTaskNotesPanel
+          task={notesTask}
+          profileId={profileId}
+          onClose={() => setNotesTask(null)}
+          onNoteAdded={() => {
+            const id = notesTask.id
+            setNoteCounts((prev) => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }))
+          }}
+          onNoteRemoved={() => {
+            const id = notesTask.id
+            setNoteCounts((prev) => {
+              const next = Math.max(0, (prev[id] ?? 1) - 1)
+              if (next === 0) {
+                const { [id]: _removed, ...rest } = prev
+                return rest
+              }
+              return { ...prev, [id]: next }
+            })
+          }}
+        />
+      ) : null}
 
       {pendingDeleteTask ? (
         <div className="nm-prod-modal-backdrop" role="presentation">
