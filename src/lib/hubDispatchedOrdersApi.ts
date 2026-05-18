@@ -6,6 +6,28 @@ function requireClient() {
   return supabase
 }
 
+function parseCountValue(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const n = Math.floor(value)
+    return n >= 0 ? n : null
+  }
+  if (typeof value === 'string' && value.trim() !== '') {
+    const n = Math.floor(Number(value))
+    if (Number.isFinite(n) && n >= 0) return n
+  }
+  return null
+}
+
+function rpcMissing(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false
+  const msg = (error.message ?? '').toLowerCase()
+  return (
+    error.code === 'PGRST202' ||
+    msg.includes('nm_hub_set_dispatched') ||
+    msg.includes('could not find the function')
+  )
+}
+
 /** Conteo del día; 0 si no hay fila. */
 export async function fetchHubDispatchedCount(forDate: string): Promise<number> {
   const day = normalizeCalendarDate(forDate)
@@ -16,28 +38,47 @@ export async function fetchHubDispatchedCount(forDate: string): Promise<number> 
     .eq('for_date', day)
     .maybeSingle()
   if (error) throw error
-  const n = Number(data?.count)
-  return Number.isFinite(n) && n >= 0 ? n : 0
+  return parseCountValue(data?.count) ?? 0
 }
 
-/** Solo admin (RPC). Fija el total del día y devuelve el valor guardado. */
+async function upsertHubDispatchedCount(forDate: string, total: number): Promise<number> {
+  const day = normalizeCalendarDate(forDate)
+  const sb = requireClient()
+  const { data, error } = await sb
+    .from('nm_hub_dispatched_orders')
+    .upsert({ for_date: day, count: total }, { onConflict: 'for_date' })
+    .select('count')
+    .single()
+  if (error) throw error
+  const n = parseCountValue(data?.count)
+  if (n === null) {
+    throw new Error('No se pudo confirmar el total guardado.')
+  }
+  return n
+}
+
+/** Solo admin. Fija el total del día (sobrescribe si ya existía). */
 export async function setHubDispatchedCount(forDate: string, count: number): Promise<number> {
   const day = normalizeCalendarDate(forDate)
   const total = Math.floor(count)
   if (!Number.isFinite(total) || total < 0) {
     throw new Error('Ingresá un número mayor o igual a 0.')
   }
+
   const sb = requireClient()
   const { data, error } = await sb.rpc('nm_hub_set_dispatched', {
     p_for_date: day,
     p_count: total,
   })
-  if (error) throw error
-  const n = Number(data)
-  if (!Number.isFinite(n) || n < 0) {
-    throw new Error('Respuesta inválida al guardar pedidos despachados.')
+
+  if (!error) {
+    const fromRpc = parseCountValue(data)
+    if (fromRpc !== null) return fromRpc
+  } else if (!rpcMissing(error)) {
+    throw error
   }
-  return n
+
+  return upsertHubDispatchedCount(day, total)
 }
 
 export type HubDispatchedDayCounts = Record<string, number>
@@ -67,8 +108,8 @@ export async function fetchHubDispatchedCountsForMonth(
   const out: HubDispatchedDayCounts = {}
   for (const row of data ?? []) {
     const iso = normalizeCalendarDate(row.for_date)
-    const n = Number(row.count)
-    if (iso && Number.isFinite(n) && n >= 0) out[iso] = n
+    const n = parseCountValue(row.count)
+    if (iso && n !== null) out[iso] = n
   }
   return out
 }

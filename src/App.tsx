@@ -138,8 +138,9 @@ export default function App() {
   const isLogin = path === '/entrar'
   const isHubTasks = path === '/tareas'
   const isHubPrintedFiles = path === '/archivos-impresos'
-  const isHubDispatchedStats = path === '/pedidos-despachados/estadisticas'
-  const isHubDispatchedOrders = path === '/pedidos-despachados'
+  const isHubDispatchedCargar = path === '/pedidos-despachados/cargar'
+  const isHubDispatchedCalendar =
+    path === '/pedidos-despachados' || path === '/pedidos-despachados/estadisticas'
   const isHubHome = path === '/' || path === ''
 
   const [reports, setReports] = useState<NmProdReport[]>([])
@@ -754,11 +755,13 @@ export default function App() {
     return <HubLoadingScreen label="Cargando perfil…" />
   }
 
-  if (authEnabled && authReady && session && isHubDispatchedOrders && !profileReady) {
-    return <HubLoadingScreen label="Cargando perfil…" />
-  }
-
-  if (authEnabled && authReady && session && isHubDispatchedStats && !profileReady) {
+  if (
+    authEnabled &&
+    authReady &&
+    session &&
+    (isHubDispatchedCalendar || isHubDispatchedCargar) &&
+    !profileReady
+  ) {
     return <HubLoadingScreen label="Cargando perfil…" />
   }
 
@@ -795,7 +798,7 @@ export default function App() {
     authEnabled &&
     authReady &&
     session &&
-    (isHubDispatchedOrders || isHubDispatchedStats) &&
+    (isHubDispatchedCalendar || isHubDispatchedCargar) &&
     profileReady &&
     !profile
   ) {
@@ -806,14 +809,15 @@ export default function App() {
     authEnabled &&
     authReady &&
     session &&
-    isHubDispatchedStats &&
+    isHubDispatchedCargar &&
     profileReady &&
     profile &&
-    getHubPermissions(profile.role)?.viewDispatchedOrders
+    getHubPermissions(profile.role)?.editDispatchedOrders
   ) {
     return (
-      <HubDispatchedStatsApp
+      <HubDispatchedOrdersApp
         configured={configured}
+        isAdmin={profile.role === 'admin'}
         adminSignOut={profile.role === 'admin'}
       />
     )
@@ -823,13 +827,13 @@ export default function App() {
     authEnabled &&
     authReady &&
     session &&
-    isHubDispatchedOrders &&
+    isHubDispatchedCalendar &&
     profileReady &&
     profile &&
     getHubPermissions(profile.role)?.viewDispatchedOrders
   ) {
     return (
-      <HubDispatchedOrdersApp
+      <HubDispatchedStatsApp
         configured={configured}
         isAdmin={profile.role === 'admin'}
         adminSignOut={profile.role === 'admin'}
@@ -857,25 +861,7 @@ export default function App() {
     )
   }
 
-  if (!authEnabled && isHubDispatchedStats) {
-    return (
-      <div className="nm-hub-app">
-        <p className="nm-hub-muted">
-          Configurá Supabase en <code>.env</code> para ver estadísticas de despachos.
-        </p>
-        <a
-          href="/"
-          className="nm-hub-back"
-          style={{ display: 'inline-block', marginTop: '1rem' }}
-          onClick={(e) => onHubLinkClick(e, '/')}
-        >
-          ← Inicio
-        </a>
-      </div>
-    )
-  }
-
-  if (!authEnabled && isHubDispatchedOrders) {
+  if (!authEnabled && (isHubDispatchedCalendar || isHubDispatchedCargar)) {
     return (
       <div className="nm-hub-app">
         <p className="nm-hub-muted">

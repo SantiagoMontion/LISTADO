@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { HubBrandBar } from './HubBrandBar'
-import { HUB_NAV_EVENT, hubNavigate, onHubLinkClick } from '../lib/hubNavigate'
+import { HUB_NAV_EVENT, hubNavigate } from '../lib/hubNavigate'
 import {
   addMonthsToYearMonth,
   buildMonthCalendarGrid,
@@ -25,17 +25,23 @@ function normalizePathname(): string {
 
 function readMonthFromUrl(): string {
   if (typeof window === 'undefined') return ''
-  const m = (new URLSearchParams(window.location.search).get('m') ?? '').trim()
-  return parseYearMonth(m) ? m : ''
+  const params = new URLSearchParams(window.location.search)
+  const m = (params.get('m') ?? '').trim()
+  if (parseYearMonth(m)) return m
+  const d = (params.get('d') ?? '').trim()
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d.slice(0, 7)
+  return ''
 }
 
 interface HubDispatchedStatsAppProps {
   configured: boolean
+  isAdmin: boolean
   adminSignOut?: boolean
 }
 
 export function HubDispatchedStatsApp({
   configured,
+  isAdmin,
   adminSignOut = false,
 }: HubDispatchedStatsAppProps) {
   const [yearMonth, setYearMonth] = useState(() =>
@@ -57,7 +63,8 @@ export function HubDispatchedStatsApp({
     if (!parseYearMonth(next)) return
     setYearMonth(next)
     const u = new URL(window.location.href)
-    u.pathname = '/pedidos-despachados/estadisticas'
+    u.pathname = '/pedidos-despachados'
+    u.search = ''
     u.searchParams.set('m', next)
     window.history.replaceState(null, '', `${u.pathname}${u.search}`)
     window.dispatchEvent(new CustomEvent(HUB_NAV_EVENT))
@@ -86,12 +93,18 @@ export function HubDispatchedStatsApp({
 
   useEffect(() => {
     const sync = () => {
-      if (normalizePathname() !== '/pedidos-despachados/estadisticas') return
+      if (normalizePathname() !== '/pedidos-despachados') return
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('d') && !params.get('m')) {
+        hubNavigate(`/pedidos-despachados/cargar?d=${params.get('d')}`)
+        return
+      }
       const m = readMonthFromUrl() || currentYearMonthLocal()
       setYearMonth((prev) => (prev === m ? prev : m))
     }
     window.addEventListener('popstate', sync)
     window.addEventListener(HUB_NAV_EVENT, sync as EventListener)
+    sync()
     return () => {
       window.removeEventListener('popstate', sync)
       window.removeEventListener(HUB_NAV_EVENT, sync as EventListener)
@@ -100,15 +113,21 @@ export function HubDispatchedStatsApp({
 
   useEffect(() => {
     const u = new URL(window.location.href)
+    if (normalizePathname() !== '/pedidos-despachados') return
+    u.searchParams.delete('d')
     if (!parseYearMonth(u.searchParams.get('m') ?? '')) {
       u.searchParams.set('m', yearMonth)
-      window.history.replaceState(null, '', `${u.pathname}${u.search}`)
     }
+    window.history.replaceState(null, '', `${u.pathname}?${u.searchParams.toString()}`)
   }, [yearMonth])
 
   useEffect(() => {
     void loadMonth(yearMonth)
   }, [yearMonth, loadMonth])
+
+  const goCargar = (isoDay: string = today) => {
+    hubNavigate(`/pedidos-despachados/cargar?d=${isoDay}`)
+  }
 
   return (
     <div className="nm-hub-app nm-hub-app--dispatched-stats">
@@ -116,18 +135,31 @@ export function HubDispatchedStatsApp({
         <HubBrandBar
           integratedDashboard
           adminSignOut={adminSignOut}
-          integratedSubtitle="Estadísticas despachos"
+          integratedSubtitle="Pedidos despachados"
           integratedSubtitleTone="muted"
           trailing={
-            <button
-              type="button"
-              className="nm-hub-brand-bar__btn navbar-global-menu-btn"
-              aria-label="Panel principal"
-              title="Panel principal"
-              onClick={() => hubNavigate('/')}
-            >
-              ☰
-            </button>
+            <div className="nm-hub-brand-bar__trailing-group">
+              {isAdmin ? (
+                <button
+                  type="button"
+                  className="nm-hub-brand-bar__btn navbar-trailing-action-btn"
+                  aria-label="Cargar pedidos despachados"
+                  title="Cargar pedidos"
+                  onClick={() => goCargar(today)}
+                >
+                  +
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="nm-hub-brand-bar__btn navbar-global-menu-btn"
+                aria-label="Panel principal"
+                title="Panel principal"
+                onClick={() => hubNavigate('/')}
+              >
+                ☰
+              </button>
+            </div>
           }
         />
       </header>
@@ -140,7 +172,7 @@ export function HubDispatchedStatsApp({
 
       {!configured ? (
         <p className="nm-hub-muted hub-dispatched-stats-feedback">
-          Configurá Supabase en <code>.env</code> para ver estadísticas.
+          Configurá Supabase en <code>.env</code> para ver pedidos despachados.
         </p>
       ) : null}
 
@@ -173,16 +205,6 @@ export function HubDispatchedStatsApp({
         </span>
       </div>
 
-      <p className="hub-dispatched-stats-nav">
-        <a
-          href="/pedidos-despachados"
-          className="nm-hub-back"
-          onClick={(e) => onHubLinkClick(e, '/pedidos-despachados')}
-        >
-          ← Registrar pedidos
-        </a>
-      </p>
-
       <div className="hub-dispatched-stats-calendar" aria-busy={loading}>
         <div className="hub-dispatched-stats-weekdays" aria-hidden="true">
           {WEEKDAY_LABELS.map((label) => (
@@ -192,26 +214,48 @@ export function HubDispatchedStatsApp({
           ))}
         </div>
 
-        <div className="hub-dispatched-stats-grid" role="grid" aria-label={`Calendario ${formatMonthYearLabel(yearMonth)}`}>
+        <div
+          className="hub-dispatched-stats-grid"
+          role="grid"
+          aria-label={`Calendario ${formatMonthYearLabel(yearMonth)}`}
+        >
           {grid.map((cell, idx) => {
             if (!cell.iso) {
-              return <div key={`empty-${idx}`} className="hub-dispatched-stats-cell hub-dispatched-stats-cell--empty" />
+              return (
+                <div key={`empty-${idx}`} className="hub-dispatched-stats-cell hub-dispatched-stats-cell--empty" />
+              )
             }
             const n = counts[cell.iso] ?? 0
             const isToday = cell.iso === today
             const hasData = n > 0
+            const className = `hub-dispatched-stats-cell${isToday ? ' hub-dispatched-stats-cell--today' : ''}${hasData ? ' hub-dispatched-stats-cell--has-data' : ''}`
+
+            if (isAdmin) {
+              return (
+                <button
+                  key={cell.iso}
+                  type="button"
+                  className={className}
+                  role="gridcell"
+                  onClick={() => goCargar(cell.iso)}
+                  aria-label={`${cell.day} de ${formatMonthYearLabel(yearMonth)}: ${n} despachados. Cargar.`}
+                >
+                  <span className="hub-dispatched-stats-cell__day">{cell.day}</span>
+                  <span className="hub-dispatched-stats-cell__count">{n}</span>
+                </button>
+              )
+            }
+
             return (
-              <a
+              <div
                 key={cell.iso}
-                href={`/pedidos-despachados?d=${cell.iso}`}
-                className={`hub-dispatched-stats-cell${isToday ? ' hub-dispatched-stats-cell--today' : ''}${hasData ? ' hub-dispatched-stats-cell--has-data' : ''}`}
+                className={className}
                 role="gridcell"
-                onClick={(e) => onHubLinkClick(e, `/pedidos-despachados?d=${cell.iso}`)}
                 aria-label={`${cell.day} de ${formatMonthYearLabel(yearMonth)}: ${n} despachados`}
               >
                 <span className="hub-dispatched-stats-cell__day">{cell.day}</span>
                 <span className="hub-dispatched-stats-cell__count">{n}</span>
-              </a>
+              </div>
             )
           })}
         </div>

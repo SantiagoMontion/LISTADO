@@ -88,5 +88,20 @@ CREATE POLICY nm_hub_dispatched_select
   TO authenticated
   USING (public.nm_hub_can_view_dispatched_orders());
 
-GRANT SELECT ON public.nm_hub_dispatched_orders TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.nm_hub_dispatched_orders TO authenticated;
 GRANT EXECUTE ON FUNCTION public.nm_hub_set_dispatched(date, integer) TO authenticated;
+
+DROP POLICY IF EXISTS nm_hub_dispatched_insert_admin ON public.nm_hub_dispatched_orders;
+CREATE POLICY nm_hub_dispatched_insert_admin
+  ON public.nm_hub_dispatched_orders
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (public.nm_hub_profile_role() = 'admin');
+
+DROP POLICY IF EXISTS nm_hub_dispatched_update_admin ON public.nm_hub_dispatched_orders;
+CREATE POLICY nm_hub_dispatched_update_admin
+  ON public.nm_hub_dispatched_orders
+  FOR UPDATE
+  TO authenticated
+  USING (public.nm_hub_profile_role() = 'admin')
+  WITH CHECK (public.nm_hub_profile_role() = 'admin');

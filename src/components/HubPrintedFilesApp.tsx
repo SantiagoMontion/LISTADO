@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { HubBrandBar } from './HubBrandBar'
 import { HubImageLightbox } from './HubImageLightbox'
-import { HUB_NAV_EVENT, hubNavigate } from '../lib/hubNavigate'
+import { HUB_NAV_EVENT } from '../lib/hubNavigate'
 import { addDaysToIsoDate, formatDayMonthShort, normalizeCalendarDate, todayIsoLocal } from '../lib/date'
 import { formatSupabaseOrError } from '../lib/errors'
 import {
@@ -176,17 +176,6 @@ export function HubPrintedFilesApp({ configured, adminSignOut = false }: HubPrin
           adminSignOut={adminSignOut}
           integratedSubtitle="Archivos impresos"
           integratedSubtitleTone="muted"
-          trailing={
-            <button
-              type="button"
-              className="nm-hub-brand-bar__btn navbar-global-menu-btn"
-              aria-label="Panel principal"
-              title="Panel principal"
-              onClick={() => hubNavigate('/')}
-            >
-              ☰
-            </button>
-          }
         />
       </header>
 
