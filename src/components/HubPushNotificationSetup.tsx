@@ -178,7 +178,7 @@ export function HubPushNotificationSetup({ userId, variant = 'default' }: Props)
           <p className="nm-hub-push-setup__title">Avisos en el celular</p>
           {variant !== 'compact' ? (
             <p className="nm-hub-muted nm-hub-push-setup__hint">
-              Activá acá en el celular de quien recibe las tareas (Dani, Juancruz, Spesia o vos si sos admin).
+              Activá acá en el celular de quien recibe las tareas (Dani, JuanC, Spesia o vos si sos admin).
               Android: Chrome. iPhone: Safari → agregar a pantalla de inicio → abrir desde el ícono.
             </p>
           ) : null}

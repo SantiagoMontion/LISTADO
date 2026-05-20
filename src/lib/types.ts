@@ -91,7 +91,7 @@ export interface NmHubTask {
   executed_by: string | null
   image_paths: string[]
   created_by: string | null
-  /** Usuario hub destino (Dani / Juancruz / Tomas). Obligatorio en filas nuevas. */
+  /** Usuario hub destino (Dani / JuanC / Spesia). Obligatorio en filas nuevas. */
   assigned_role: HubTaskAssignableRole
   /** Usuario asignado (UUID); opcional legacy. */
   assigned_to?: string | null

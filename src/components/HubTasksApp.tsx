@@ -1074,7 +1074,7 @@ export function HubTasksApp({
             <div className="task-create-preset-row">
               <button
                 type="button"
-                className={`task-create-preset-btn filter-tab-item${fallaPresetActive ? ' active-pending' : ''}`}
+                className={`task-create-preset-btn${fallaPresetActive ? ' task-create-preset-btn--active' : ''}`}
                 onClick={applyFallaPreset}
                 disabled={busy}
                 aria-pressed={fallaPresetActive}
