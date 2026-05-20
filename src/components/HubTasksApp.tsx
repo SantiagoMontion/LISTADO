@@ -242,6 +242,8 @@ function AssigneeRoleSelect({
 
 type TasksPanel = 'list' | 'create'
 type HubListScope = 'inbox' | 'sent' | 'completadas'
+/** Subfiltro dentro de Completadas. */
+type HubCompletedFilter = 'todas' | 'inbox' | 'sent'
 
 function readHubListScope(): HubListScope {
   if (typeof window === 'undefined') return 'inbox'
@@ -490,6 +492,7 @@ export function HubTasksApp({
   const [listScope, setListScope] = useState<HubListScope>(() =>
     typeof window !== 'undefined' ? readHubListScope() : 'inbox',
   )
+  const [completedFilter, setCompletedFilter] = useState<HubCompletedFilter>('todas')
   const [hasPendingBefore, setHasPendingBefore] = useState(false)
   const [hasPendingAfter, setHasPendingAfter] = useState(false)
   const [executorNames, setExecutorNames] = useState<Record<string, string>>({})
@@ -761,7 +764,7 @@ export function HubTasksApp({
     return rawPending.filter((t) => isDelegatedByMe(t, profileRole, profileId))
   }, [rawPending, profileRole, profileId, isAdmin])
 
-  /** Completadas: mi bandeja + (admin) equipo; + (no admin) lo que asigné a otros. */
+  /** Completadas — pool: mi bandeja + (admin) equipo + lo que asigné a otros. */
   const mergedCompletedTasks = useMemo(
     () =>
       rawCompleted.filter((t) => {
@@ -777,8 +780,31 @@ export function HubTasksApp({
     [rawCompleted, profileRole, profileId, isAdmin],
   )
 
+  const completedInboxTasks = useMemo(
+    () => mergedCompletedTasks.filter((t) => taskInAssignedInbox(t, profileRole)),
+    [mergedCompletedTasks, profileRole],
+  )
+
+  const completedDelegatedTasks = useMemo(() => {
+    if (isAdmin) {
+      return mergedCompletedTasks.filter(taskInAdminAssignedOverview)
+    }
+    return mergedCompletedTasks.filter((t) => isDelegatedByMe(t, profileRole, profileId))
+  }, [mergedCompletedTasks, profileRole, profileId, isAdmin])
+
+  const completedFilteredTasks = useMemo(() => {
+    if (completedFilter === 'inbox') return completedInboxTasks
+    if (completedFilter === 'sent') return completedDelegatedTasks
+    return mergedCompletedTasks
+  }, [
+    completedFilter,
+    mergedCompletedTasks,
+    completedInboxTasks,
+    completedDelegatedTasks,
+  ])
+
   const scopedForSorting = useMemo(() => {
-    if (listScope === 'completadas') return mergedCompletedTasks
+    if (listScope === 'completadas') return completedFilteredTasks
     if (listScope === 'sent') return assignedByMeTasks
     return inboxPendingTasks
   }, [listScope, mergedCompletedTasks, assignedByMeTasks, inboxPendingTasks])
@@ -838,6 +864,7 @@ export function HubTasksApp({
 
   useEffect(() => {
     setTaskQuery('')
+    if (listScope !== 'completadas') setCompletedFilter('todas')
   }, [taskDay, listScope])
 
   const goCreatePanel = useCallback(() => {
@@ -967,7 +994,7 @@ export function HubTasksApp({
           ? 'completed'
           : 'pending'
 
-  const showCreateBtn = !readOnly && (panel === 'create' || panel === 'list')
+  const showCreateNavBtn = !readOnly && panel === 'list'
 
   return (
     <div className="nm-hub-app nm-hub-app--tasks">
@@ -978,28 +1005,16 @@ export function HubTasksApp({
           integratedSubtitle={integratedSubtitle}
           integratedSubtitleTone={integratedSubtitleTone}
           trailing={
-            showCreateBtn ? (
-              panel === 'list' ? (
-                <button
-                  type="button"
-                  className="nm-hub-brand-bar__btn navbar-trailing-action-btn"
-                  onClick={() => goCreatePanel()}
-                  aria-label="Nueva tarea"
-                  title="Nueva tarea"
-                >
-                  +
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="nm-hub-brand-bar__btn navbar-trailing-action-btn"
-                  onClick={() => goListPanel()}
-                  aria-label="Volver al listado"
-                  title="Listado"
-                >
-                  ☰
-                </button>
-              )
+            showCreateNavBtn ? (
+              <button
+                type="button"
+                className="nm-hub-brand-bar__btn navbar-trailing-action-btn"
+                onClick={() => goCreatePanel()}
+                aria-label="Nueva tarea"
+                title="Nueva tarea"
+              >
+                +
+              </button>
             ) : null
           }
         />
@@ -1250,11 +1265,49 @@ export function HubTasksApp({
                 role="tab"
                 aria-selected={listScope === 'completadas'}
                 className={`filter-tab-item${listScope === 'completadas' ? ' active-completed' : ''}`}
-                onClick={() => setListScopeInUrl('completadas')}
+                onClick={() => {
+                  setCompletedFilter('todas')
+                  setListScopeInUrl('completadas')
+                }}
               >
                 Completadas
               </button>
             </div>
+            {listScope === 'completadas' ? (
+              <div
+                role="tablist"
+                className="filter-track-rebel filter-track-rebel--completed-sub"
+                aria-label="Filtro de tareas completadas"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={completedFilter === 'todas'}
+                  className={`filter-tab-item${completedFilter === 'todas' ? ' active-completed' : ''}`}
+                  onClick={() => setCompletedFilter('todas')}
+                >
+                  Todas
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={completedFilter === 'inbox'}
+                  className={`filter-tab-item${completedFilter === 'inbox' ? ' active-completed' : ''}`}
+                  onClick={() => setCompletedFilter('inbox')}
+                >
+                  Mis tareas
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={completedFilter === 'sent'}
+                  className={`filter-tab-item${completedFilter === 'sent' ? ' active-completed' : ''}`}
+                  onClick={() => setCompletedFilter('sent')}
+                >
+                  Asignadas
+                </button>
+              </div>
+            ) : null}
             <div className="nm-hub-task-search-wrap tasks-hub-search-wrap">
               <label className="nm-hub-sr-only" htmlFor="nm-hub-task-q">
                 Buscar en tareas
@@ -1277,7 +1330,13 @@ export function HubTasksApp({
           {!loading && sorted.length === 0 ? (
             <p className="nm-hub-muted">
               {listScope === 'completadas'
-                ? 'No hay tareas completadas este día.'
+                ? completedFilter === 'inbox'
+                  ? 'No hay tareas completadas en tu bandeja este día.'
+                  : completedFilter === 'sent'
+                    ? isAdmin
+                      ? 'No hay tareas completadas del equipo este día.'
+                      : 'No hay tareas completadas que asignaste a otros este día.'
+                    : 'No hay tareas completadas este día.'
                 : listScope === 'sent'
                   ? isAdmin
                     ? 'No hay tareas del equipo este día (fuera de tu bandeja Admin).'

@@ -2894,6 +2894,18 @@ body:has(.nm-hub-app--cut-list) {
   margin-bottom: 12px;
 }
 
+.nm-hub-app--tasks .filter-track-rebel--completed-sub {
+  margin-bottom: 0;
+}
+
+.nm-hub-app--tasks .filter-track-rebel--completed-sub .filter-tab-item {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 8px 4px;
+  font-size: 0.66rem;
+  letter-spacing: 0.3px;
+}
+
 .nm-hub-app--tasks .tasks-hub-search-wrap.nm-hub-task-search-wrap {
   margin: 0;
 }
