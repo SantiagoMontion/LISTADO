@@ -1,7 +1,8 @@
 import { normalizeCalendarDate } from './date'
+import { HUB_ROLE_LABEL } from './hubPermissions'
 import { supabase } from './supabase'
 import type { HubTaskAssignableRole } from './hubTaskAssignable'
-import type { HubImportance, NmHubTask, NmHubTaskNote } from './types'
+import type { HubImportance, HubUserRole, NmHubTask, NmHubTaskNote } from './types'
 
 const BUCKET = 'nm-hub-task-images'
 
@@ -115,17 +116,73 @@ export async function fetchHasPendingHubTasksAfter(forDate: string): Promise<boo
   return (count ?? 0) > 0
 }
 
+function profileLabelFromRow(displayName: string, role: string | null | undefined): string {
+  const name = displayName.trim()
+  if (name && name.toLowerCase() !== 'usuario') return name
+  const r = role as HubUserRole | undefined
+  if (r && HUB_ROLE_LABEL[r]) return HUB_ROLE_LABEL[r]
+  return name || 'Usuario'
+}
+
+export type HubProfileDisplaySelf = {
+  id: string
+  displayName: string
+  role: HubUserRole
+}
+
+/** Nombre legible de un usuario hub (perfil cargado, mapa RPC/tabla o rol). */
+export function hubProfileDisplayLabel(
+  userId: string | null | undefined,
+  names: Record<string, string>,
+  namesReady: boolean,
+  self?: HubProfileDisplaySelf,
+): string {
+  if (!userId) return '—'
+  if (self && userId === self.id) {
+    const own = self.displayName.trim()
+    if (own && own.toLowerCase() !== 'usuario') return own
+    return HUB_ROLE_LABEL[self.role] ?? (own || 'Usuario')
+  }
+  const cached = names[userId]?.trim()
+  if (cached) return cached
+  return namesReady ? 'Usuario' : '…'
+}
+
 export async function fetchHubProfileDisplayNames(userIds: string[]): Promise<Record<string, string>> {
   const uniq = [...new Set(userIds.filter(Boolean))]
   if (uniq.length === 0) return {}
   const sb = requireClient()
-  const { data, error } = await sb.from('nm_hub_profiles').select('id, display_name').in('id', uniq)
-  if (error) throw error
+
+  const { data: rpcData, error: rpcError } = await sb.rpc('nm_hub_profile_display_names', {
+    p_user_ids: uniq,
+  })
+
+  if (!rpcError && Array.isArray(rpcData)) {
+    const out: Record<string, string> = {}
+    for (const row of rpcData as { user_id?: string; label?: string }[]) {
+      const id = row.user_id
+      const label = (row.label ?? '').trim()
+      if (id && label) out[id] = label
+    }
+    if (Object.keys(out).length > 0) return out
+  }
+
+  if (rpcError) {
+    console.warn('[nm-hub] nm_hub_profile_display_names:', rpcError.message)
+  }
+
+  const { data, error } = await sb
+    .from('nm_hub_profiles')
+    .select('id, display_name, role')
+    .in('id', uniq)
+  if (error) {
+    console.warn('[nm-hub] perfiles display_name:', error.message)
+    return {}
+  }
   const out: Record<string, string> = {}
   for (const row of data ?? []) {
     const id = row.id as string
-    const name = ((row.display_name as string) ?? '').trim()
-    out[id] = name || id.slice(0, 8)
+    out[id] = profileLabelFromRow((row.display_name as string) ?? '', row.role as string)
   }
   return out
 }

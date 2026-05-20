@@ -11,6 +11,14 @@ export const HUB_TASK_ASSIGNEE_LABEL: Record<HubTaskAssignableRole, string> = {
   admin: 'Admin',
 }
 
+/** Solo dropdown «Asignar a» en Crear tarea. */
+export const HUB_TASK_ASSIGNEE_CREATE_LABEL: Record<HubTaskAssignableRole, string> = {
+  online_1: 'Dani - Clientes',
+  taller_1: 'JuanC - Taller',
+  lista_creator: 'Spesia - Papel',
+  admin: 'Admin - Admin',
+}
+
 /** Etiqueta del destinatario en chips de asignación. */
 export function hubTaskAssigneeShortName(role: HubTaskAssignableRole): string {
   return HUB_TASK_ASSIGNEE_LABEL[role]

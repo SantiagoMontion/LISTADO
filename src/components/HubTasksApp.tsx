@@ -7,6 +7,7 @@ import {
   fetchHasPendingHubTasksAfter,
   fetchHasPendingHubTasksBefore,
   fetchHubProfileDisplayNames,
+  hubProfileDisplayLabel,
   fetchHubTaskNoteCounts,
   fetchHubTasksCompleted,
   fetchHubTasksPending,
@@ -24,6 +25,7 @@ import { HubPushNotificationSetup } from './HubPushNotificationSetup'
 import { HUB_NAV_EVENT } from '../lib/hubNavigate'
 import {
   getTaskAssigneeRolesForCreator,
+  HUB_TASK_ASSIGNEE_CREATE_LABEL,
   HUB_TASK_ASSIGNEE_LABEL,
   hubTaskAssigneeShortName,
   type HubTaskAssignableRole,
@@ -196,7 +198,7 @@ function AssigneeRoleSelect({
         <span
           className={`importance-dropdown__value${value ? '' : ' importance-dropdown__value--placeholder'}`}
         >
-          {value ? HUB_TASK_ASSIGNEE_LABEL[value] : 'Elegí a quién va'}
+          {value ? HUB_TASK_ASSIGNEE_CREATE_LABEL[value] : 'Elegí a quién va'}
         </span>
         <svg
           className="importance-dropdown__chevron"
@@ -231,7 +233,7 @@ function AssigneeRoleSelect({
               className="importance-dropdown__option"
               onClick={() => select(k)}
             >
-              {HUB_TASK_ASSIGNEE_LABEL[k]}
+              {HUB_TASK_ASSIGNEE_CREATE_LABEL[k]}
             </button>
           ))}
         </div>
@@ -472,6 +474,7 @@ export type HubTasksAppProps = {
   readOnly?: boolean
   profileRole: HubUserRole
   profileId: string
+  profileDisplayName: string
   isAdmin: boolean
   /** Pestaña «Asignadas» (delegadas por mí); útil cuando `createHubTasks`. */
   showSentTab?: boolean
@@ -481,6 +484,7 @@ export function HubTasksApp({
   readOnly = false,
   profileRole,
   profileId,
+  profileDisplayName,
   isAdmin,
   showSentTab = true,
 }: HubTasksAppProps) {
@@ -614,6 +618,11 @@ export function HubTasksApp({
       cancelled = true
     }
   }, [rawPending, rawCompleted, hubDataGen, isAdmin])
+
+  const profileDisplaySelf = useMemo(
+    () => ({ id: profileId, displayName: profileDisplayName, role: profileRole }),
+    [profileId, profileDisplayName, profileRole],
+  )
 
   const load = useCallback(async () => {
     setError(null)
@@ -872,11 +881,6 @@ export function HubTasksApp({
     replaceCreatePanelUrl()
     setPanel('create')
   }, [readOnly])
-
-  const goListPanel = useCallback(() => {
-    replaceListPanelUrl()
-    setPanel('list')
-  }, [])
 
   const applyFallaPreset = useCallback(() => {
     setTitle('Falla')
@@ -1373,10 +1377,12 @@ export function HubTasksApp({
                       {isAdmin && listScope === 'sent' ? (
                         <span className="task-delegation-chip" title="Asignación">
                           De{' '}
-                          {t.created_by
-                            ? executorNames[t.created_by] ??
-                              (executorNamesReady ? 'Usuario' : '…')
-                            : '—'}{' '}
+                          {hubProfileDisplayLabel(
+                            t.created_by,
+                            executorNames,
+                            executorNamesReady,
+                            profileDisplaySelf,
+                          )}{' '}
                           para {hubTaskAssigneeShortName(t.assigned_role)}
                         </span>
                       ) : showAssignedToChip(t, isAdmin, listScope, profileRole, profileId) ? (
@@ -1466,10 +1472,12 @@ export function HubTasksApp({
                         <p className="task-meta-log__who">
                           Completada por{' '}
                           <strong>
-                            {t.executed_by
-                              ? executorNames[t.executed_by] ??
-                                (executorNamesReady ? 'Usuario' : '…')
-                              : '—'}
+                            {hubProfileDisplayLabel(
+                              t.executed_by,
+                              executorNames,
+                              executorNamesReady,
+                              profileDisplaySelf,
+                            )}
                           </strong>
                         </p>
                         {t.executed_at ? (
