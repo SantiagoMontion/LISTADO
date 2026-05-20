@@ -274,7 +274,10 @@ function showDelegationChip(
 ): boolean {
   if (isAdmin && listScope === 'sent') return taskInAdminAssignedOverview(t)
   if (listScope === 'sent' && !isAdmin) return true
-  if (listScope === 'completadas') return isDelegatedByMe(t, profileRole, profileId)
+  if (listScope === 'completadas') {
+    if (isAdmin) return taskInAdminAssignedOverview(t)
+    return isDelegatedByMe(t, profileRole, profileId)
+  }
   return false
 }
 
@@ -775,27 +778,33 @@ export function HubTasksApp({
     return rawPending.filter((t) => isDelegatedByMe(t, profileRole, profileId))
   }, [rawPending, profileRole, profileId, isAdmin])
 
-  /** Completadas — Todas: mi bandeja + lo que yo asigné a otro rol. */
-  const completedInboxTasks = useMemo(
-    () =>
-      rawCompleted.filter(
-        (t) =>
-          t.executed_at &&
-          taskInMyInbox(t, profileRole, profileId) &&
-          !isDelegatedByMe(t, profileRole, profileId),
-      ),
-    [rawCompleted, profileRole, profileId],
+  const completedExecuted = useMemo(
+    () => rawCompleted.filter((t) => Boolean(t.executed_at)),
+    [rawCompleted],
   )
 
-  const completedDelegatedTasks = useMemo(
-    () =>
-      rawCompleted.filter(
-        (t) => t.executed_at && isDelegatedByMe(t, profileRole, profileId),
-      ),
-    [rawCompleted, profileRole, profileId],
-  )
+  /** Completadas — Mis tareas: mi bandeja; admin solo bandeja Admin. */
+  const completedInboxTasks = useMemo(() => {
+    if (isAdmin) {
+      return completedExecuted.filter((t) => taskInMyInbox(t, profileRole, profileId))
+    }
+    return completedExecuted.filter(
+      (t) =>
+        taskInMyInbox(t, profileRole, profileId) &&
+        !isDelegatedByMe(t, profileRole, profileId),
+    )
+  }, [completedExecuted, profileRole, profileId, isAdmin])
+
+  /** Completadas — Asignadas: delegadas por mí; admin = todo el equipo (fuera bandeja Admin). */
+  const completedDelegatedTasks = useMemo(() => {
+    if (isAdmin) {
+      return completedExecuted.filter(taskInAdminAssignedOverview)
+    }
+    return completedExecuted.filter((t) => isDelegatedByMe(t, profileRole, profileId))
+  }, [completedExecuted, profileRole, profileId, isAdmin])
 
   const mergedCompletedTasks = useMemo(() => {
+    if (isAdmin) return completedExecuted
     const seen = new Set<string>()
     const out: NmHubTask[] = []
     for (const t of [...completedInboxTasks, ...completedDelegatedTasks]) {
@@ -804,7 +813,7 @@ export function HubTasksApp({
       out.push(t)
     }
     return out
-  }, [completedInboxTasks, completedDelegatedTasks])
+  }, [isAdmin, completedExecuted, completedInboxTasks, completedDelegatedTasks])
 
   const completedFilteredTasks = useMemo(() => {
     if (completedFilter === 'inbox') return completedInboxTasks
@@ -1342,9 +1351,13 @@ export function HubTasksApp({
             <p className="nm-hub-muted">
               {listScope === 'completadas'
                 ? completedFilter === 'inbox'
-                  ? 'No hay tareas completadas en tu bandeja este día.'
+                  ? isAdmin
+                    ? 'No hay tareas completadas en tu bandeja Admin este día.'
+                    : 'No hay tareas completadas en tu bandeja este día.'
                   : completedFilter === 'sent'
-                    ? 'No hay tareas completadas que asignaste a otros este día.'
+                    ? isAdmin
+                      ? 'No hay tareas completadas del equipo este día (fuera de tu bandeja Admin).'
+                      : 'No hay tareas completadas que asignaste a otros este día.'
                     : 'No hay tareas completadas este día.'
                 : listScope === 'sent'
                   ? isAdmin
