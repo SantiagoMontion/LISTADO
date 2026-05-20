@@ -29,14 +29,6 @@ export function OnlineOperatorDashboard({ stats }: RoleDashboardProps) {
           statLabel="pendientes"
           title="Ver tareas pendientes"
         />
-        <DashboardCard
-          href={links.completedTasks}
-          accent="completed"
-          icon="✓"
-          stat={stats.completedHubTasksToday}
-          statLabel="completadas"
-          title="Tareas completadas"
-        />
       </nav>
     </>
   )
@@ -81,14 +73,6 @@ export function AdminDashboard({ stats }: RoleDashboardProps) {
           statLabel="en el mes"
           title="Pedidos despachados"
         />
-        <DashboardCard
-          href={links.completedTasks}
-          accent="completed"
-          icon="✓"
-          stat={stats.completedHubTasksToday}
-          statLabel="hechas hoy"
-          title="Tareas completadas"
-        />
       </nav>
     </>
   )
@@ -126,14 +110,6 @@ export function ListaCreatorDashboard({ stats }: RoleDashboardProps) {
           statLabel="pendientes hub"
           title="Tareas del taller"
         />
-        <DashboardCard
-          href={links.completedTasks}
-          accent="completed"
-          icon="✓"
-          stat={stats.completedHubTasksToday}
-          statLabel="completadas"
-          title="Tareas completadas"
-        />
       </nav>
     </>
   )
@@ -168,14 +144,6 @@ export function Taller1Dashboard({ stats }: RoleDashboardProps) {
           stat={stats.dispatchedOrdersMonthTotal}
           statLabel="en el mes"
           title="Pedidos despachados"
-        />
-        <DashboardCard
-          href={links.completedTasks}
-          accent="completed"
-          icon="✓"
-          stat={stats.completedHubTasksToday}
-          statLabel="completadas"
-          title="Tareas completadas"
         />
       </nav>
     </>

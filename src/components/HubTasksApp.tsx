@@ -4,6 +4,7 @@ import {
   createHubTask,
   deleteHubTask,
   notifyTaskAssignedPush,
+  fetchHasPendingHubTasksAfter,
   fetchHasPendingHubTasksBefore,
   fetchHubProfileDisplayNames,
   fetchHubTaskNoteCounts,
@@ -24,6 +25,7 @@ import { HUB_NAV_EVENT } from '../lib/hubNavigate'
 import {
   getTaskAssigneeRolesForCreator,
   HUB_TASK_ASSIGNEE_LABEL,
+  hubTaskAssigneeShortName,
   type HubTaskAssignableRole,
 } from '../lib/hubTaskAssignable'
 
@@ -257,6 +259,20 @@ function isDelegatedByMe(t: NmHubTask, myRole: HubUserRole, myId: string): boole
   return t.assigned_role !== myRole
 }
 
+/** Chip «Asignada a …» en Asignadas; en Completadas solo si yo la delegué. */
+function showAssignedToChip(
+  t: NmHubTask,
+  isAdmin: boolean,
+  listScope: HubListScope,
+  profileRole: HubUserRole,
+  profileId: string,
+): boolean {
+  if (isAdmin) return false
+  if (listScope === 'sent') return true
+  if (listScope === 'completadas') return isDelegatedByMe(t, profileRole, profileId)
+  return false
+}
+
 /** Admin — pestaña Asignadas: todas las tareas del equipo (no las de su propia bandeja). */
 function taskInAdminAssignedOverview(t: NmHubTask): boolean {
   return t.assigned_role !== 'admin'
@@ -469,7 +485,8 @@ export function HubTasksApp({
   const [listScope, setListScope] = useState<HubListScope>(() =>
     typeof window !== 'undefined' ? readHubListScope() : 'inbox',
   )
-  const [hasOlderPending, setHasOlderPending] = useState(false)
+  const [hasPendingBefore, setHasPendingBefore] = useState(false)
+  const [hasPendingAfter, setHasPendingAfter] = useState(false)
   const [executorNames, setExecutorNames] = useState<Record<string, string>>({})
   const [executorNamesReady, setExecutorNamesReady] = useState(false)
   const [taskQuery, setTaskQuery] = useState('')
@@ -528,12 +545,17 @@ export function HubTasksApp({
     e.target.value = ''
   }, [])
 
-  const refreshOlderPending = useCallback(async () => {
+  const refreshAdjacentPending = useCallback(async () => {
     try {
-      const v = await fetchHasPendingHubTasksBefore(taskDay)
-      setHasOlderPending(v)
+      const [before, after] = await Promise.all([
+        fetchHasPendingHubTasksBefore(taskDay),
+        fetchHasPendingHubTasksAfter(taskDay),
+      ])
+      setHasPendingBefore(before)
+      setHasPendingAfter(after)
     } catch {
-      setHasOlderPending(false)
+      setHasPendingBefore(false)
+      setHasPendingAfter(false)
     }
   }, [taskDay])
 
@@ -562,20 +584,18 @@ export function HubTasksApp({
 
   useEffect(() => {
     let cancelled = false
-    const ids = [
-      ...new Set(
-        [...rawPending, ...rawCompleted]
-          .filter((t) => t.executed_at && t.executed_by)
-          .map((t) => t.executed_by as string),
-      ),
-    ]
-    if (ids.length === 0) {
+    const ids = new Set<string>()
+    for (const t of [...rawPending, ...rawCompleted]) {
+      if (t.executed_by) ids.add(t.executed_by)
+      if (isAdmin && t.created_by) ids.add(t.created_by)
+    }
+    if (ids.size === 0) {
       setExecutorNames({})
       setExecutorNamesReady(true)
       return
     }
     setExecutorNamesReady(false)
-    void fetchHubProfileDisplayNames(ids)
+    void fetchHubProfileDisplayNames([...ids])
       .then((names) => {
         if (!cancelled) setExecutorNames(names)
       })
@@ -585,7 +605,7 @@ export function HubTasksApp({
     return () => {
       cancelled = true
     }
-  }, [rawPending, rawCompleted, hubDataGen])
+  }, [rawPending, rawCompleted, hubDataGen, isAdmin])
 
   const load = useCallback(async () => {
     setError(null)
@@ -634,7 +654,7 @@ export function HubTasksApp({
       hubTasksRealtimeDebounceRef.current = window.setTimeout(() => {
         hubTasksRealtimeDebounceRef.current = null
         void loadSilent().catch(() => {})
-        if (panel !== 'create') void refreshOlderPending()
+        if (panel !== 'create') void refreshAdjacentPending()
       }, 150)
     }
 
@@ -657,15 +677,16 @@ export function HubTasksApp({
       }
       void sb.removeChannel(channel)
     }
-  }, [taskDay, loadSilent, panel, refreshOlderPending])
+  }, [taskDay, loadSilent, panel, refreshAdjacentPending])
 
   useEffect(() => {
     if (panel === 'create') {
-      setHasOlderPending(false)
+      setHasPendingBefore(false)
+      setHasPendingAfter(false)
       return
     }
-    void refreshOlderPending()
-  }, [taskDay, rawPending, panel, refreshOlderPending])
+    void refreshAdjacentPending()
+  }, [taskDay, rawPending, panel, refreshAdjacentPending])
 
   useEffect(() => {
     const u = new URL(window.location.href)
@@ -727,27 +748,28 @@ export function HubTasksApp({
     () => rawPending.filter((t) => !t.executed_at && taskInAssignedInbox(t, profileRole)),
     [rawPending, profileRole],
   )
-  /** Asignadas: admin ve todo el equipo; el resto solo lo que delegó. */
+  /** Asignadas: solo pendientes; al completarse pasan a la pestaña Completadas. */
   const assignedByMeTasks = useMemo(() => {
     if (isAdmin) {
-      const pending = rawPending.filter(taskInAdminAssignedOverview)
-      const completed = rawCompleted.filter(taskInAdminAssignedOverview)
-      return [...pending, ...completed]
+      return rawPending.filter(taskInAdminAssignedOverview)
     }
-    const pending = rawPending.filter((t) => isDelegatedByMe(t, profileRole, profileId))
-    const completed = rawCompleted.filter((t) => isDelegatedByMe(t, profileRole, profileId))
-    return [...pending, ...completed]
-  }, [rawPending, rawCompleted, profileRole, profileId, isAdmin])
+    return rawPending.filter((t) => isDelegatedByMe(t, profileRole, profileId))
+  }, [rawPending, profileRole, profileId, isAdmin])
 
-  /** Completadas: solo las de mi bandeja (rol asignado a mí), no las que delegué. */
+  /** Completadas: mi bandeja + (admin) equipo; + (no admin) lo que asigné a otros. */
   const mergedCompletedTasks = useMemo(
     () =>
       rawCompleted.filter((t) => {
         if (!t.executed_at) return false
-        if (isDelegatedByMe(t, profileRole, profileId)) return false
-        return taskInAssignedInbox(t, profileRole)
+        if (isAdmin) {
+          return taskInAssignedInbox(t, profileRole) || taskInAdminAssignedOverview(t)
+        }
+        return (
+          taskInAssignedInbox(t, profileRole) ||
+          isDelegatedByMe(t, profileRole, profileId)
+        )
       }),
-    [rawCompleted, profileRole, profileId],
+    [rawCompleted, profileRole, profileId, isAdmin],
   )
 
   const scopedForSorting = useMemo(() => {
@@ -795,10 +817,15 @@ export function HubTasksApp({
     (t: NmHubTask) => {
       if (readOnly || !t.executed_at) return false
       if (listScope === 'sent') {
-        if (isAdmin) return taskInAdminAssignedOverview(t)
-        return isDelegatedByMe(t, profileRole, profileId)
+        return !isAdmin && isDelegatedByMe(t, profileRole, profileId)
       }
-      if (listScope === 'completadas') return canToggleExecuted(t)
+      if (listScope === 'completadas') {
+        if (isAdmin) return canToggleExecuted(t)
+        return (
+          taskInAssignedInbox(t, profileRole) ||
+          isDelegatedByMe(t, profileRole, profileId)
+        )
+      }
       return false
     },
     [readOnly, listScope, isAdmin, profileRole, profileId, canToggleExecuted],
@@ -818,6 +845,20 @@ export function HubTasksApp({
     replaceListPanelUrl()
     setPanel('list')
   }, [])
+
+  const applyFallaPreset = useCallback(() => {
+    setTitle('Falla')
+    setImportance('high')
+    setAssignedRoleCreate('lista_creator')
+  }, [])
+
+  const fallaPresetActive = useMemo(
+    () =>
+      title.trim() === 'Falla' &&
+      importance === 'high' &&
+      assignedRoleCreate === 'lista_creator',
+    [title, importance, assignedRoleCreate],
+  )
 
   const onCreate = async (e: FormEvent) => {
     e.preventDefault()
@@ -894,7 +935,7 @@ export function HubTasksApp({
     try {
       await updateHubTaskExecuted(t.id, executed)
       await loadSilent()
-      if (panel !== 'create') void refreshOlderPending()
+      if (panel !== 'create') void refreshAdjacentPending()
     } catch (err: unknown) {
       setError(formatSupabaseOrError(err))
       await loadSilent()
@@ -976,7 +1017,7 @@ export function HubTasksApp({
             >
               ←
             </button>
-            {panel === 'list' && hasOlderPending ? (
+            {panel === 'list' && hasPendingBefore ? (
               <span className="nm-hub-nav-pending-dot" title="Hay tareas pendientes en días anteriores" aria-hidden="true">
                 !
               </span>
@@ -994,14 +1035,25 @@ export function HubTasksApp({
           />
         </div>
         <div className="date-pager-side date-pager-side--end">
-          <button
-            type="button"
-            className="pager-arrow-btn"
-            onClick={() => applyTaskDay(addDaysToIsoDate(taskDay, 1))}
-            aria-label="Día siguiente"
-          >
-            →
-          </button>
+          <div className="date-pager-arrow-wrap">
+            <button
+              type="button"
+              className="pager-arrow-btn"
+              onClick={() => applyTaskDay(addDaysToIsoDate(taskDay, 1))}
+              aria-label="Día siguiente"
+            >
+              →
+            </button>
+            {panel === 'list' && hasPendingAfter ? (
+              <span
+                className="nm-hub-nav-pending-dot"
+                title="Hay tareas pendientes en días posteriores"
+                aria-hidden="true"
+              >
+                !
+              </span>
+            ) : null}
+          </div>
         </div>
       </section>
 
@@ -1019,6 +1071,17 @@ export function HubTasksApp({
               onChange={(e) => setTitle(e.target.value)}
               required
             />
+            <div className="task-create-preset-row">
+              <button
+                type="button"
+                className={`task-create-preset-btn filter-tab-item${fallaPresetActive ? ' active-pending' : ''}`}
+                onClick={applyFallaPreset}
+                disabled={busy}
+                aria-pressed={fallaPresetActive}
+              >
+                Falta
+              </button>
+            </div>
           </div>
 
           <div className="field-group">
@@ -1223,13 +1286,14 @@ export function HubTasksApp({
           <ul className="nm-hub-task-list tasks-list-rebel" aria-busy={loading}>
             {filteredSorted.map((t) => {
               const assignedDone = listScope === 'sent' && Boolean(t.executed_at)
+              const isMutedCard = listScope === 'completadas' || assignedDone
               return (
               <li
                 key={t.id}
-                className={`task-card-rebel nm-hub-task-item${assignedDone ? ' task-card-rebel--assigned-done' : ''}`}
+                className={`task-card-rebel nm-hub-task-item${isMutedCard ? ' task-card-rebel--done' : ''}`}
                 style={
                   {
-                    '--accent-color': assignedDone ? '#535a62' : PRIORITY_ACCENT[t.importance],
+                    '--accent-color': isMutedCard ? '#434a52' : PRIORITY_ACCENT[t.importance],
                   } as CSSProperties
                 }
               >
@@ -1242,9 +1306,24 @@ export function HubTasksApp({
                       >
                         {IMPORTANCE_LABEL[t.importance]}
                       </span>
-                      <span className="task-assignee-chip" title="Destinatario asignado">
-                        {HUB_TASK_ASSIGNEE_LABEL[t.assigned_role]}
-                      </span>
+                      {isAdmin && listScope === 'sent' ? (
+                        <span className="task-delegation-chip" title="Asignación">
+                          De{' '}
+                          {t.created_by
+                            ? executorNames[t.created_by] ??
+                              (executorNamesReady ? 'Usuario' : '…')
+                            : '—'}{' '}
+                          para {hubTaskAssigneeShortName(t.assigned_role)}
+                        </span>
+                      ) : showAssignedToChip(t, isAdmin, listScope, profileRole, profileId) ? (
+                        <span className="task-assignee-chip" title="Asignación">
+                          Asignada a {hubTaskAssigneeShortName(t.assigned_role)}
+                        </span>
+                      ) : (
+                        <span className="task-assignee-chip" title="Destinatario asignado">
+                          {HUB_TASK_ASSIGNEE_LABEL[t.assigned_role]}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="task-card-header-actions">

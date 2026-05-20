@@ -101,6 +101,20 @@ export async function fetchHasPendingHubTasksBefore(forDate: string): Promise<bo
   return (count ?? 0) > 0
 }
 
+/** Hay al menos una tarea pendiente (sin ejecutar) con for_date posterior al día mostrado. */
+export async function fetchHasPendingHubTasksAfter(forDate: string): Promise<boolean> {
+  const sb = requireClient()
+  const day = normalizeCalendarDate(forDate)
+  const { count, error } = await sb
+    .from('nm_hub_tasks')
+    .select('id', { count: 'exact', head: true })
+    .is('executed_at', null)
+    .gt('for_date', day)
+
+  if (error) throw error
+  return (count ?? 0) > 0
+}
+
 export async function fetchHubProfileDisplayNames(userIds: string[]): Promise<Record<string, string>> {
   const uniq = [...new Set(userIds.filter(Boolean))]
   if (uniq.length === 0) return {}

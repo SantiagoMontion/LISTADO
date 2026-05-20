@@ -2524,6 +2524,21 @@ body:has(.nm-hub-app--cut-list) {
   gap: 6px;
 }
 
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-row {
+  display: flex;
+  margin-top: 2px;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-btn {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
+  padding: 6px 14px;
+  font-size: 0.68rem;
+  letter-spacing: 0.45px;
+  line-height: 1.2;
+}
+
 /* Labels — separados del fondo de la tarjeta */
 .nm-hub-app--tasks form#nm-hub-tareas-nueva .field-label {
   font-size: 0.8rem;
@@ -2961,24 +2976,39 @@ body:has(.nm-hub-app--cut-list) {
   margin-bottom: 0;
 }
 
-.nm-hub-app--tasks .task-card-rebel--assigned-done {
-  background-color: rgba(255, 255, 255, 0.02);
-  border-color: rgba(255, 255, 255, 0.05);
-  border-left-color: #535a62;
-  opacity: 0.88;
+/* Tareas hechas: pestaña Completadas y asignadas ya ejecutadas */
+.nm-hub-app--tasks .task-card-rebel--done {
+  background-color: rgba(255, 255, 255, 0.012);
+  border-color: rgba(255, 255, 255, 0.035);
+  border-left-color: #434a52;
+  opacity: 0.78;
 }
 
-.nm-hub-app--tasks .task-card-rebel--assigned-done .task-card-title {
-  color: #9099a3;
+.nm-hub-app--tasks .task-card-rebel--done .task-card-title {
+  color: #6b7280;
+  font-weight: 700;
 }
 
-.nm-hub-app--tasks .task-card-rebel--assigned-done .badge-priority-rebel,
-.nm-hub-app--tasks .task-card-rebel--assigned-done .task-assignee-chip {
-  opacity: 0.65;
+.nm-hub-app--tasks .task-card-rebel--done .task-badge-row {
+  filter: grayscale(0.9);
+  opacity: 0.62;
 }
 
-.nm-hub-app--tasks .task-card-rebel--assigned-done .task-meta-log {
-  color: #8b949e;
+.nm-hub-app--tasks .task-card-rebel--done .task-description-text {
+  color: #6b7280;
+}
+
+.nm-hub-app--tasks .task-card-rebel--done .task-meta-log {
+  color: #727b85;
+}
+
+.nm-hub-app--tasks .task-card-rebel--done .btn-task-notes,
+.nm-hub-app--tasks .task-card-rebel--done .btn-undo-icon {
+  opacity: 0.72;
+}
+
+.nm-hub-app--tasks .task-card-rebel--done .task-thumb-hit {
+  opacity: 0.7;
 }
 
 .nm-hub-app--tasks .task-card-header {
@@ -3052,10 +3082,24 @@ body:has(.nm-hub-app--cut-list) {
   text-overflow: ellipsis;
 }
 
+.nm-hub-app--tasks .task-delegation-chip {
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: rgba(252, 211, 140, 0.95);
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.28);
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .nm-hub-app--tasks .task-card-header-actions {
   flex-shrink: 0;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 6px;
 }
 
@@ -3144,37 +3188,45 @@ body:has(.nm-hub-app--cut-list) {
 }
 
 .nm-hub-app--tasks .btn-task-notes {
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  min-height: 2rem;
-  padding: 0.25rem 0.65rem;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(248, 250, 252, 0.88);
-  font-size: 0.72rem;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(70, 207, 248, 0.45);
+  background-color: rgba(70, 207, 248, 0.12);
+  color: var(--accent-rebel-blue);
+  font-size: 0.78rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-family: inherit;
+  line-height: 1.2;
+  white-space: nowrap;
   cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
   -webkit-tap-highlight-color: transparent;
 }
 
 .nm-hub-app--tasks .btn-task-notes:hover:not(:disabled) {
-  background: rgba(96, 165, 250, 0.12);
-  border-color: rgba(96, 165, 250, 0.35);
+  background-color: rgba(70, 207, 248, 0.22);
+  border-color: var(--accent-rebel-blue);
+}
+
+.nm-hub-app--tasks .btn-task-notes:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .nm-hub-app--tasks .btn-task-notes__count {
-  min-width: 1.15rem;
-  padding: 0.05rem 0.35rem;
-  border-radius: 999px;
-  background: rgba(232, 216, 0, 0.2);
+  min-width: 1.1rem;
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: rgba(232, 216, 0, 0.22);
   color: #e8d800;
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   font-weight: 800;
-  line-height: 1.2;
+  line-height: 1.15;
   text-align: center;
 }
 

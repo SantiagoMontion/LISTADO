@@ -137,19 +137,6 @@ export function HubDispatchedStatsApp({
           adminSignOut={adminSignOut}
           integratedSubtitle="Pedidos despachados"
           integratedSubtitleTone="muted"
-          trailing={
-            isAdmin ? (
-              <button
-                type="button"
-                className="nm-hub-brand-bar__btn navbar-trailing-action-btn"
-                aria-label="Cargar pedidos despachados"
-                title="Cargar pedidos"
-                onClick={() => goCargar(today)}
-              >
-                +
-              </button>
-            ) : undefined
-          }
         />
       </header>
 

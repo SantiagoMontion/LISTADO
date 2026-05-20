@@ -11,6 +11,13 @@ export const HUB_TASK_ASSIGNEE_LABEL: Record<HubTaskAssignableRole, string> = {
   admin: 'Admin',
 }
 
+/** Nombre corto del destinatario (ej. «Spesia» sin «(Papel)»). */
+export function hubTaskAssigneeShortName(role: HubTaskAssignableRole): string {
+  const label = HUB_TASK_ASSIGNEE_LABEL[role]
+  const paren = label.indexOf(' (')
+  return paren > 0 ? label.slice(0, paren) : label
+}
+
 /** Opciones del dropdown según quién crea la tarea (solo admin puede asignarse a sí). */
 export function getTaskAssigneeRolesForCreator(creatorIsAdmin: boolean): HubTaskAssignableRole[] {
   if (creatorIsAdmin) return [...HUB_TASK_ASSIGNEE_ROLES, 'admin']
