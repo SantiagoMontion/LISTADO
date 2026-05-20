@@ -779,7 +779,10 @@ export function HubTasksApp({
   const completedInboxTasks = useMemo(
     () =>
       rawCompleted.filter(
-        (t) => t.executed_at && taskInMyInbox(t, profileRole, profileId),
+        (t) =>
+          t.executed_at &&
+          taskInMyInbox(t, profileRole, profileId) &&
+          !isDelegatedByMe(t, profileRole, profileId),
       ),
     [rawCompleted, profileRole, profileId],
   )
@@ -818,7 +821,7 @@ export function HubTasksApp({
     if (listScope === 'completadas') return completedFilteredTasks
     if (listScope === 'sent') return assignedByMeTasks
     return inboxPendingTasks
-  }, [listScope, mergedCompletedTasks, assignedByMeTasks, inboxPendingTasks])
+  }, [listScope, completedFilteredTasks, assignedByMeTasks, inboxPendingTasks])
 
   const sorted = useMemo(() => {
     if (listScope === 'completadas') return sortCompletedTasks(scopedForSorting)
