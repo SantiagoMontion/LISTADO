@@ -97,10 +97,10 @@ export const HUB_PERMISSIONS: Record<HubUserRole, HubPermissions> = {
 }
 
 export const HUB_ROLE_LABEL: Record<HubUserRole, string> = {
-  admin: 'Admin - Admin',
-  lista_creator: 'Spesia - Papel',
-  taller_1: 'JuanC - Taller',
-  online_1: 'Dani - Clientes',
+  admin: 'Admin',
+  lista_creator: 'Papel',
+  taller_1: 'Taller',
+  online_1: 'Clientes',
   taller_2: 'CORTE - BORDADO',
 }
 

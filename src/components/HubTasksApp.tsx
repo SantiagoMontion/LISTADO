@@ -282,6 +282,11 @@ function taskInAdminAssignedOverview(t: NmHubTask): boolean {
 function taskInAssignedInbox(t: NmHubTask, myRole: HubUserRole): boolean {
   return t.assigned_role === myRole
 }
+
+/** Chip de destinatario: no mostrar si la tarea ya es de mi rol. */
+function showAssigneeRoleChip(t: NmHubTask, myRole: HubUserRole): boolean {
+  return t.assigned_role !== myRole
+}
 /** Hash explícito gana; si no hay hash útil, `?hub=crear` (desde inicio) abre el formulario aunque el fragmento se pierda. */
 function hubTasksPanelFromLocation(readOnly: boolean): TasksPanel {
   if (readOnly) return 'list'
@@ -1319,11 +1324,11 @@ export function HubTasksApp({
                         <span className="task-assignee-chip" title="Asignación">
                           Asignada a {hubTaskAssigneeShortName(t.assigned_role)}
                         </span>
-                      ) : (
+                      ) : showAssigneeRoleChip(t, profileRole) ? (
                         <span className="task-assignee-chip" title="Destinatario asignado">
                           {HUB_TASK_ASSIGNEE_LABEL[t.assigned_role]}
                         </span>
-                      )}
+                      ) : null}
                     </div>
                   </div>
                   <div className="task-card-header-actions">

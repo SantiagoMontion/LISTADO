@@ -5,18 +5,15 @@ export type HubTaskAssignableRole =
   | 'admin'
 
 export const HUB_TASK_ASSIGNEE_LABEL: Record<HubTaskAssignableRole, string> = {
-  online_1: 'Dani - Clientes',
-  taller_1: 'JuanC - Taller',
-  lista_creator: 'Spesia - Papel',
-  admin: 'Admin - Admin',
+  online_1: 'Clientes',
+  taller_1: 'Taller',
+  lista_creator: 'Papel',
+  admin: 'Admin',
 }
 
-/** Nombre corto del destinatario (ej. «Spesia» sin «- Papel»). */
+/** Etiqueta del destinatario en chips de asignación. */
 export function hubTaskAssigneeShortName(role: HubTaskAssignableRole): string {
-  const label = HUB_TASK_ASSIGNEE_LABEL[role]
-  const dash = label.indexOf(' - ')
-  if (dash > 0) return label.slice(0, dash)
-  return label
+  return HUB_TASK_ASSIGNEE_LABEL[role]
 }
 
 /** Opciones del dropdown según quién crea la tarea (solo admin puede asignarse a sí). */

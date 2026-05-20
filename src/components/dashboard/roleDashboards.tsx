@@ -19,7 +19,7 @@ export function OnlineOperatorDashboard({ stats }: RoleDashboardProps) {
           { count: stats.completedHubTasksToday, label: 'Completadas', completed: true },
         ]}
       />
-      <nav className="cards-container-rebel" aria-label="Panel Dani - Clientes">
+      <nav className="cards-container-rebel" aria-label="Panel Clientes">
         <DashboardCard href={links.createTask} accent="create" icon="✎" title="Crear tarea" />
         <DashboardCard
           href={links.pendingTasks}
