@@ -19,9 +19,12 @@ export const HUB_TASK_ASSIGNEE_CREATE_LABEL: Record<HubTaskAssignableRole, strin
   admin: 'Admin - Admin',
 }
 
-/** Etiqueta del destinatario en chips de asignación. */
-export function hubTaskAssigneeShortName(role: HubTaskAssignableRole): string {
-  return HUB_TASK_ASSIGNEE_LABEL[role]
+/** display_name en nm_hub_profiles del destinatario principal de cada rol (dropdown Crear tarea). */
+export const HUB_TASK_ASSIGNEE_PROFILE_NAME: Record<HubTaskAssignableRole, string> = {
+  online_1: 'Dani',
+  taller_1: 'juanC',
+  lista_creator: 'Spesia',
+  admin: 'Montion',
 }
 
 /** Opciones del dropdown según quién crea la tarea (solo admin puede asignarse a sí). */

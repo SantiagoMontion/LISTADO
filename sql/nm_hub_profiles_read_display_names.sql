@@ -1,6 +1,9 @@
 -- NOTMID — Permitir leer display_name de otros usuarios del hub
 -- Necesario para «Completada por …», notas de tarea, etc.
--- Ejecutar en Supabase SQL Editor (después de nm_hub_profiles.sql).
+-- Ejecutar en Supabase SQL Editor (después de nm_hub_profiles.sql y nm_hub_tasks_assigned_admin.sql).
+--
+-- ⚠️ No usar EXISTS (SELECT … FROM nm_hub_profiles) en la política: provoca
+--    error 42P17 «infinite recursion detected in policy».
 
 DROP POLICY IF EXISTS nm_hub_profiles_select ON public.nm_hub_profiles;
 
@@ -9,14 +12,11 @@ CREATE POLICY nm_hub_profiles_select
   FOR SELECT
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1
-      FROM public.nm_hub_profiles me
-      WHERE me.id = auth.uid()
-    )
+    id = auth.uid()
+    OR public.nm_hub_profile_role() IS NOT NULL
   );
 
--- Etiquetas para «Completada por …» (evita RLS que solo deja leer el propio perfil).
+-- Etiquetas para «Completada por …» (SECURITY DEFINER, sin RLS recursivo).
 CREATE OR REPLACE FUNCTION public.nm_hub_profile_display_names(p_user_ids uuid[])
 RETURNS TABLE (user_id uuid, label text)
 LANGUAGE sql

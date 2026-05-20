@@ -1,7 +1,10 @@
 import { normalizeCalendarDate } from './date'
 import { HUB_ROLE_LABEL } from './hubPermissions'
 import { supabase } from './supabase'
-import type { HubTaskAssignableRole } from './hubTaskAssignable'
+import {
+  HUB_TASK_ASSIGNEE_PROFILE_NAME,
+  type HubTaskAssignableRole,
+} from './hubTaskAssignable'
 import type { HubImportance, HubUserRole, NmHubTask, NmHubTaskNote } from './types'
 
 const BUCKET = 'nm-hub-task-images'
@@ -146,6 +149,25 @@ export function hubProfileDisplayLabel(
   const cached = names[userId]?.trim()
   if (cached) return cached
   return namesReady ? 'Usuario' : '…'
+}
+
+/** UUID del usuario destinatario al elegir un rol en Crear tarea (p. ej. JuanC, no «cualquier taller»). */
+export async function resolveAssignedToUserId(
+  role: HubTaskAssignableRole,
+): Promise<string | null> {
+  const sb = requireClient()
+  const needle = HUB_TASK_ASSIGNEE_PROFILE_NAME[role].trim().toLowerCase()
+  const { data, error } = await sb
+    .from('nm_hub_profiles')
+    .select('id, display_name, role')
+    .eq('role', role)
+  if (error) {
+    console.warn('[nm-hub] resolveAssignedToUserId:', error.message)
+    return null
+  }
+  const rows = (data ?? []) as { id: string; display_name: string | null }[]
+  const hit = rows.find((r) => (r.display_name ?? '').trim().toLowerCase() === needle)
+  return hit?.id ?? rows[0]?.id ?? null
 }
 
 export async function fetchHubProfileDisplayNames(userIds: string[]): Promise<Record<string, string>> {

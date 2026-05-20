@@ -2,6 +2,7 @@ import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState, type
 import {
   appendTaskImages,
   createHubTask,
+  resolveAssignedToUserId,
   deleteHubTask,
   notifyTaskAssignedPush,
   fetchHasPendingHubTasksAfter,
@@ -27,7 +28,6 @@ import {
   getTaskAssigneeRolesForCreator,
   HUB_TASK_ASSIGNEE_CREATE_LABEL,
   HUB_TASK_ASSIGNEE_LABEL,
-  hubTaskAssigneeShortName,
   type HubTaskAssignableRole,
 } from '../lib/hubTaskAssignable'
 
@@ -257,22 +257,23 @@ function readHubListScope(): HubListScope {
   return 'inbox'
 }
 
-/** Tareas que creé y asigné a otro rol (pestaña Asignadas, no admin). */
+/** Tareas que creé y asigné a otro usuario (no a mí mismo). */
 function isDelegatedByMe(t: NmHubTask, myRole: HubUserRole, myId: string): boolean {
   if (t.created_by !== myId) return false
+  if (t.assigned_to) return t.assigned_to !== myId
   return t.assigned_role !== myRole
 }
 
-/** Chip «Asignada a …» en Asignadas; en Completadas solo si yo la delegué. */
-function showAssignedToChip(
+/** Chip «De … para …» (mismo formato admin y resto de roles). */
+function showDelegationChip(
   t: NmHubTask,
   isAdmin: boolean,
   listScope: HubListScope,
   profileRole: HubUserRole,
   profileId: string,
 ): boolean {
-  if (isAdmin) return false
-  if (listScope === 'sent') return true
+  if (isAdmin && listScope === 'sent') return taskInAdminAssignedOverview(t)
+  if (listScope === 'sent' && !isAdmin) return true
   if (listScope === 'completadas') return isDelegatedByMe(t, profileRole, profileId)
   return false
 }
@@ -282,14 +283,15 @@ function taskInAdminAssignedOverview(t: NmHubTask): boolean {
   return t.assigned_role !== 'admin'
 }
 
-/** Bandeja «Mis tareas»: solo lo asignado a mi rol (incl. admin → assigned_role admin). */
-function taskInAssignedInbox(t: NmHubTask, myRole: HubUserRole): boolean {
+/** Bandeja «Mis tareas»: asignadas a este usuario (no solo al rol). */
+function taskInMyInbox(t: NmHubTask, myRole: HubUserRole, myId: string): boolean {
+  if (t.assigned_to) return t.assigned_to === myId
   return t.assigned_role === myRole
 }
 
-/** Chip de destinatario: no mostrar si la tarea ya es de mi rol. */
-function showAssigneeRoleChip(t: NmHubTask, myRole: HubUserRole): boolean {
-  return t.assigned_role !== myRole
+/** Chip de destinatario: no mostrar si la tarea ya es para mí. */
+function showAssigneeRoleChip(t: NmHubTask, myRole: HubUserRole, myId: string): boolean {
+  return !taskInMyInbox(t, myRole, myId)
 }
 /** Hash explícito gana; si no hay hash útil, `?hub=crear` (desde inicio) abre el formulario aunque el fragmento se pierda. */
 function hubTasksPanelFromLocation(readOnly: boolean): TasksPanel {
@@ -762,8 +764,8 @@ export function HubTasksApp({
   const assigneeRolesCreate = useMemo(() => getTaskAssigneeRolesForCreator(isAdmin), [isAdmin])
 
   const inboxPendingTasks = useMemo(
-    () => rawPending.filter((t) => !t.executed_at && taskInAssignedInbox(t, profileRole)),
-    [rawPending, profileRole],
+    () => rawPending.filter((t) => !t.executed_at && taskInMyInbox(t, profileRole, profileId)),
+    [rawPending, profileRole, profileId],
   )
   /** Asignadas: solo pendientes; al completarse pasan a la pestaña Completadas. */
   const assignedByMeTasks = useMemo(() => {
@@ -773,33 +775,33 @@ export function HubTasksApp({
     return rawPending.filter((t) => isDelegatedByMe(t, profileRole, profileId))
   }, [rawPending, profileRole, profileId, isAdmin])
 
-  /** Completadas — pool: mi bandeja + (admin) equipo + lo que asigné a otros. */
-  const mergedCompletedTasks = useMemo(
-    () =>
-      rawCompleted.filter((t) => {
-        if (!t.executed_at) return false
-        if (isAdmin) {
-          return taskInAssignedInbox(t, profileRole) || taskInAdminAssignedOverview(t)
-        }
-        return (
-          taskInAssignedInbox(t, profileRole) ||
-          isDelegatedByMe(t, profileRole, profileId)
-        )
-      }),
-    [rawCompleted, profileRole, profileId, isAdmin],
-  )
-
+  /** Completadas — Todas: mi bandeja + lo que yo asigné a otro rol. */
   const completedInboxTasks = useMemo(
-    () => mergedCompletedTasks.filter((t) => taskInAssignedInbox(t, profileRole)),
-    [mergedCompletedTasks, profileRole],
+    () =>
+      rawCompleted.filter(
+        (t) => t.executed_at && taskInMyInbox(t, profileRole, profileId),
+      ),
+    [rawCompleted, profileRole, profileId],
   )
 
-  const completedDelegatedTasks = useMemo(() => {
-    if (isAdmin) {
-      return mergedCompletedTasks.filter(taskInAdminAssignedOverview)
+  const completedDelegatedTasks = useMemo(
+    () =>
+      rawCompleted.filter(
+        (t) => t.executed_at && isDelegatedByMe(t, profileRole, profileId),
+      ),
+    [rawCompleted, profileRole, profileId],
+  )
+
+  const mergedCompletedTasks = useMemo(() => {
+    const seen = new Set<string>()
+    const out: NmHubTask[] = []
+    for (const t of [...completedInboxTasks, ...completedDelegatedTasks]) {
+      if (seen.has(t.id)) continue
+      seen.add(t.id)
+      out.push(t)
     }
-    return mergedCompletedTasks.filter((t) => isDelegatedByMe(t, profileRole, profileId))
-  }, [mergedCompletedTasks, profileRole, profileId, isAdmin])
+    return out
+  }, [completedInboxTasks, completedDelegatedTasks])
 
   const completedFilteredTasks = useMemo(() => {
     if (completedFilter === 'inbox') return completedInboxTasks
@@ -839,9 +841,9 @@ export function HubTasksApp({
       if (readOnly) return false
       if (isAdmin) return true
       if (listScope === 'sent') return false
-      return taskInAssignedInbox(t, profileRole)
+      return taskInMyInbox(t, profileRole, profileId)
     },
-    [readOnly, isAdmin, listScope, profileRole],
+    [readOnly, isAdmin, listScope, profileRole, profileId],
   )
 
   const canMarkComplete = useCallback(
@@ -862,7 +864,7 @@ export function HubTasksApp({
       if (listScope === 'completadas') {
         if (isAdmin) return canToggleExecuted(t)
         return (
-          taskInAssignedInbox(t, profileRole) ||
+          taskInMyInbox(t, profileRole, profileId) ||
           isDelegatedByMe(t, profileRole, profileId)
         )
       }
@@ -903,12 +905,14 @@ export function HubTasksApp({
     setError(null)
     const titleDraft = title.trim()
     try {
+      const assignedTo = await resolveAssignedToUserId(assignedRoleCreate)
       const created = await createHubTask({
         title: titleDraft,
         body: body.trim() || null,
         importance,
         for_date: taskDay,
         assigned_role: assignedRoleCreate,
+        assigned_to: assignedTo,
       })
       if (files.length > 0) {
         await appendTaskImages(created.id, files, created.image_paths ?? [])
@@ -1337,9 +1341,7 @@ export function HubTasksApp({
                 ? completedFilter === 'inbox'
                   ? 'No hay tareas completadas en tu bandeja este día.'
                   : completedFilter === 'sent'
-                    ? isAdmin
-                      ? 'No hay tareas completadas del equipo este día.'
-                      : 'No hay tareas completadas que asignaste a otros este día.'
+                    ? 'No hay tareas completadas que asignaste a otros este día.'
                     : 'No hay tareas completadas este día.'
                 : listScope === 'sent'
                   ? isAdmin
@@ -1374,7 +1376,7 @@ export function HubTasksApp({
                       >
                         {IMPORTANCE_LABEL[t.importance]}
                       </span>
-                      {isAdmin && listScope === 'sent' ? (
+                      {showDelegationChip(t, isAdmin, listScope, profileRole, profileId) ? (
                         <span className="task-delegation-chip" title="Asignación">
                           De{' '}
                           {hubProfileDisplayLabel(
@@ -1383,13 +1385,9 @@ export function HubTasksApp({
                             executorNamesReady,
                             profileDisplaySelf,
                           )}{' '}
-                          para {hubTaskAssigneeShortName(t.assigned_role)}
+                          para {HUB_TASK_ASSIGNEE_CREATE_LABEL[t.assigned_role]}
                         </span>
-                      ) : showAssignedToChip(t, isAdmin, listScope, profileRole, profileId) ? (
-                        <span className="task-assignee-chip" title="Asignación">
-                          Asignada a {hubTaskAssigneeShortName(t.assigned_role)}
-                        </span>
-                      ) : showAssigneeRoleChip(t, profileRole) ? (
+                      ) : showAssigneeRoleChip(t, profileRole, profileId) ? (
                         <span className="task-assignee-chip" title="Destinatario asignado">
                           {HUB_TASK_ASSIGNEE_LABEL[t.assigned_role]}
                         </span>
