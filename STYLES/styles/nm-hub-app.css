@@ -3150,17 +3150,32 @@ body:has(.nm-hub-app--cut-list) {
   gap: 6px;
 }
 
+/* Altura única en la fila de acciones de la tarjeta */
+.nm-hub-app--tasks .task-card-header-actions .btn-task-notes,
+.nm-hub-app--tasks .task-card-header-actions .btn-complete-compact,
+.nm-hub-app--tasks .task-card-header-actions .btn-undo-icon,
+.nm-hub-app--tasks .task-card-header-actions .btn-delete-task {
+  box-sizing: border-box;
+  height: 36px;
+  min-height: 36px;
+  flex-shrink: 0;
+}
+
 .nm-hub-app--tasks .btn-complete-compact {
   background-color: rgba(74, 222, 128, 0.12);
   border: 1px solid rgba(74, 222, 128, 0.45);
   color: var(--accent-rebel-green);
   font-weight: 700;
   font-size: 0.78rem;
-  padding: 8px 12px;
+  padding: 0 12px;
   border-radius: 10px;
   font-family: inherit;
   cursor: pointer;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
   transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
@@ -3175,20 +3190,17 @@ body:has(.nm-hub-app--cut-list) {
 }
 
 .nm-hub-app--tasks .btn-undo-icon {
-  box-sizing: border-box;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
   color: var(--text-rebel-secondary);
   width: 36px;
-  height: 36px;
+  padding: 0;
   border-radius: 10px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-  padding: 0;
-  flex-shrink: 0;
 }
 
 .nm-hub-app--tasks .btn-undo-icon:hover:not(:disabled) {
@@ -3207,21 +3219,18 @@ body:has(.nm-hub-app--cut-list) {
 }
 
 .nm-hub-app--tasks .btn-delete-task {
-  box-sizing: border-box;
   background: rgba(239, 68, 68, 0.08);
   border: 1px solid rgba(239, 68, 68, 0.35);
   color: rgba(252, 165, 165, 0.95);
   width: 36px;
-  height: 36px;
+  padding: 0;
   border-radius: 10px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   font-size: 1.35rem;
   line-height: 1;
   cursor: pointer;
-  padding: 0;
-  flex-shrink: 0;
 }
 
 .nm-hub-app--tasks .btn-delete-task:hover:not(:disabled) {
@@ -3235,12 +3244,11 @@ body:has(.nm-hub-app--cut-list) {
 }
 
 .nm-hub-app--tasks .btn-task-notes {
-  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 8px 12px;
+  padding: 0 12px;
   border-radius: 10px;
   border: 1px solid rgba(70, 207, 248, 0.45);
   background-color: rgba(70, 207, 248, 0.12);
@@ -3248,7 +3256,7 @@ body:has(.nm-hub-app--cut-list) {
   font-size: 0.78rem;
   font-weight: 700;
   font-family: inherit;
-  line-height: 1.2;
+  line-height: 1;
   white-space: nowrap;
   cursor: pointer;
   transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
