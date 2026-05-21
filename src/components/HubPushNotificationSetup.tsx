@@ -86,20 +86,7 @@ export function HubPushNotificationSetup({ userId, variant = 'default' }: Props)
       : null
 
   if (variant === 'footer') {
-    if (!support.supported) {
-      return (
-        <footer className="nm-hub-push-footer" aria-live="polite">
-          <p className="nm-hub-push-footer__muted">{getHubPushUnsupportedHint(support.reason)}</p>
-          {iosSteps ? (
-            <ol className="nm-hub-push-footer__steps">
-              {iosSteps.map((step) => (
-                <li key={step}>{step}</li>
-              ))}
-            </ol>
-          ) : null}
-        </footer>
-      )
-    }
+    if (!support.supported) return null
 
     return (
       <footer className="nm-hub-push-footer" aria-label="Notificaciones de tareas asignadas">
