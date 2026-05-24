@@ -10,7 +10,7 @@ import {
   mondayOfWeekContaining,
   previousWeekMonday,
   sumDispatchSeries,
-  weekRangeEndSaturday,
+  weekRangeEndFriday,
   type DispatchDayRecord,
 } from '../lib/dispatchAnalytics'
 import { fetchHubDispatchedCountsForRange } from '../lib/hubDispatchedOrdersApi'
@@ -43,16 +43,16 @@ function DispatchBarChart({ series, dailyAverage }: DispatchBarChartProps) {
     <div
       className="dispatch-bar-chart"
       role="img"
-      aria-label="Gráfico de barras de despachos de lunes a sábado con línea de promedio diario"
+      aria-label="Gráfico de barras de despachos de lunes a viernes con línea de promedio diario"
     >
       <div className="dispatch-bar-chart__plot">
         <div
-          className="chart-reference-line"
+          className="dispatch-bar-chart__reference"
           style={{ bottom: `${referenceBottomPct}%` }}
           aria-hidden="true"
         >
-          <span className="chart-reference-line__label">
-            Promedio {formatMetric(dailyAverage)}
+          <span className="dispatch-bar-chart__reference-label">
+            Prom. {formatMetric(dailyAverage)}
           </span>
         </div>
 
@@ -64,7 +64,7 @@ function DispatchBarChart({ series, dailyAverage }: DispatchBarChartProps) {
               <div key={row.fecha} className="dispatch-bar-chart__column">
                 <div className="dispatch-bar-chart__bar-wrap">
                   <div
-                    className={`dispatch-bar-chart__bar${aboveAverage ? ' dispatch-bar-chart__bar--above-avg' : ' dispatch-bar-chart__bar--below-avg'}`}
+                    className={`dispatch-bar-chart__bar${aboveAverage ? ' dispatch-bar-chart__bar--above' : ' dispatch-bar-chart__bar--below'}`}
                     style={{ height: `${heightPct}%` }}
                     title={`${row.dia}: ${row.despachados}`}
                   />
@@ -91,7 +91,7 @@ export function HubAdminDispatchAnalytics({
 
   const weekMonday = useMemo(() => mondayOfWeekContaining(todayIsoLocal()), [])
   const prevMonday = useMemo(() => previousWeekMonday(weekMonday), [weekMonday])
-  const weekEnd = useMemo(() => weekRangeEndSaturday(weekMonday), [weekMonday])
+  const weekEnd = useMemo(() => weekRangeEndFriday(weekMonday), [weekMonday])
 
   const currentWeek = useMemo(
     () => buildWeekDispatchSeries(counts, weekMonday),
@@ -158,7 +158,7 @@ export function HubAdminDispatchAnalytics({
   const criticalDayPercentage = analytics.criticalDay?.percentage ?? 0
 
   return (
-    <div className="nm-hub-app nm-hub-app--dispatch-analytics admin-stats-container">
+    <div className="nm-hub-app nm-hub-app--dispatch-analytics">
       <header className="dashboard-navbar dashboard-navbar-clean nm-hub-header">
         <HubBrandBar
           integratedDashboard
@@ -168,101 +168,82 @@ export function HubAdminDispatchAnalytics({
         />
       </header>
 
-      <header className="stats-header">
-        <h2>Panel de Control Admin</h2>
-        <span>Métricas de Rendimiento y Despachos</span>
-        <p className="stats-header__range nm-hub-muted">
-          Semana {weekMonday} — {weekEnd}
-          {loading ? ' · cargando…' : null}
-        </p>
-      </header>
+      <div className="admin-analytics-holder">
+        <header className="analytics-header">
+          <h2>Panel de Control Admin</h2>
+          <span>Métricas de rendimiento y despachos (lun–vie)</span>
+          <p className="analytics-header__range">
+            Semana {weekMonday} — {weekEnd}
+            {loading ? ' · cargando…' : null}
+          </p>
+        </header>
 
-      {error ? (
-        <p className="nm-hub-error" role="alert">
-          {error}
-        </p>
-      ) : null}
+        {error ? (
+          <p className="nm-hub-error admin-analytics-holder__feedback" role="alert">
+            {error}
+          </p>
+        ) : null}
 
-      {!configured ? (
-        <p className="nm-hub-muted">
-          Configurá Supabase en <code>.env</code> para ver analítica de despachos.
-        </p>
-      ) : null}
+        {!configured ? (
+          <p className="nm-hub-muted admin-analytics-holder__feedback">
+            Configurá Supabase en <code>.env</code> para ver analítica de despachos.
+          </p>
+        ) : null}
 
-      <section className="kpi-grid" aria-label="Indicadores clave">
-        <div className="kpi-card-metric">
-          <label>Promedio Diario</label>
-          <span className="metric-value">{formatMetric(analytics.dailyAverage)}</span>
-        </div>
-        <div className="kpi-card-metric">
-          <label>Récord de Despacho</label>
-          <span className="metric-value">{analytics.historicMax}</span>
-        </div>
-        <div className="kpi-card-metric-alert">
-          <label>Punto Crítico ({criticalDayName})</label>
-          <span className="metric-value">
-            {analytics.criticalDay ? `-${criticalDayPercentage}%` : '—'}
-          </span>
-        </div>
-      </section>
+        <section className="kpi-analytics-grid" aria-label="Indicadores clave">
+          <article className="kpi-card-rebel">
+            <span className="kpi-card-label">Promedio diario</span>
+            <span className="kpi-card-number">{formatMetric(analytics.dailyAverage)}</span>
+            <span className="kpi-card-subtext">pedidos / día hábil</span>
+          </article>
+          <article className="kpi-card-rebel">
+            <span className="kpi-card-label">Récord</span>
+            <span className="kpi-card-number">{analytics.historicMax}</span>
+            <span className="kpi-card-subtext">techo semanal</span>
+          </article>
+          <article
+            className={`kpi-card-rebel${analytics.criticalDay ? ' alert-critical' : ''}`}
+          >
+            <span className="kpi-card-label">Punto crítico</span>
+            <span className="kpi-card-number">
+              {analytics.criticalDay ? `-${criticalDayPercentage}%` : '—'}
+            </span>
+            <span className="kpi-card-subtext">{criticalDayName}</span>
+          </article>
+        </section>
 
-      <section className="chart-main-holder" aria-label="Despachos por día">
-        <DispatchBarChart series={currentWeek} dailyAverage={analytics.dailyAverage} />
-      </section>
+        <section className="chart-card-wrapper" aria-label="Despachos por día">
+          <h3 className="chart-card-wrapper__title">Despachos por día</h3>
+          <DispatchBarChart series={currentWeek} dailyAverage={analytics.dailyAverage} />
+        </section>
 
-      <section className="admin-insights-log" aria-label="Insights de producción">
-        <span className="insight-section-title">Insights de Producción</span>
+        <section className="insights-log-box" aria-label="Insights de producción">
+          <h3 className="insights-log-box__title">Insights de producción</h3>
 
-        <div className="insight-row">
-          <p className="insight-text">
-            <strong>[DATA_BOT]:</strong> La estabilidad de flujo es del {analytics.stabilityIndex}%.
+          <div className="insight-log-row">
+            <span className="insight-bot-tag">[DATA_BOT]</span>
+            La estabilidad de flujo es del {analytics.stabilityIndex}%.
             {analytics.stabilityIndex < 70
               ? ' Se sugiere revisar acumulación de stock.'
               : ' Flujo de trabajo constante.'}
-          </p>
-        </div>
+          </div>
 
-        <div className="insight-row">
-          <p className="insight-text">
-            <strong>[DATA_BOT]:</strong> Rendimiento semanal: {weeklyComparisonLabel}%
+          <div className="insight-log-row">
+            <span className="insight-bot-tag">[DATA_BOT]</span>
+            Rendimiento semanal: {weeklyComparisonLabel}%
             {analytics.weeklyComparison !== null
               ? ' en comparación a la semana anterior.'
               : ' (sin base de semana anterior).'}
-          </p>
-        </div>
-
-        {insightLines.map((line) => (
-          <div key={line} className="insight-row">
-            <p className="insight-text">
-              <strong>[DATA_BOT]:</strong> {line}
-            </p>
           </div>
-        ))}
-      </section>
 
-      <p className="nm-hub-muted stats-footer-note">
-        <a
-          href="/pedidos-despachados"
-          className="nm-hub-back"
-          onClick={(e) => {
-            e.preventDefault()
-            hubNavigate('/pedidos-despachados')
-          }}
-        >
-          ← Calendario de despachos
-        </a>
-        <span aria-hidden="true"> · </span>
-        <a
-          href="/pedidos-despachados/cargar"
-          className="nm-hub-back"
-          onClick={(e) => {
-            e.preventDefault()
-            hubNavigate('/pedidos-despachados/cargar')
-          }}
-        >
-          Cargar conteos
-        </a>
-      </p>
+          {insightLines.map((line) => (
+            <div key={line} className="insight-log-row">
+              <span className="insight-bot-tag">[DATA_BOT]</span>
+              {line}
+            </div>
+          ))}
+        </section>
+      </div>
     </div>
   )
 }

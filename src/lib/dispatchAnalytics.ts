@@ -22,14 +22,7 @@ export interface DispatchAnalytics {
   weeklyComparison: number | null
 }
 
-const WEEKDAY_LABELS_ES = [
-  'Lunes',
-  'Martes',
-  'Miércoles',
-  'Jueves',
-  'Viernes',
-  'Sábado',
-] as const
+const WEEKDAY_LABELS_ES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'] as const
 
 const WORKING_DAYS_PER_WEEK = WEEKDAY_LABELS_ES.length
 
@@ -37,16 +30,28 @@ function valuesFromSeries(series: DispatchDayRecord[]): number[] {
   return series.map((row) => row.despachados)
 }
 
-/** Promedio diario: total / días en la serie. */
-export function computeDailyAverage(series: DispatchDayRecord[]): number {
-  if (series.length === 0) return 0
-  const total = series.reduce((sum, row) => sum + row.despachados, 0)
-  return Math.round((total / series.length) * 10) / 10
+/** Excluye sábado y domingo (taller opera lun–vie). */
+export function isBusinessDispatchDay(dia: string): boolean {
+  const nombreDia = dia.trim().toLowerCase()
+  return nombreDia !== 'sábado' && nombreDia !== 'sabado' && nombreDia !== 'domingo'
 }
 
-/** Mediana de producción (capacidad estándar). */
+/** Filtra el historial a días laborables antes de métricas. */
+export function filterBusinessDays(series: DispatchDayRecord[]): DispatchDayRecord[] {
+  return series.filter((item) => isBusinessDispatchDay(item.dia))
+}
+
+/** Promedio diario: total / días laborables en la serie. */
+export function computeDailyAverage(series: DispatchDayRecord[]): number {
+  const diasLaborables = filterBusinessDays(series)
+  if (diasLaborables.length === 0) return 0
+  const total = diasLaborables.reduce((sum, row) => sum + row.despachados, 0)
+  return Math.round((total / diasLaborables.length) * 10) / 10
+}
+
+/** Mediana de producción (capacidad estándar), solo días laborables. */
 export function computeProductionMedian(series: DispatchDayRecord[]): number {
-  const values = valuesFromSeries(series).sort((a, b) => a - b)
+  const values = valuesFromSeries(filterBusinessDays(series)).sort((a, b) => a - b)
   const n = values.length
   if (n === 0) return 0
   const mid = Math.floor(n / 2)
@@ -54,16 +59,18 @@ export function computeProductionMedian(series: DispatchDayRecord[]): number {
   return Math.round(((values[mid - 1] + values[mid]) / 2) * 10) / 10
 }
 
-/** Récord histórico (máximo en la serie). */
+/** Récord histórico (máximo en días laborables). */
 export function computeHistoricMax(series: DispatchDayRecord[]): number {
-  if (series.length === 0) return 0
-  return Math.max(...valuesFromSeries(series))
+  const diasLaborables = filterBusinessDays(series)
+  if (diasLaborables.length === 0) return 0
+  return Math.max(...valuesFromSeries(diasLaborables))
 }
 
-/** Variación absoluta entre el día más alto y el más bajo. */
+/** Variación absoluta entre el día más alto y el más bajo (lun–vie). */
 export function computeFlowSpread(series: DispatchDayRecord[]): number {
-  if (series.length === 0) return 0
-  const values = valuesFromSeries(series)
+  const diasLaborables = filterBusinessDays(series)
+  if (diasLaborables.length === 0) return 0
+  const values = valuesFromSeries(diasLaborables)
   return Math.max(...values) - Math.min(...values)
 }
 
@@ -79,16 +86,16 @@ export function computeStabilityIndex(series: DispatchDayRecord[]): number {
 }
 
 /**
- * Día con mayor brecha por debajo del promedio general (%).
- * Ej.: promedio 40 y martes 34 → ~15% menos.
+ * Día laborable con mayor brecha por debajo del promedio (%).
  */
 export function computeCriticalDay(series: DispatchDayRecord[]): CriticalDayMetric | null {
-  if (series.length === 0) return null
-  const average = computeDailyAverage(series)
+  const diasLaborables = filterBusinessDays(series)
+  if (diasLaborables.length === 0) return null
+  const average = computeDailyAverage(diasLaborables)
   if (average <= 0) return null
 
   let worst: CriticalDayMetric | null = null
-  for (const row of series) {
+  for (const row of diasLaborables) {
     if (row.despachados >= average) continue
     const gap = Math.round(((average - row.despachados) / average) * 100)
     if (!worst || gap > worst.percentage) {
@@ -108,21 +115,22 @@ export function computeWeeklyComparison(
 }
 
 export function sumDispatchSeries(series: DispatchDayRecord[]): number {
-  return series.reduce((sum, row) => sum + row.despachados, 0)
+  return filterBusinessDays(series).reduce((sum, row) => sum + row.despachados, 0)
 }
 
 export function computeDispatchAnalytics(
   currentWeek: DispatchDayRecord[],
   previousWeekTotal = 0,
 ): DispatchAnalytics {
+  const diasLaborables = filterBusinessDays(currentWeek)
   const currentTotal = sumDispatchSeries(currentWeek)
   return {
-    dailyAverage: computeDailyAverage(currentWeek),
-    productionMedian: computeProductionMedian(currentWeek),
-    historicMax: computeHistoricMax(currentWeek),
-    flowSpread: computeFlowSpread(currentWeek),
-    stabilityIndex: computeStabilityIndex(currentWeek),
-    criticalDay: computeCriticalDay(currentWeek),
+    dailyAverage: computeDailyAverage(diasLaborables),
+    productionMedian: computeProductionMedian(diasLaborables),
+    historicMax: computeHistoricMax(diasLaborables),
+    flowSpread: computeFlowSpread(diasLaborables),
+    stabilityIndex: computeStabilityIndex(diasLaborables),
+    criticalDay: computeCriticalDay(diasLaborables),
     weeklyComparison: computeWeeklyComparison(currentTotal, previousWeekTotal),
   }
 }
@@ -139,7 +147,7 @@ export function mondayOfWeekContaining(isoDate: string): string {
   return `${y2}-${m2}-${d2}`
 }
 
-/** Serie Lun–Sáb a partir de un mapa ISO → conteo. */
+/** Serie Lun–Vie a partir de un mapa ISO → conteo. */
 export function buildWeekDispatchSeries(
   counts: Record<string, number>,
   weekStartMonday: string,
@@ -160,8 +168,14 @@ export function previousWeekMonday(mondayIso: string): string {
   return addDaysToIsoDate(mondayIso, -7)
 }
 
-export function weekRangeEndSaturday(mondayIso: string): string {
+/** Viernes de la semana laborable (lun + 4). */
+export function weekRangeEndFriday(mondayIso: string): string {
   return addDaysToIsoDate(mondayIso, WORKING_DAYS_PER_WEEK - 1)
+}
+
+/** @deprecated Usar weekRangeEndFriday */
+export function weekRangeEndSaturday(mondayIso: string): string {
+  return weekRangeEndFriday(mondayIso)
 }
 
 /** Textos extra para el feed (sin duplicar KPIs ya mostrados arriba). */

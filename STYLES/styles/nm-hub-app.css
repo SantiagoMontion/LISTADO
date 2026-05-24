@@ -1807,6 +1807,236 @@ a.nm-hub-brand-bar__btn:hover {
   color: var(--accent-rebel-green, #22c55e);
 }
 
+/* Analítica admin despachos (/pedidos-despachados/analitica) */
+.nm-hub-app.nm-hub-app--dispatch-analytics .dashboard-navbar.dashboard-navbar-clean {
+  background-color: #121417;
+}
+
+.nm-hub-app.nm-hub-app--dispatch-analytics .admin-analytics-holder {
+  padding: 12px 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.nm-hub-app.nm-hub-app--dispatch-analytics .admin-analytics-holder__feedback {
+  margin: 0;
+}
+
+.nm-hub-app.nm-hub-app--dispatch-analytics .analytics-header {
+  margin-bottom: 4px;
+}
+
+.nm-hub-app.nm-hub-app--dispatch-analytics .analytics-header h2 {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #fcfdff;
+  margin: 0 0 4px;
+  letter-spacing: -0.02em;
+}
+
+.nm-hub-app.nm-hub-app--dispatch-analytics .analytics-header span {
+  display: block;
+  font-size: 0.85rem;
+  color: #9099a3;
+  line-height: 1.35;
+}
+
+.nm-hub-app.nm-hub-app--dispatch-analytics .analytics-header__range {
+  margin: 8px 0 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #535a62;
+  letter-spacing: 0.02em;
+}
+
+.nm-hub-app.nm-hub-app--dispatch-analytics .kpi-analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  width: 100%;
+}
+
+.nm-hub-app.nm-hub-app--dispatch-analytics .kpi-card-rebel {
+  background-color: #121417;
+  border: 1px solid rgba(255, 255, 255, 0.02);
+  border-radius: 14px;
+  padding: 14px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.nm-hub-app.nm-hub-app--dispatch-analytics .kpi-card-rebel.alert-critical {
+  border-left: 3px solid #ffab40;
+}
+
+.nm-hub-app.nm-hub-app--dispatch-analytics .kpi-card-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #535a62;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1.2;
+}
+
+.nm-hub-app.nm-hub-app--dispatch-analytics .kpi-card-number {
+  font-size: clamp(1.15rem, 5vw, 1.5rem);
+  font-weight: 800;
+  color: #fcfdff;
+  line-height: 1.1;
+  font-family: var(--font-rebel-count, inherit);
+  font-variant-numeric: tabular-nums;
+}
+
+.nm-hub-app.nm-hub-app--dispatch-analytics .kpi-card-rebel.alert-critical .kpi-card-number {
+  color: #ffab40;
+}
+
+.nm-hub-app.nm-hub-app--dispatch-analytics .kpi-card-subtext {
+  font-size: 0.68rem;
+  color: #9099a3;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nm-hub-app.nm-hub-app--dispatch-analytics .chart-card-wrapper {
+  background-color: #121417;
+  border: 1px solid rgba(255, 255, 255, 0.02);
+  border-radius: 16px;
+  padding: 20px 16px 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.nm-hub-app.nm-hub-app--dispatch-analytics .chart-card-wrapper__title,
+.nm-hub-app.nm-hub-app--dispatch-analytics .insights-log-box__title {
+  margin: 0 0 14px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #535a62;
+}
+
+.nm-hub-app.nm-hub-app--dispatch-analytics .dispatch-bar-chart__plot {
+  position: relative;
+  height: 11.5rem;
+  padding-top: 0.5rem;
+}
+
+.nm-hub-app.nm-hub-app--dispatch-analytics .dispatch-bar-chart__bars {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  height: 100%;
+}
+
+.nm-hub-app.nm-hub-app--dispatch-analytics .dispatch-bar-chart__column {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+}
+
+.nm-hub-app.nm-hub-app--dispatch-analytics .dispatch-bar-chart__bar-wrap {
+  flex: 1;
+  width: 100%;
+  max-width: 2.25rem;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.nm-hub-app.nm-hub-app--dispatch-analytics .dispatch-bar-chart__bar {
+  width: 100%;
+  min-height: 4px;
+  border-radius: 6px 6px 2px 2px;
+  background: rgba(34, 197, 94, 0.85);
+  transition: height 0.2s ease;
+}
+
+.nm-hub-app.nm-hub-app--dispatch-analytics .dispatch-bar-chart__bar--below {
+  background: rgba(70, 207, 248, 0.55);
+}
+
+.nm-hub-app.nm-hub-app--dispatch-analytics .dispatch-bar-chart__value {
+  font-size: 0.8rem;
+  font-weight: 800;
+  font-family: var(--font-rebel-count, inherit);
+  color: #fcfdff;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.nm-hub-app.nm-hub-app--dispatch-analytics .dispatch-bar-chart__day {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #535a62;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.nm-hub-app.nm-hub-app--dispatch-analytics .dispatch-bar-chart__reference {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  border-top: 1px dashed rgba(255, 171, 64, 0.65);
+  pointer-events: none;
+}
+
+.nm-hub-app.nm-hub-app--dispatch-analytics .dispatch-bar-chart__reference-label {
+  position: absolute;
+  right: 0;
+  top: -1.1rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #ffab40;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.nm-hub-app.nm-hub-app--dispatch-analytics .insights-log-box {
+  background-color: #121417;
+  border: 1px solid rgba(255, 255, 255, 0.02);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.nm-hub-app.nm-hub-app--dispatch-analytics .insight-log-row {
+  font-size: 0.9rem;
+  color: #d1d5db;
+  line-height: 1.45;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.nm-hub-app.nm-hub-app--dispatch-analytics .insight-log-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.nm-hub-app.nm-hub-app--dispatch-analytics .insight-bot-tag {
+  color: #46cff8;
+  font-weight: 700;
+  margin-right: 6px;
+}
+
 .nm-hub-printed-loading {
   display: flex;
   flex-direction: column;
