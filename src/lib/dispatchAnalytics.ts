@@ -168,6 +168,19 @@ export function previousWeekMonday(mondayIso: string): string {
   return addDaysToIsoDate(mondayIso, -7)
 }
 
+export function nextWeekMonday(mondayIso: string): string {
+  return addDaysToIsoDate(mondayIso, 7)
+}
+
+/** Rango visible en el paginador (ej. 18/05/2026 — 22/05/2026). */
+export function formatWeekRangeDisplay(mondayIso: string, fridayIso: string): string {
+  const fmt = (iso: string) => {
+    const [y, m, d] = iso.split('-')
+    return `${Number(d)}/${Number(m)}/${y}`
+  }
+  return `${fmt(mondayIso)} — ${fmt(fridayIso)}`
+}
+
 /** Viernes de la semana laborable (lun + 4). */
 export function weekRangeEndFriday(mondayIso: string): string {
   return addDaysToIsoDate(mondayIso, WORKING_DAYS_PER_WEEK - 1)

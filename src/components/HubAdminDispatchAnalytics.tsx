@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { HubBrandBar } from './HubBrandBar'
 import { hubNavigate } from '../lib/hubNavigate'
 import { todayIsoLocal } from '../lib/date'
@@ -7,7 +7,9 @@ import {
   buildDispatchInsightLines,
   buildWeekDispatchSeries,
   computeDispatchAnalytics,
+  formatWeekRangeDisplay,
   mondayOfWeekContaining,
+  nextWeekMonday,
   previousWeekMonday,
   sumDispatchSeries,
   weekRangeEndFriday,
@@ -15,6 +17,8 @@ import {
 } from '../lib/dispatchAnalytics'
 import { fetchHubDispatchedCountsForRange } from '../lib/hubDispatchedOrdersApi'
 import type { HubUserRole } from '../lib/types'
+
+const NOT_BOT_TAG = '[NOT-BOT]'
 
 interface HubAdminDispatchAnalyticsProps {
   configured: boolean
@@ -80,22 +84,38 @@ function DispatchBarChart({ series, dailyAverage }: DispatchBarChartProps) {
   )
 }
 
+function InsightRow({ children }: { children: ReactNode }) {
+  return (
+    <div className="insight-log-row">
+      <span className="insight-bot-tag">{NOT_BOT_TAG}</span>
+      {children}
+    </div>
+  )
+}
+
 export function HubAdminDispatchAnalytics({
   configured,
   role,
   adminSignOut = false,
 }: HubAdminDispatchAnalyticsProps) {
+  const currentWeekMonday = useMemo(() => mondayOfWeekContaining(todayIsoLocal()), [])
+  const [selectedWeekMonday, setSelectedWeekMonday] = useState(currentWeekMonday)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [counts, setCounts] = useState<Record<string, number>>({})
 
-  const weekMonday = useMemo(() => mondayOfWeekContaining(todayIsoLocal()), [])
-  const prevMonday = useMemo(() => previousWeekMonday(weekMonday), [weekMonday])
-  const weekEnd = useMemo(() => weekRangeEndFriday(weekMonday), [weekMonday])
+  const weekEnd = useMemo(() => weekRangeEndFriday(selectedWeekMonday), [selectedWeekMonday])
+  const prevMonday = useMemo(() => previousWeekMonday(selectedWeekMonday), [selectedWeekMonday])
+  const weekRangeLabel = useMemo(
+    () => formatWeekRangeDisplay(selectedWeekMonday, weekEnd),
+    [selectedWeekMonday, weekEnd],
+  )
+
+  const canGoForward = selectedWeekMonday < currentWeekMonday
 
   const currentWeek = useMemo(
-    () => buildWeekDispatchSeries(counts, weekMonday),
-    [counts, weekMonday],
+    () => buildWeekDispatchSeries(counts, selectedWeekMonday),
+    [counts, selectedWeekMonday],
   )
   const previousWeek = useMemo(
     () => buildWeekDispatchSeries(counts, prevMonday),
@@ -119,6 +139,15 @@ export function HubAdminDispatchAnalytics({
     const n = analytics.weeklyComparison
     return n > 0 ? `+${n}` : String(n)
   }, [analytics.weeklyComparison])
+
+  const shiftWeek = useCallback(
+    (direction: -1 | 1) => {
+      setSelectedWeekMonday((prev) =>
+        direction < 0 ? previousWeekMonday(prev) : nextWeekMonday(prev),
+      )
+    },
+    [],
+  )
 
   const loadWeeks = useCallback(async () => {
     if (!configured) {
@@ -163,20 +192,36 @@ export function HubAdminDispatchAnalytics({
         <HubBrandBar
           integratedDashboard
           adminSignOut={adminSignOut}
-          integratedSubtitle="Analítica de despachos"
+          integratedSubtitle="Despachos Semanales"
           integratedSubtitleTone="muted"
         />
       </header>
 
       <div className="admin-analytics-holder">
-        <header className="analytics-header">
-          <h2>Panel de Control Admin</h2>
-          <span>Métricas de rendimiento y despachos (lun–vie)</span>
-          <p className="analytics-header__range">
-            Semana {weekMonday} — {weekEnd}
-            {loading ? ' · cargando…' : null}
-          </p>
-        </header>
+        <section className="week-pager-rebel" aria-label="Semana de consulta">
+          <button
+            type="button"
+            className="week-pager-btn"
+            onClick={() => shiftWeek(-1)}
+            disabled={!configured || loading}
+            aria-label="Semana anterior"
+          >
+            ←
+          </button>
+          <span className="week-range-text" aria-live="polite">
+            {weekRangeLabel}
+            {loading ? ' …' : null}
+          </span>
+          <button
+            type="button"
+            className="week-pager-btn"
+            onClick={() => shiftWeek(1)}
+            disabled={!configured || loading || !canGoForward}
+            aria-label="Semana siguiente"
+          >
+            →
+          </button>
+        </section>
 
         {error ? (
           <p className="nm-hub-error admin-analytics-holder__feedback" role="alert">
@@ -217,30 +262,25 @@ export function HubAdminDispatchAnalytics({
           <DispatchBarChart series={currentWeek} dailyAverage={analytics.dailyAverage} />
         </section>
 
-        <section className="insights-log-box" aria-label="Insights de producción">
-          <h3 className="insights-log-box__title">Insights de producción</h3>
+        <section className="insights-log-box" aria-label="Sugerencias de producción">
+          <h3 className="insights-log-box__title">Sugerencias de producción</h3>
 
-          <div className="insight-log-row">
-            <span className="insight-bot-tag">[DATA_BOT]</span>
+          <InsightRow>
             La estabilidad de flujo es del {analytics.stabilityIndex}%.
             {analytics.stabilityIndex < 70
               ? ' Se sugiere revisar acumulación de stock.'
               : ' Flujo de trabajo constante.'}
-          </div>
+          </InsightRow>
 
-          <div className="insight-log-row">
-            <span className="insight-bot-tag">[DATA_BOT]</span>
+          <InsightRow>
             Rendimiento semanal: {weeklyComparisonLabel}%
             {analytics.weeklyComparison !== null
               ? ' en comparación a la semana anterior.'
               : ' (sin base de semana anterior).'}
-          </div>
+          </InsightRow>
 
           {insightLines.map((line) => (
-            <div key={line} className="insight-log-row">
-              <span className="insight-bot-tag">[DATA_BOT]</span>
-              {line}
-            </div>
+            <InsightRow key={line}>{line}</InsightRow>
           ))}
         </section>
       </div>
