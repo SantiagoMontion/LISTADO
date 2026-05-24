@@ -117,6 +117,7 @@ export type HubAppPath =
   | '/archivos-impresos'
   | '/pedidos-despachados'
   | '/pedidos-despachados/cargar'
+  | '/pedidos-despachados/analitica'
   | '/entrar'
 
 export function canAccessHubPath(
@@ -144,6 +145,8 @@ export function canAccessHubPath(
       return perms.viewDispatchedOrders
     case '/pedidos-despachados/cargar':
       return perms.editDispatchedOrders
+    case '/pedidos-despachados/analitica':
+      return role === 'admin'
     default:
       return false
   }
@@ -159,6 +162,7 @@ export function normalizeHubPath(path: string): HubAppPath | string {
   if (p === '/archivos-impresos') return '/archivos-impresos'
   if (p === '/pedidos-despachados/estadisticas') return '/pedidos-despachados'
   if (p === '/pedidos-despachados/cargar') return '/pedidos-despachados/cargar'
+  if (p === '/pedidos-despachados/analitica') return '/pedidos-despachados/analitica'
   if (p === '/pedidos-despachados') return '/pedidos-despachados'
   if (p === '' || p === '/') return '/'
   return p
@@ -191,6 +195,9 @@ export function hubPathBlockedMessage(path: string, role: HubUserRole | null | u
   if (p === '/pedidos-despachados/cargar') {
     return `El perfil «${label}» no puede cargar pedidos despachados.`
   }
+  if (p === '/pedidos-despachados/analitica') {
+    return `El perfil «${label}» no accede a la analítica avanzada de despachos.`
+  }
   return 'No tenés permiso para esta pantalla.'
 }
 
@@ -206,5 +213,6 @@ export function hubDashboardLinks(day: string = todayIsoLocal()) {
     completedTasks: `/tareas?d=${d}&hub=completadas#nm-hub-tareas-lista`,
     printedFiles: `/archivos-impresos?d=${d}`,
     dispatchedOrders: `/pedidos-despachados?m=${d.slice(0, 7)}`,
+    dispatchAnalytics: '/pedidos-despachados/analitica',
   } as const
 }

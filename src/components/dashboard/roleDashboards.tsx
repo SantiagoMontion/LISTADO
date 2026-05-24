@@ -56,6 +56,12 @@ export function AdminDashboard({ stats }: RoleDashboardProps) {
         statLabel="en el mes"
         title="Pedidos despachados"
       />
+      <DashboardCard
+        href={links.dispatchAnalytics}
+        accent="pending"
+        icon="◫"
+        title="Analítica de despachos"
+      />
     </nav>
   )
 }

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CreadorMaterialImagesModal } from './components/CreadorMaterialImagesModal'
 import { QuickAddMeasureModal } from './components/QuickAddMeasureModal'
 import { HubDispatchedOrdersApp } from './components/HubDispatchedOrdersApp'
+import { HubAdminDispatchAnalytics } from './components/HubAdminDispatchAnalytics'
 import { HubDispatchedStatsApp } from './components/HubDispatchedStatsApp'
 import { HubPrintedFilesApp } from './components/HubPrintedFilesApp'
 import { MaterialTabs } from './components/MaterialTabs'
@@ -139,6 +140,7 @@ export default function App() {
   const isHubTasks = path === '/tareas'
   const isHubPrintedFiles = path === '/archivos-impresos'
   const isHubDispatchedCargar = path === '/pedidos-despachados/cargar'
+  const isHubDispatchedAnalytics = path === '/pedidos-despachados/analitica'
   const isHubDispatchedCalendar =
     path === '/pedidos-despachados' || path === '/pedidos-despachados/estadisticas'
   const isHubHome = path === '/' || path === ''
@@ -759,7 +761,7 @@ export default function App() {
     authEnabled &&
     authReady &&
     session &&
-    (isHubDispatchedCalendar || isHubDispatchedCargar) &&
+    (isHubDispatchedCalendar || isHubDispatchedCargar || isHubDispatchedAnalytics) &&
     !profileReady
   ) {
     return <HubLoadingScreen label="Cargando perfil…" />
@@ -799,11 +801,29 @@ export default function App() {
     authEnabled &&
     authReady &&
     session &&
-    (isHubDispatchedCalendar || isHubDispatchedCargar) &&
+    (isHubDispatchedCalendar || isHubDispatchedCargar || isHubDispatchedAnalytics) &&
     profileReady &&
     !profile
   ) {
     return <HubLoadingScreen label="No se pudo cargar el perfil del hub." />
+  }
+
+  if (
+    authEnabled &&
+    authReady &&
+    session &&
+    isHubDispatchedAnalytics &&
+    profileReady &&
+    profile &&
+    profile.role === 'admin'
+  ) {
+    return (
+      <HubAdminDispatchAnalytics
+        configured={configured}
+        role={profile.role}
+        adminSignOut
+      />
+    )
   }
 
   if (
@@ -862,7 +882,7 @@ export default function App() {
     )
   }
 
-  if (!authEnabled && (isHubDispatchedCalendar || isHubDispatchedCargar)) {
+  if (!authEnabled && (isHubDispatchedCalendar || isHubDispatchedCargar || isHubDispatchedAnalytics)) {
     return (
       <div className="nm-hub-app">
         <p className="nm-hub-muted">

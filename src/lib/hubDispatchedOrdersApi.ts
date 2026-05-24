@@ -121,3 +121,30 @@ export function sumHubDispatchedCounts(counts: HubDispatchedDayCounts): number {
   }
   return total
 }
+
+/** Conteos por día en un rango inclusivo (`YYYY-MM-DD`). */
+export async function fetchHubDispatchedCountsForRange(
+  startDate: string,
+  endDate: string,
+): Promise<HubDispatchedDayCounts> {
+  const start = normalizeCalendarDate(startDate)
+  const end = normalizeCalendarDate(endDate)
+  if (!start || !end) throw new Error('Rango de fechas inválido.')
+  if (start > end) throw new Error('La fecha inicial no puede ser posterior a la final.')
+
+  const sb = requireClient()
+  const { data, error } = await sb
+    .from('nm_hub_dispatched_orders')
+    .select('for_date, count')
+    .gte('for_date', start)
+    .lte('for_date', end)
+  if (error) throw error
+
+  const out: HubDispatchedDayCounts = {}
+  for (const row of data ?? []) {
+    const iso = normalizeCalendarDate(row.for_date)
+    const n = parseCountValue(row.count)
+    if (iso && n !== null) out[iso] = n
+  }
+  return out
+}
