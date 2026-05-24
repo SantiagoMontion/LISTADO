@@ -1808,11 +1808,13 @@ a.nm-hub-brand-bar__btn:hover {
 }
 
 /* Analítica admin despachos (/pedidos-despachados/analitica) */
-.nm-hub-app.nm-hub-app--dispatch-analytics .dashboard-navbar.dashboard-navbar-clean {
+.nm-hub-app.nm-hub-app--dispatch-analytics,
+.nm-hub-app.nm-hub-app--cut-analytics .dashboard-navbar.dashboard-navbar-clean {
   background-color: #121417;
 }
 
-.nm-hub-app.nm-hub-app--dispatch-analytics .admin-analytics-holder {
+.nm-hub-app.nm-hub-app--dispatch-analytics,
+.nm-hub-app.nm-hub-app--cut-analytics .admin-analytics-holder {
   padding: 12px 16px 24px;
   display: flex;
   flex-direction: column;
@@ -1821,11 +1823,13 @@ a.nm-hub-brand-bar__btn:hover {
   box-sizing: border-box;
 }
 
-.nm-hub-app.nm-hub-app--dispatch-analytics .admin-analytics-holder__feedback {
+.nm-hub-app.nm-hub-app--dispatch-analytics,
+.nm-hub-app.nm-hub-app--cut-analytics .admin-analytics-holder__feedback {
   margin: 0;
 }
 
-.nm-hub-app.nm-hub-app--dispatch-analytics .week-pager-rebel {
+.nm-hub-app.nm-hub-app--dispatch-analytics,
+.nm-hub-app.nm-hub-app--cut-analytics .week-pager-rebel {
   background-color: #121417;
   border: 1px solid rgba(255, 255, 255, 0.02);
   border-radius: 14px;
@@ -1839,7 +1843,8 @@ a.nm-hub-brand-bar__btn:hover {
   gap: 10px;
 }
 
-.nm-hub-app.nm-hub-app--dispatch-analytics .week-pager-btn {
+.nm-hub-app.nm-hub-app--dispatch-analytics,
+.nm-hub-app.nm-hub-app--cut-analytics .week-pager-btn {
   flex-shrink: 0;
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.05);
@@ -1858,22 +1863,26 @@ a.nm-hub-brand-bar__btn:hover {
   -webkit-tap-highlight-color: transparent;
 }
 
-.nm-hub-app.nm-hub-app--dispatch-analytics .week-pager-btn:hover:not(:disabled) {
+.nm-hub-app.nm-hub-app--dispatch-analytics,
+.nm-hub-app.nm-hub-app--cut-analytics .week-pager-btn:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.06);
   border-color: rgba(255, 255, 255, 0.1);
 }
 
-.nm-hub-app.nm-hub-app--dispatch-analytics .week-pager-btn:focus-visible {
+.nm-hub-app.nm-hub-app--dispatch-analytics,
+.nm-hub-app.nm-hub-app--cut-analytics .week-pager-btn:focus-visible {
   outline: 2px solid var(--accent-rebel-blue, #3b82f6);
   outline-offset: 2px;
 }
 
-.nm-hub-app.nm-hub-app--dispatch-analytics .week-pager-btn:disabled {
+.nm-hub-app.nm-hub-app--dispatch-analytics,
+.nm-hub-app.nm-hub-app--cut-analytics .week-pager-btn:disabled {
   opacity: 0.35;
   cursor: not-allowed;
 }
 
-.nm-hub-app.nm-hub-app--dispatch-analytics .week-range-text {
+.nm-hub-app.nm-hub-app--dispatch-analytics,
+.nm-hub-app.nm-hub-app--cut-analytics .week-range-text {
   flex: 1;
   text-align: center;
   font-size: 0.9rem;
@@ -1883,14 +1892,16 @@ a.nm-hub-brand-bar__btn:hover {
   line-height: 1.3;
 }
 
-.nm-hub-app.nm-hub-app--dispatch-analytics .kpi-analytics-grid {
+.nm-hub-app.nm-hub-app--dispatch-analytics,
+.nm-hub-app.nm-hub-app--cut-analytics .kpi-analytics-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
   width: 100%;
 }
 
-.nm-hub-app.nm-hub-app--dispatch-analytics .kpi-card-rebel {
+.nm-hub-app.nm-hub-app--dispatch-analytics,
+.nm-hub-app.nm-hub-app--cut-analytics .kpi-card-rebel {
   background-color: #121417;
   border: 1px solid rgba(255, 255, 255, 0.02);
   border-radius: 14px;
@@ -1901,11 +1912,13 @@ a.nm-hub-brand-bar__btn:hover {
   min-width: 0;
 }
 
-.nm-hub-app.nm-hub-app--dispatch-analytics .kpi-card-rebel.alert-critical {
+.nm-hub-app.nm-hub-app--dispatch-analytics,
+.nm-hub-app.nm-hub-app--cut-analytics .kpi-card-rebel.alert-critical {
   border-left: 3px solid #ffab40;
 }
 
-.nm-hub-app.nm-hub-app--dispatch-analytics .kpi-card-label {
+.nm-hub-app.nm-hub-app--dispatch-analytics,
+.nm-hub-app.nm-hub-app--cut-analytics .kpi-card-label {
   font-size: 0.62rem;
   font-weight: 700;
   color: #535a62;
@@ -1914,7 +1927,8 @@ a.nm-hub-brand-bar__btn:hover {
   line-height: 1.2;
 }
 
-.nm-hub-app.nm-hub-app--dispatch-analytics .kpi-card-number {
+.nm-hub-app.nm-hub-app--dispatch-analytics,
+.nm-hub-app.nm-hub-app--cut-analytics .kpi-card-number {
   font-size: clamp(1.15rem, 5vw, 1.5rem);
   font-weight: 800;
   color: #fcfdff;
@@ -1923,11 +1937,13 @@ a.nm-hub-brand-bar__btn:hover {
   font-variant-numeric: tabular-nums;
 }
 
-.nm-hub-app.nm-hub-app--dispatch-analytics .kpi-card-rebel.alert-critical .kpi-card-number {
+.nm-hub-app.nm-hub-app--dispatch-analytics,
+.nm-hub-app.nm-hub-app--cut-analytics .kpi-card-rebel.alert-critical .kpi-card-number {
   color: #ffab40;
 }
 
-.nm-hub-app.nm-hub-app--dispatch-analytics .kpi-card-subtext {
+.nm-hub-app.nm-hub-app--dispatch-analytics,
+.nm-hub-app.nm-hub-app--cut-analytics .kpi-card-subtext {
   font-size: 0.68rem;
   color: #9099a3;
   line-height: 1.2;
@@ -1936,7 +1952,8 @@ a.nm-hub-brand-bar__btn:hover {
   text-overflow: ellipsis;
 }
 
-.nm-hub-app.nm-hub-app--dispatch-analytics .chart-card-wrapper {
+.nm-hub-app.nm-hub-app--dispatch-analytics,
+.nm-hub-app.nm-hub-app--cut-analytics .chart-card-wrapper {
   background-color: #121417;
   border: 1px solid rgba(255, 255, 255, 0.02);
   border-radius: 16px;
@@ -1945,8 +1962,10 @@ a.nm-hub-brand-bar__btn:hover {
   box-sizing: border-box;
 }
 
-.nm-hub-app.nm-hub-app--dispatch-analytics .chart-card-wrapper__title,
-.nm-hub-app.nm-hub-app--dispatch-analytics .insights-log-box__title {
+.nm-hub-app.nm-hub-app--dispatch-analytics,
+.nm-hub-app.nm-hub-app--cut-analytics .chart-card-wrapper__title,
+.nm-hub-app.nm-hub-app--dispatch-analytics,
+.nm-hub-app.nm-hub-app--cut-analytics .insights-log-box__title {
   margin: 0 0 14px;
   font-size: 0.72rem;
   font-weight: 700;
@@ -1955,13 +1974,15 @@ a.nm-hub-brand-bar__btn:hover {
   color: #535a62;
 }
 
-.nm-hub-app.nm-hub-app--dispatch-analytics .dispatch-bar-chart__plot {
+.nm-hub-app.nm-hub-app--dispatch-analytics,
+.nm-hub-app.nm-hub-app--cut-analytics .dispatch-bar-chart__plot {
   position: relative;
   height: 11.5rem;
   padding-top: 0.5rem;
 }
 
-.nm-hub-app.nm-hub-app--dispatch-analytics .dispatch-bar-chart__bars {
+.nm-hub-app.nm-hub-app--dispatch-analytics,
+.nm-hub-app.nm-hub-app--cut-analytics .dispatch-bar-chart__bars {
   position: relative;
   z-index: 1;
   display: flex;
@@ -1971,7 +1992,8 @@ a.nm-hub-brand-bar__btn:hover {
   height: 100%;
 }
 
-.nm-hub-app.nm-hub-app--dispatch-analytics .dispatch-bar-chart__column {
+.nm-hub-app.nm-hub-app--dispatch-analytics,
+.nm-hub-app.nm-hub-app--cut-analytics .dispatch-bar-chart__column {
   flex: 1;
   min-width: 0;
   display: flex;
@@ -1981,7 +2003,8 @@ a.nm-hub-brand-bar__btn:hover {
   height: 100%;
 }
 
-.nm-hub-app.nm-hub-app--dispatch-analytics .dispatch-bar-chart__bar-wrap {
+.nm-hub-app.nm-hub-app--dispatch-analytics,
+.nm-hub-app.nm-hub-app--cut-analytics .dispatch-bar-chart__bar-wrap {
   flex: 1;
   width: 100%;
   max-width: 2.25rem;
@@ -1990,7 +2013,8 @@ a.nm-hub-brand-bar__btn:hover {
   justify-content: center;
 }
 
-.nm-hub-app.nm-hub-app--dispatch-analytics .dispatch-bar-chart__bar {
+.nm-hub-app.nm-hub-app--dispatch-analytics,
+.nm-hub-app.nm-hub-app--cut-analytics .dispatch-bar-chart__bar {
   width: 100%;
   min-height: 4px;
   border-radius: 6px 6px 2px 2px;
@@ -1998,11 +2022,13 @@ a.nm-hub-brand-bar__btn:hover {
   transition: height 0.2s ease;
 }
 
-.nm-hub-app.nm-hub-app--dispatch-analytics .dispatch-bar-chart__bar--below {
+.nm-hub-app.nm-hub-app--dispatch-analytics,
+.nm-hub-app.nm-hub-app--cut-analytics .dispatch-bar-chart__bar--below {
   background: rgba(70, 207, 248, 0.55);
 }
 
-.nm-hub-app.nm-hub-app--dispatch-analytics .dispatch-bar-chart__value {
+.nm-hub-app.nm-hub-app--dispatch-analytics,
+.nm-hub-app.nm-hub-app--cut-analytics .dispatch-bar-chart__value {
   font-size: 0.8rem;
   font-weight: 800;
   font-family: var(--font-rebel-count, inherit);
@@ -2011,7 +2037,8 @@ a.nm-hub-brand-bar__btn:hover {
   line-height: 1;
 }
 
-.nm-hub-app.nm-hub-app--dispatch-analytics .dispatch-bar-chart__day {
+.nm-hub-app.nm-hub-app--dispatch-analytics,
+.nm-hub-app.nm-hub-app--cut-analytics .dispatch-bar-chart__day {
   font-size: 0.65rem;
   font-weight: 700;
   color: #535a62;
@@ -2019,7 +2046,8 @@ a.nm-hub-brand-bar__btn:hover {
   letter-spacing: 0.04em;
 }
 
-.nm-hub-app.nm-hub-app--dispatch-analytics .dispatch-bar-chart__reference {
+.nm-hub-app.nm-hub-app--dispatch-analytics,
+.nm-hub-app.nm-hub-app--cut-analytics .dispatch-bar-chart__reference {
   position: absolute;
   left: 0;
   right: 0;
@@ -2028,7 +2056,8 @@ a.nm-hub-brand-bar__btn:hover {
   pointer-events: none;
 }
 
-.nm-hub-app.nm-hub-app--dispatch-analytics .dispatch-bar-chart__reference-label {
+.nm-hub-app.nm-hub-app--dispatch-analytics,
+.nm-hub-app.nm-hub-app--cut-analytics .dispatch-bar-chart__reference-label {
   position: absolute;
   right: 0;
   top: -1.1rem;
@@ -2039,7 +2068,8 @@ a.nm-hub-brand-bar__btn:hover {
   white-space: nowrap;
 }
 
-.nm-hub-app.nm-hub-app--dispatch-analytics .insights-log-box {
+.nm-hub-app.nm-hub-app--dispatch-analytics,
+.nm-hub-app.nm-hub-app--cut-analytics .insights-log-box {
   background-color: #121417;
   border: 1px solid rgba(255, 255, 255, 0.02);
   border-radius: 14px;
@@ -2049,7 +2079,8 @@ a.nm-hub-brand-bar__btn:hover {
   gap: 12px;
 }
 
-.nm-hub-app.nm-hub-app--dispatch-analytics .insight-log-row {
+.nm-hub-app.nm-hub-app--dispatch-analytics,
+.nm-hub-app.nm-hub-app--cut-analytics .insight-log-row {
   font-size: 0.9rem;
   color: #d1d5db;
   line-height: 1.45;
@@ -2057,12 +2088,14 @@ a.nm-hub-brand-bar__btn:hover {
   border-bottom: 1px solid rgba(255, 255, 255, 0.02);
 }
 
-.nm-hub-app.nm-hub-app--dispatch-analytics .insight-log-row:last-child {
+.nm-hub-app.nm-hub-app--dispatch-analytics,
+.nm-hub-app.nm-hub-app--cut-analytics .insight-log-row:last-child {
   border-bottom: none;
   padding-bottom: 0;
 }
 
-.nm-hub-app.nm-hub-app--dispatch-analytics .insight-bot-tag {
+.nm-hub-app.nm-hub-app--dispatch-analytics,
+.nm-hub-app.nm-hub-app--cut-analytics .insight-bot-tag {
   color: #34d399;
   font-weight: 850;
   letter-spacing: 0.5px;

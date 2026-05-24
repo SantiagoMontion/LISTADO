@@ -223,7 +223,7 @@ export async function fetchReports(): Promise<NmProdReport[]> {
 }
 
 const TASK_SELECT_WITH_FALTAS =
-  'id, report_id, material_type, dimensions, total_qty, current_qty, is_priority, from_faltas, notes, is_completed, created_at'
+  'id, report_id, material_type, dimensions, total_qty, current_qty, is_priority, from_faltas, notes, is_completed, created_at, fecha_corte'
 const TASK_SELECT_LEGACY =
   'id, report_id, material_type, dimensions, total_qty, current_qty, is_priority, notes, is_completed, created_at'
 
@@ -240,8 +240,13 @@ export async function fetchTasks(reportId: string): Promise<NmProdTask[]> {
 
   const msg = String((first.error as { message?: string }).message ?? '')
   const code = String((first.error as { code?: string }).code ?? '')
-  if (msg.includes('from_faltas') || code === '42703') {
-    const second = await sb.from('nm_prod_tasks').select(TASK_SELECT_LEGACY).eq('report_id', reportId)
+  if (msg.includes('from_faltas') || msg.includes('fecha_corte') || code === '42703') {
+    const withoutFechaCorte =
+      'id, report_id, material_type, dimensions, total_qty, current_qty, is_priority, from_faltas, notes, is_completed, created_at'
+    const second = await sb
+      .from('nm_prod_tasks')
+      .select(msg.includes('from_faltas') ? TASK_SELECT_LEGACY : withoutFechaCorte)
+      .eq('report_id', reportId)
     if (second.error) throw second.error
     return mapRows(second.data)
   }
@@ -402,11 +407,17 @@ export async function toggleTaskPriority(task: NmProdTask): Promise<void> {
 export async function toggleTaskCompleted(task: NmProdTask): Promise<void> {
   const nextCompleted = !task.is_completed
   const sb = requireSupabase()
+  if (nextCompleted && task.current_qty < task.total_qty) {
+    const rpc = await sb.rpc('nm_prod_finish_task_qty', { p_task_id: task.id })
+    if (!rpc.error) return
+    if (!isMissingRpc(rpc.error)) throw rpc.error
+  }
   const { error } = await sb
     .from('nm_prod_tasks')
     .update({
       is_completed: nextCompleted,
       current_qty: nextCompleted ? task.total_qty : task.current_qty,
+      ...(nextCompleted ? { fecha_corte: new Date().toISOString() } : { fecha_corte: null }),
     })
     .eq('id', task.id)
   if (error) throw error

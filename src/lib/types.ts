@@ -34,7 +34,10 @@ export interface NmProdTask {
   from_faltas: boolean
   notes: string | null
   is_completed: boolean
+  /** Alta de la línea en el sistema (fecha_creacion lógica). */
   created_at: string
+  /** Timestamp del último (+); null si nunca se cortó. */
+  fecha_corte?: string | null
   updated_at?: string | null
 }
 

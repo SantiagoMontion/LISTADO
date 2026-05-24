@@ -62,6 +62,12 @@ export function AdminDashboard({ stats }: RoleDashboardProps) {
         icon="◫"
         title="Analítica de despachos"
       />
+      <DashboardCard
+        href={links.cutAnalytics}
+        accent="pending"
+        icon="✂"
+        title="Analítica de corte"
+      />
     </nav>
   )
 }

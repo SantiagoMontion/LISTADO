@@ -118,6 +118,7 @@ export type HubAppPath =
   | '/pedidos-despachados'
   | '/pedidos-despachados/cargar'
   | '/pedidos-despachados/analitica'
+  | '/lista-corte/analitica'
   | '/entrar'
 
 export function canAccessHubPath(
@@ -147,6 +148,8 @@ export function canAccessHubPath(
       return perms.editDispatchedOrders
     case '/pedidos-despachados/analitica':
       return role === 'admin'
+    case '/lista-corte/analitica':
+      return role === 'admin'
     default:
       return false
   }
@@ -163,6 +166,7 @@ export function normalizeHubPath(path: string): HubAppPath | string {
   if (p === '/pedidos-despachados/estadisticas') return '/pedidos-despachados'
   if (p === '/pedidos-despachados/cargar') return '/pedidos-despachados/cargar'
   if (p === '/pedidos-despachados/analitica') return '/pedidos-despachados/analitica'
+  if (p === '/lista-corte/analitica') return '/lista-corte/analitica'
   if (p === '/pedidos-despachados') return '/pedidos-despachados'
   if (p === '' || p === '/') return '/'
   return p
@@ -198,6 +202,9 @@ export function hubPathBlockedMessage(path: string, role: HubUserRole | null | u
   if (p === '/pedidos-despachados/analitica') {
     return `El perfil «${label}» no accede a la analítica avanzada de despachos.`
   }
+  if (p === '/lista-corte/analitica') {
+    return `El perfil «${label}» no accede a la analítica de corte.`
+  }
   return 'No tenés permiso para esta pantalla.'
 }
 
@@ -214,5 +221,6 @@ export function hubDashboardLinks(day: string = todayIsoLocal()) {
     printedFiles: `/archivos-impresos?d=${d}`,
     dispatchedOrders: `/pedidos-despachados?m=${d.slice(0, 7)}`,
     dispatchAnalytics: '/pedidos-despachados/analitica',
+    cutAnalytics: '/lista-corte/analitica',
   } as const
 }
