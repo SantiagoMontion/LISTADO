@@ -41,17 +41,22 @@ export function filterBusinessDays(series: DispatchDayRecord[]): DispatchDayReco
   return series.filter((item) => isBusinessDispatchDay(item.dia))
 }
 
-/** Promedio diario: total / días laborables en la serie. */
-export function computeDailyAverage(series: DispatchDayRecord[]): number {
-  const diasLaborables = filterBusinessDays(series)
-  if (diasLaborables.length === 0) return 0
-  const total = diasLaborables.reduce((sum, row) => sum + row.despachados, 0)
-  return Math.round((total / diasLaborables.length) * 10) / 10
+/** Días laborables con al menos 1 despacho (feriados / sin actividad quedan fuera). */
+export function filterActiveBusinessDays(series: DispatchDayRecord[]): DispatchDayRecord[] {
+  return filterBusinessDays(series).filter((row) => row.despachados > 0)
 }
 
-/** Mediana de producción (capacidad estándar), solo días laborables. */
+/** Promedio diario: total / días laborables con actividad (>0). */
+export function computeDailyAverage(series: DispatchDayRecord[]): number {
+  const diasActivos = filterActiveBusinessDays(series)
+  if (diasActivos.length === 0) return 0
+  const total = diasActivos.reduce((sum, row) => sum + row.despachados, 0)
+  return Math.round((total / diasActivos.length) * 10) / 10
+}
+
+/** Mediana de producción (capacidad estándar), solo días con actividad. */
 export function computeProductionMedian(series: DispatchDayRecord[]): number {
-  const values = valuesFromSeries(filterBusinessDays(series)).sort((a, b) => a - b)
+  const values = valuesFromSeries(filterActiveBusinessDays(series)).sort((a, b) => a - b)
   const n = values.length
   if (n === 0) return 0
   const mid = Math.floor(n / 2)
@@ -59,18 +64,18 @@ export function computeProductionMedian(series: DispatchDayRecord[]): number {
   return Math.round(((values[mid - 1] + values[mid]) / 2) * 10) / 10
 }
 
-/** Récord histórico (máximo en días laborables). */
+/** Récord histórico (máximo en días con actividad). */
 export function computeHistoricMax(series: DispatchDayRecord[]): number {
-  const diasLaborables = filterBusinessDays(series)
-  if (diasLaborables.length === 0) return 0
-  return Math.max(...valuesFromSeries(diasLaborables))
+  const diasActivos = filterActiveBusinessDays(series)
+  if (diasActivos.length === 0) return 0
+  return Math.max(...valuesFromSeries(diasActivos))
 }
 
-/** Variación absoluta entre el día más alto y el más bajo (lun–vie). */
+/** Variación absoluta entre el mejor y el peor día con actividad. */
 export function computeFlowSpread(series: DispatchDayRecord[]): number {
-  const diasLaborables = filterBusinessDays(series)
-  if (diasLaborables.length === 0) return 0
-  const values = valuesFromSeries(diasLaborables)
+  const diasActivos = filterActiveBusinessDays(series)
+  if (diasActivos.length === 0) return 0
+  const values = valuesFromSeries(diasActivos)
   return Math.max(...values) - Math.min(...values)
 }
 
@@ -89,13 +94,13 @@ export function computeStabilityIndex(series: DispatchDayRecord[]): number {
  * Día laborable con mayor brecha por debajo del promedio (%).
  */
 export function computeCriticalDay(series: DispatchDayRecord[]): CriticalDayMetric | null {
-  const diasLaborables = filterBusinessDays(series)
-  if (diasLaborables.length === 0) return null
-  const average = computeDailyAverage(diasLaborables)
+  const diasActivos = filterActiveBusinessDays(series)
+  if (diasActivos.length === 0) return null
+  const average = computeDailyAverage(series)
   if (average <= 0) return null
 
   let worst: CriticalDayMetric | null = null
-  for (const row of diasLaborables) {
+  for (const row of diasActivos) {
     if (row.despachados >= average) continue
     const gap = Math.round(((average - row.despachados) / average) * 100)
     if (!worst || gap > worst.percentage) {

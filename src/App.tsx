@@ -30,13 +30,13 @@ import { sortTasksForDisplay } from './lib/sortTasks'
 import { surfaceFromDimensions } from './lib/surface'
 import {
   createReportWithTasks,
+  importTasksIntoDay,
   mergeTaskIntoReport,
   decrementTaskQty,
   deleteReportCompletely,
   fetchReportsWithTasksProgress,
   fetchTasks,
   incrementTaskQty,
-  restoreTaskQty,
   supabase,
   toggleTaskCompleted,
   toggleTaskPriority,
@@ -183,7 +183,6 @@ export default function App() {
   const [pendingQuickAdd, setPendingQuickAdd] = useState(false)
   const [quickAddError, setQuickAddError] = useState<string | null>(null)
   const [pendingDates, setPendingDates] = useState<Set<string>>(new Set())
-  const [reportHasPendingById, setReportHasPendingById] = useState<Record<string, boolean>>({})
   const [materialImgModalOpen, setMaterialImgModalOpen] = useState(false)
 
   useEffect(() => {
@@ -211,13 +210,11 @@ export default function App() {
   const refreshReports = useCallback(async () => {
     if (!configured) return
     const seq = ++reportsRefreshSeqRef.current
-    const { reports: list, pendingFechas, reportHasPendingById: openByReport } =
-      await fetchReportsWithTasksProgress()
+    const { reports: list, pendingFechas } = await fetchReportsWithTasksProgress()
     if (seq !== reportsRefreshSeqRef.current) return
 
     setReports(list)
     setPendingDates(new Set(pendingFechas))
-    setReportHasPendingById(openByReport)
   }, [configured])
 
   const pendingReportsRefreshRef = useRef<number | null>(null)
@@ -458,9 +455,9 @@ export default function App() {
       setReportId(saved)
       return
     }
-    const withPending = reportsForSelectedDate.find((r) => reportHasPendingById[r.id] === true)
-    setReportId((withPending ?? reportsForSelectedDate[0]).id)
-  }, [mode, reportsForSelectedDate, reportId, reportHasPendingById, selectedDate])
+    // Mantener la lista más reciente del día aunque ya esté todo cortado (evita saltar a un 2.º reporte duplicado).
+    setReportId(reportsForSelectedDate[0].id)
+  }, [mode, reportsForSelectedDate, reportId, selectedDate])
 
   useEffect(() => {
     if (mode !== 'manager' || !reportId) return
@@ -513,9 +510,13 @@ export default function App() {
     }
     setLoading(true)
     try {
-      await createReportWithTasks({ fecha, tasks: flat })
+      const { merged } = await importTasksIntoDay(fecha, flat)
       setPaste('')
-      setSuccess('Lista subida correctamente')
+      setSuccess(
+        merged
+          ? 'Lista actualizada en el día (se mantuvo el progreso de corte).'
+          : 'Lista subida correctamente.',
+      )
       await refreshReports()
     } catch (e: unknown) {
       setError(formatSupabaseOrError(e))
@@ -567,26 +568,17 @@ export default function App() {
   }
 
   const onDecrement = async (task: NmProdTask) => {
+    if (task.current_qty <= 0) return
     setBusyId(task.id)
     setError(null)
     markLocalListMutation()
-    const done = task.is_completed || task.current_qty >= task.total_qty
-    patchTaskLocal(task.id, (t) =>
-      done
-        ? {
-            ...t,
-            current_qty: 0,
-            is_completed: false,
-          }
-        : {
-            ...t,
-            current_qty: Math.max(t.current_qty - 1, 0),
-            is_completed: false,
-          },
-    )
+    patchTaskLocal(task.id, (t) => ({
+      ...t,
+      current_qty: Math.max(t.current_qty - 1, 0),
+      is_completed: false,
+    }))
     try {
-      if (done) await restoreTaskQty(task)
-      else await decrementTaskQty(task)
+      await decrementTaskQty(task)
       scheduleRefreshReports()
     } catch (e: unknown) {
       setError(formatSupabaseOrError(e))

@@ -73,8 +73,8 @@ export function TaskCard({
                 className="btn-utility-rebel"
                 disabled={busy || task.current_qty === 0}
                 onClick={() => onDecrement?.(task)}
-                aria-label="Restar una unidad"
-                title="Restar una unidad"
+                aria-label={done ? 'Deshacer una unidad cortada' : 'Restar una unidad'}
+                title={done ? 'Deshacer una unidad cortada' : 'Restar una unidad'}
               >
                 −
               </button>
@@ -169,8 +169,8 @@ export function TaskCard({
                 className="nm-prod-btn nm-prod-btn-icon"
                 disabled={busy || task.current_qty === 0}
                 onClick={() => onDecrement?.(task)}
-                aria-label="Restar una unidad"
-                title="Restar una unidad"
+                aria-label={done ? 'Deshacer una unidad cortada' : 'Restar una unidad'}
+                title={done ? 'Deshacer una unidad cortada' : 'Restar una unidad'}
               >
                 -
               </button>

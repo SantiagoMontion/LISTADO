@@ -34,6 +34,22 @@ describe('cutAnalytics', () => {
     expect(computeCutDailyAverage(series)).toBe(15)
   })
 
+  it('no marca feriado con cero como día crítico', () => {
+    const series = buildCutWeekSeries(
+      {
+        '2026-05-18': 0,
+        '2026-05-19': 20,
+        '2026-05-20': 40,
+        '2026-05-21': 40,
+        '2026-05-22': 40,
+      },
+      weekMonday,
+    )
+    const critical = computeCutCriticalDay(series)
+    expect(critical?.name).not.toBe('Lunes')
+    expect(critical?.name).toBe('Martes')
+  })
+
   it('detecta día flojo de corte', () => {
     const series = buildCutWeekSeries(
       {

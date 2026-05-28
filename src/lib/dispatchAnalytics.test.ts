@@ -34,9 +34,22 @@ describe('dispatchAnalytics', () => {
     expect(filterBusinessDays(SAMPLE_WITH_WEEKEND).map((d) => d.dia)).not.toContain('Sábado')
   })
 
-  it('calcula promedio solo sobre lun–vie', () => {
+  it('calcula promedio solo sobre días con actividad (>0)', () => {
     expect(computeDailyAverage(SAMPLE_WITH_WEEKEND)).toBe(35.4)
     expect(computeDailyAverage(SAMPLE_WEEK_BUSINESS)).toBe(35.4)
+  })
+
+  it('excluye feriados con cero del promedio y métricas derivadas', () => {
+    const withHoliday = [
+      { fecha: '2026-05-18', dia: 'Lunes', despachados: 0 },
+      { fecha: '2026-05-19', dia: 'Martes', despachados: 29 },
+      { fecha: '2026-05-20', dia: 'Miércoles', despachados: 40 },
+      { fecha: '2026-05-21', dia: 'Jueves', despachados: 38 },
+      { fecha: '2026-05-22', dia: 'Viernes', despachados: 36 },
+    ]
+    expect(computeDailyAverage(withHoliday)).toBe(35.8)
+    expect(computeProductionMedian(withHoliday)).toBe(37)
+    expect(computeCriticalDay(withHoliday)?.name).toBe('Martes')
   })
 
   it('calcula mediana solo sobre días laborables', () => {

@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { normalizeCalendarDate } from './date'
+import { collapseImportTasks, planImportUpsert } from './prodTaskImport'
 import type { NmProdReport, NmProdTask } from './types'
 
 function normalizeEnv(v: string | undefined): string | undefined {
@@ -342,6 +343,105 @@ export async function mergeTaskIntoReport(reportId: string, task: NewTaskRow): P
     material_type: materialType,
     dimensions,
     total_qty: delta,
+    current_qty: task.current_qty ?? 0,
+    is_priority: task.is_priority ?? false,
+    from_faltas: fromFaltas,
+    notes: task.notes ?? null,
+  }
+  let ins = await sb.from('nm_prod_tasks').insert(rowWithFaltas)
+  if (ins.error && isMissingFromFaltasColumn(ins.error)) {
+    const { from_faltas: _omit, ...legacyRow } = rowWithFaltas
+    ins = await sb.from('nm_prod_tasks').insert(legacyRow)
+  }
+  if (ins.error) throw ins.error
+}
+
+/**
+ * Reimportar lista del día: usa el reporte más reciente de esa fecha y reemplaza
+ * totales (no suma), conservando cuánto ya se cortó. Evita duplicar listas y
+ * que medidas ya cortadas vuelvan a aparecer como pendientes.
+ */
+export async function importTasksIntoDay(
+  fecha: string,
+  tasks: NewTaskRow[],
+): Promise<{ reportId: string; merged: boolean }> {
+  const collapsed = collapseImportTasks(tasks)
+  const existingId = await findLatestReportIdForFecha(fecha)
+  if (!existingId) {
+    const { reportId } = await createReportWithTasks({ fecha, tasks: collapsed })
+    return { reportId, merged: false }
+  }
+  for (const t of collapsed) {
+    await upsertTaskFromImport(existingId, t)
+  }
+  return { reportId: existingId, merged: true }
+}
+
+export async function findLatestReportIdForFecha(fecha: string): Promise<string | null> {
+  const sb = requireSupabase()
+  const day = normalizeCalendarDate(fecha)
+  const { data, error } = await sb
+    .from('nm_prod_reports')
+    .select('id')
+    .eq('fecha', day)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error) throw error
+  return (data?.id as string | undefined) ?? null
+}
+
+/** Actualiza o inserta una línea al importar (reemplaza total, mantiene corte). */
+export async function upsertTaskFromImport(reportId: string, task: NewTaskRow): Promise<void> {
+  const sb = requireSupabase()
+  const materialType = task.material_type.trim()
+  const dimensions = task.dimensions.trim()
+  const importedTotal = Math.max(1, Number(task.total_qty) || 1)
+  const fromFaltas = task.from_faltas ?? false
+
+  let existingRes = await sb
+    .from('nm_prod_tasks')
+    .select('id, total_qty, current_qty, is_priority')
+    .eq('report_id', reportId)
+    .eq('material_type', materialType)
+    .eq('dimensions', dimensions)
+    .eq('from_faltas', fromFaltas)
+    .maybeSingle()
+
+  if (existingRes.error && isMissingFromFaltasColumn(existingRes.error)) {
+    existingRes = await sb
+      .from('nm_prod_tasks')
+      .select('id, total_qty, current_qty, is_priority')
+      .eq('report_id', reportId)
+      .eq('material_type', materialType)
+      .eq('dimensions', dimensions)
+      .maybeSingle()
+  }
+  if (existingRes.error) throw existingRes.error
+
+  const existing = existingRes.data as
+    | { id: string; total_qty: number; current_qty: number; is_priority?: boolean }
+    | null
+
+  if (existing) {
+    const planned = planImportUpsert(existing, importedTotal)
+    const { error: upErr } = await sb
+      .from('nm_prod_tasks')
+      .update({
+        total_qty: planned.total_qty,
+        current_qty: planned.current_qty,
+        is_priority: Boolean(existing.is_priority) || Boolean(task.is_priority),
+      })
+      .eq('id', existing.id)
+    if (upErr) throw upErr
+    return
+  }
+
+  const rowWithFaltas = {
+    report_id: reportId,
+    material_type: materialType,
+    dimensions,
+    total_qty: importedTotal,
     current_qty: task.current_qty ?? 0,
     is_priority: task.is_priority ?? false,
     from_faltas: fromFaltas,

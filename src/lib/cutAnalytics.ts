@@ -116,6 +116,7 @@ export function computeCutCriticalDay(series: CutDayRecord[]): { name: string; p
 
   let worst: { name: string; percentage: number } | null = null
   for (const row of laborables) {
+    if (row.despachados <= 0) continue
     if (row.despachados >= average) continue
     const gap = Math.round(((average - row.despachados) / average) * 100)
     if (!worst || gap > worst.percentage) {
