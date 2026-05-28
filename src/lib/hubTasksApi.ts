@@ -9,6 +9,9 @@ import type { HubImportance, HubUserRole, NmHubTask, NmHubTaskNote } from './typ
 
 const BUCKET = 'nm-hub-task-images'
 
+/** Tamaño máximo de imagen en una nota de tarea (20 MB). */
+export const HUB_TASK_NOTE_IMAGE_MAX_BYTES = 20 * 1024 * 1024
+
 function normalizeAssignedRole(raw: unknown): HubTaskAssignableRole {
   const s = typeof raw === 'string' ? raw : ''
   if (s === 'online_1' || s === 'taller_1' || s === 'lista_creator' || s === 'admin') return s
@@ -356,20 +359,51 @@ export async function signedImageUrl(path: string, expiresSec = 60 * 30): Promis
 }
 
 function mapTaskNoteRow(row: Record<string, unknown>): NmHubTaskNote {
+  const paths = row.image_paths
   return {
     id: row.id as string,
     task_id: row.task_id as string,
     author_id: row.author_id as string,
     body: String(row.body ?? ''),
+    image_paths: Array.isArray(paths) ? (paths as string[]) : [],
     created_at: String(row.created_at ?? ''),
   }
+}
+
+export function validateHubTaskNoteImageFile(file: File): string | null {
+  if (!file.type.startsWith('image/')) return 'El archivo debe ser una imagen.'
+  if (file.size > HUB_TASK_NOTE_IMAGE_MAX_BYTES) {
+    return 'La imagen no puede superar 20 MB.'
+  }
+  return null
+}
+
+async function uploadHubTaskNoteImage(taskId: string, file: File): Promise<string> {
+  const err = validateHubTaskNoteImageFile(file)
+  if (err) throw new Error(err)
+  const sb = requireClient()
+  const safe = file.name.replace(/[^\w.\-()+ ]/g, '_').slice(0, 120)
+  const path = `notes/${taskId}/${crypto.randomUUID()}-${safe}`
+  const { error } = await sb.storage.from(BUCKET).upload(path, file, {
+    cacheControl: '3600',
+    upsert: false,
+  })
+  if (error) throw error
+  return path
+}
+
+async function removeHubTaskNoteImages(paths: string[]): Promise<void> {
+  if (paths.length === 0) return
+  const sb = requireClient()
+  const { error } = await sb.storage.from(BUCKET).remove(paths)
+  if (error) console.warn('[nm-hub] no se pudieron borrar imágenes de nota:', error.message)
 }
 
 export async function fetchHubTaskNotes(taskId: string): Promise<NmHubTaskNote[]> {
   const sb = requireClient()
   const { data, error } = await sb
     .from('nm_hub_task_notes')
-    .select('id, task_id, author_id, body, created_at')
+    .select('id, task_id, author_id, body, image_paths, created_at')
     .eq('task_id', taskId)
     .order('created_at', { ascending: true })
 
@@ -391,34 +425,60 @@ export async function fetchHubTaskNoteCounts(taskIds: string[]): Promise<Record<
   return out
 }
 
-export async function createHubTaskNote(taskId: string, body: string): Promise<NmHubTaskNote> {
+export async function createHubTaskNote(
+  taskId: string,
+  body: string,
+  imageFile?: File | null,
+): Promise<NmHubTaskNote> {
   const sb = requireClient()
   const trimmed = body.trim()
-  if (!trimmed) throw new Error('Escribí una nota.')
+  if (!trimmed && !imageFile) throw new Error('Escribí una nota o adjuntá una imagen.')
   const { data: userData } = await sb.auth.getUser()
   const uid = userData.user?.id
   if (!uid) throw new Error('Sesión requerida.')
 
+  const imagePaths: string[] = []
+  if (imageFile) {
+    imagePaths.push(await uploadHubTaskNoteImage(taskId, imageFile))
+  }
+
   const { data, error } = await sb
     .from('nm_hub_task_notes')
-    .insert({ task_id: taskId, author_id: uid, body: trimmed })
-    .select('id, task_id, author_id, body, created_at')
+    .insert({
+      task_id: taskId,
+      author_id: uid,
+      body: trimmed,
+      image_paths: imagePaths,
+    })
+    .select('id, task_id, author_id, body, image_paths, created_at')
     .single()
 
-  if (error) throw error
+  if (error) {
+    await removeHubTaskNoteImages(imagePaths)
+    throw error
+  }
   return mapTaskNoteRow(data as Record<string, unknown>)
 }
 
 export async function updateHubTaskNote(noteId: string, body: string): Promise<NmHubTaskNote> {
   const sb = requireClient()
   const trimmed = body.trim()
-  if (!trimmed) throw new Error('Escribí una nota.')
+  if (!trimmed) {
+    const { data: existing, error: fetchErr } = await sb
+      .from('nm_hub_task_notes')
+      .select('image_paths')
+      .eq('id', noteId)
+      .maybeSingle()
+    if (fetchErr) throw fetchErr
+    const paths = Array.isArray(existing?.image_paths) ? (existing.image_paths as string[]) : []
+    if (paths.length === 0) throw new Error('Escribí una nota.')
+  }
 
   const { data, error } = await sb
     .from('nm_hub_task_notes')
     .update({ body: trimmed })
     .eq('id', noteId)
-    .select('id, task_id, author_id, body, created_at')
+    .select('id, task_id, author_id, body, image_paths, created_at')
     .single()
 
   if (error) throw error
@@ -427,6 +487,15 @@ export async function updateHubTaskNote(noteId: string, body: string): Promise<N
 
 export async function deleteHubTaskNote(noteId: string): Promise<void> {
   const sb = requireClient()
+  const { data: row, error: fetchErr } = await sb
+    .from('nm_hub_task_notes')
+    .select('image_paths')
+    .eq('id', noteId)
+    .maybeSingle()
+  if (fetchErr) throw fetchErr
+
+  const paths = Array.isArray(row?.image_paths) ? (row.image_paths as string[]) : []
   const { error } = await sb.from('nm_hub_task_notes').delete().eq('id', noteId)
   if (error) throw error
+  await removeHubTaskNoteImages(paths)
 }

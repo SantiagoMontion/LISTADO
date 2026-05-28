@@ -3781,6 +3781,88 @@ body:has(.nm-hub-app--cut-list) {
   margin: 0;
 }
 
+.nm-hub-task-note-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.nm-hub-task-note-images__btn {
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.nm-hub-task-note-images__img {
+  display: block;
+  max-width: min(100%, 220px);
+  max-height: 180px;
+  width: auto;
+  height: auto;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.nm-hub-task-notes-compose__image-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.nm-hub-task-notes-compose__attach {
+  font-size: 0.88rem;
+  padding: 6px 10px;
+}
+
+.nm-hub-task-notes-compose__image-hint {
+  font-size: 0.78rem;
+}
+
+.nm-hub-task-notes-compose__preview {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 8px;
+  border-radius: 12px;
+  border: 1px solid var(--border-input-base, rgba(255, 255, 255, 0.08));
+  background: var(--bg-input-field, #181a1f);
+}
+
+.nm-hub-task-notes-compose__preview-img {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.nm-hub-task-notes-compose__preview-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+.nm-hub-task-notes-compose__preview-name {
+  font-size: 0.82rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nm-hub-task-notes-compose__preview-remove {
+  align-self: flex-start;
+  font-size: 0.82rem;
+  padding: 4px 8px;
+}
+
 .nm-hub-task-notes-error {
   margin: 0;
   font-size: 0.82rem;

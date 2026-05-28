@@ -8,8 +8,16 @@ CREATE TABLE IF NOT EXISTS public.nm_hub_task_notes (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   task_id uuid NOT NULL REFERENCES public.nm_hub_tasks (id) ON DELETE CASCADE,
   author_id uuid NOT NULL REFERENCES public.nm_hub_profiles (id) ON DELETE CASCADE,
-  body text NOT NULL CHECK (char_length(trim(body)) > 0 AND char_length(body) <= 8000),
-  created_at timestamptz NOT NULL DEFAULT now()
+  body text NOT NULL DEFAULT '',
+  image_paths text[] NOT NULL DEFAULT '{}',
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT nm_hub_task_notes_body_check CHECK (
+    char_length(body) <= 8000
+    AND (
+      char_length(trim(body)) > 0
+      OR coalesce(cardinality(image_paths), 0) > 0
+    )
+  )
 );
 
 CREATE INDEX IF NOT EXISTS idx_nm_hub_task_notes_task_created
@@ -61,8 +69,11 @@ CREATE POLICY nm_hub_task_notes_update
   WITH CHECK (
     author_id = auth.uid()
     AND public.nm_hub_task_note_task_visible(task_id)
-    AND char_length(trim(body)) > 0
     AND char_length(body) <= 8000
+    AND (
+      char_length(trim(body)) > 0
+      OR coalesce(cardinality(image_paths), 0) > 0
+    )
   );
 
 DROP POLICY IF EXISTS nm_hub_task_notes_delete ON public.nm_hub_task_notes;

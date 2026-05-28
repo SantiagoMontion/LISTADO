@@ -1,14 +1,18 @@
-import { type FormEvent, useCallback, useEffect, useRef, useState } from 'react'
+import { type ChangeEvent, type FormEvent, useCallback, useEffect, useRef, useState } from 'react'
 import { formatSupabaseOrError } from '../lib/errors'
 import {
   createHubTaskNote,
   deleteHubTaskNote,
   fetchHubTaskNotes,
   fetchHubProfileDisplayNames,
+  HUB_TASK_NOTE_IMAGE_MAX_BYTES,
+  signedImageUrl,
   updateHubTaskNote,
+  validateHubTaskNoteImageFile,
 } from '../lib/hubTasksApi'
 import { supabase } from '../lib/supabase'
 import type { NmHubTask, NmHubTaskNote } from '../lib/types'
+import { HubImageLightbox } from './HubImageLightbox'
 
 function formatNoteWhen(iso: string): string {
   try {
@@ -26,6 +30,53 @@ function formatNoteWhen(iso: string): string {
   }
 }
 
+function NoteImageThumbnails({ paths }: { paths: string[] }) {
+  const [urls, setUrls] = useState<Record<string, string>>({})
+  const [lightbox, setLightbox] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (paths.length === 0) return
+    let cancelled = false
+    const run = async () => {
+      const next: Record<string, string> = {}
+      for (const p of paths) {
+        const u = await signedImageUrl(p)
+        if (u) next[p] = u
+      }
+      if (!cancelled) setUrls(next)
+    }
+    void run()
+    return () => {
+      cancelled = true
+    }
+  }, [paths])
+
+  if (paths.length === 0) return null
+
+  return (
+    <>
+      <div className="nm-hub-task-note-images">
+        {paths.map((p) =>
+          urls[p] ? (
+            <button
+              key={p}
+              type="button"
+              className="nm-hub-thumb-btn nm-hub-task-note-images__btn"
+              onClick={() => setLightbox(urls[p])}
+              aria-label="Ampliar imagen de la nota"
+            >
+              <img src={urls[p]} alt="" className="nm-hub-thumb nm-hub-task-note-images__img" />
+            </button>
+          ) : (
+            <span key={p} className="nm-hub-thumb-placeholder" aria-hidden />
+          ),
+        )}
+      </div>
+      {lightbox ? <HubImageLightbox src={lightbox} onClose={() => setLightbox(null)} /> : null}
+    </>
+  )
+}
+
 type TaskNoteItemProps = {
   note: NmHubTaskNote
   authorName: string
@@ -41,6 +92,7 @@ function TaskNoteItem({ note, authorName, canManage, busy, onEdit, onDelete }: T
   const [editing, setEditing] = useState(false)
   const [editDraft, setEditDraft] = useState(note.body)
   const menuWrapRef = useRef<HTMLDivElement>(null)
+  const hasImages = (note.image_paths?.length ?? 0) > 0
 
   useEffect(() => {
     if (!menuOpen) return
@@ -73,7 +125,7 @@ function TaskNoteItem({ note, authorName, canManage, busy, onEdit, onDelete }: T
   const saveEdit = async (e: FormEvent) => {
     e.preventDefault()
     const text = editDraft.trim()
-    if (!text || busy) return
+    if ((!text && !hasImages) || busy) return
     await onEdit(note.id, text)
     setEditing(false)
   }
@@ -101,7 +153,11 @@ function TaskNoteItem({ note, authorName, canManage, busy, onEdit, onDelete }: T
             <button type="button" className="btn-modal-cancel" disabled={busy} onClick={cancelEdit}>
               Cancelar
             </button>
-            <button type="submit" className="btn-modal-submit-active" disabled={busy || !editDraft.trim()}>
+            <button
+              type="submit"
+              className="btn-modal-submit-active"
+              disabled={busy || (!editDraft.trim() && !hasImages)}
+            >
               {busy ? 'Guardando…' : 'Guardar'}
             </button>
           </div>
@@ -185,7 +241,10 @@ function TaskNoteItem({ note, authorName, canManage, busy, onEdit, onDelete }: T
               </div>
             ) : null}
           </div>
-          <p className="nm-hub-task-note__body task-description-text">{note.body}</p>
+          {note.body.trim() ? (
+            <p className="nm-hub-task-note__body task-description-text">{note.body}</p>
+          ) : null}
+          <NoteImageThumbnails paths={note.image_paths ?? []} />
         </>
       )}
     </article>
@@ -210,11 +269,14 @@ export function HubTaskNotesPanel({
   const [notes, setNotes] = useState<NmHubTaskNote[]>([])
   const [authorNames, setAuthorNames] = useState<Record<string, string>>({})
   const [draft, setDraft] = useState('')
+  const [pendingImage, setPendingImage] = useState<File | null>(null)
+  const [pendingImagePreview, setPendingImagePreview] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const threadRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
   const historyPushedRef = useRef(true)
   const initialLoadDoneRef = useRef(false)
   const skipRealtimeUntilRef = useRef(0)
@@ -227,6 +289,21 @@ export function HubTaskNotesPanel({
   const markLocalNoteMutation = useCallback(() => {
     skipRealtimeUntilRef.current = Date.now() + 2500
   }, [])
+
+  const clearPendingImage = useCallback(() => {
+    setPendingImage(null)
+    setPendingImagePreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev)
+      return null
+    })
+    if (imageInputRef.current) imageInputRef.current.value = ''
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (pendingImagePreview) URL.revokeObjectURL(pendingImagePreview)
+    }
+  }, [pendingImagePreview])
 
   const loadNotes = useCallback(
     async (opts?: { silent?: boolean }) => {
@@ -316,21 +393,41 @@ export function HubTaskNotesPanel({
     }
   }, [task.id, loadNotes])
 
+  const canSubmit = Boolean(draft.trim() || pendingImage)
+
+  const onImageSelected = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    const validationErr = validateHubTaskNoteImageFile(file)
+    if (validationErr) {
+      setError(validationErr)
+      return
+    }
+    setError(null)
+    setPendingImagePreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev)
+      return URL.createObjectURL(file)
+    })
+    setPendingImage(file)
+  }
+
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
     const text = draft.trim()
-    if (!text || saving) return
+    if ((!text && !pendingImage) || saving) return
     setSaving(true)
     setError(null)
     try {
       markLocalNoteMutation()
-      const created = await createHubTaskNote(task.id, text)
+      const created = await createHubTaskNote(task.id, text, pendingImage)
       setNotes((prev) => (prev.some((n) => n.id === created.id) ? prev : [...prev, created]))
       if (!authorNames[created.author_id]) {
         const names = await fetchHubProfileDisplayNames([created.author_id])
         setAuthorNames((prev) => ({ ...prev, ...names }))
       }
       setDraft('')
+      clearPendingImage()
       onNoteAdded?.()
       requestAnimationFrame(() => {
         scrollToEnd()
@@ -373,6 +470,8 @@ export function HubTaskNotesPanel({
       setSaving(false)
     }
   }
+
+  const maxMb = HUB_TASK_NOTE_IMAGE_MAX_BYTES / (1024 * 1024)
 
   return (
     <div
@@ -443,11 +542,54 @@ export function HubTaskNotesPanel({
             disabled={saving}
             onChange={(e) => setDraft(e.target.value)}
           />
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/*"
+            className="nm-hub-sr-only"
+            aria-hidden
+            tabIndex={-1}
+            onChange={onImageSelected}
+          />
+          <div className="nm-hub-task-notes-compose__image-row">
+            <button
+              type="button"
+              className="nm-hub-btn nm-hub-btn-ghost nm-hub-task-notes-compose__attach"
+              disabled={saving || Boolean(pendingImage)}
+              onClick={() => imageInputRef.current?.click()}
+            >
+              Adjuntar imagen
+            </button>
+            <span className="nm-hub-muted nm-hub-task-notes-compose__image-hint">Máx. {maxMb} MB</span>
+          </div>
+          {pendingImage && pendingImagePreview ? (
+            <div className="nm-hub-task-notes-compose__preview">
+              <img
+                src={pendingImagePreview}
+                alt=""
+                className="nm-hub-task-notes-compose__preview-img"
+              />
+              <div className="nm-hub-task-notes-compose__preview-meta">
+                <span className="nm-hub-task-notes-compose__preview-name" title={pendingImage.name}>
+                  {pendingImage.name}
+                </span>
+                <button
+                  type="button"
+                  className="nm-hub-btn nm-hub-btn-ghost nm-hub-task-notes-compose__preview-remove"
+                  disabled={saving}
+                  onClick={clearPendingImage}
+                  aria-label="Quitar imagen"
+                >
+                  Quitar
+                </button>
+              </div>
+            </div>
+          ) : null}
           <div className="modal-actions-row">
             <button type="button" className="btn-modal-cancel" disabled={saving} onClick={onClose}>
               Cerrar
             </button>
-            <button type="submit" className="btn-modal-submit-active" disabled={saving || !draft.trim()}>
+            <button type="submit" className="btn-modal-submit-active" disabled={saving || !canSubmit}>
               {saving ? 'Enviando…' : 'Agregar nota'}
             </button>
           </div>

@@ -78,6 +78,7 @@ export interface NmHubTaskNote {
   task_id: string
   author_id: string
   body: string
+  image_paths: string[]
   created_at: string
 }
 
