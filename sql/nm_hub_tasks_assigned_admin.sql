@@ -7,7 +7,7 @@
 -- Qué hace:
 --   • assigned_role puede ser 'admin' (solo admin puede asignarse a sí)
 --   • nm_hub_create_task → jsonb (evita error falso "row-level security" al crear)
---   • nm_hub_delete_task → solo admin
+--   • nm_hub_delete_task → admin y taller_1
 --   • Storage nm-hub-task-images para admin y creadores de tareas
 --
 -- Al final debés ver: 4 políticas en nm_hub_tasks, constraint con 'admin',
@@ -201,7 +201,7 @@ REVOKE ALL ON FUNCTION public.nm_hub_set_task_image_paths(uuid, text[]) FROM PUB
 GRANT EXECUTE ON FUNCTION public.nm_hub_set_task_image_paths(uuid, text[]) TO authenticated;
 
 -- -----------------------------------------------------------------------------
--- 5) RPC: eliminar tarea (solo admin)
+-- 5) RPC: eliminar tarea (admin y taller_1)
 -- -----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.nm_hub_delete_task(p_task_id uuid)
 RETURNS void
@@ -210,8 +210,8 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  IF public.nm_hub_profile_role() IS DISTINCT FROM 'admin' THEN
-    RAISE EXCEPTION 'Solo el administrador puede eliminar tareas.'
+  IF public.nm_hub_profile_role() NOT IN ('admin', 'taller_1') THEN
+    RAISE EXCEPTION 'No tenés permiso para eliminar tareas.'
       USING ERRCODE = '42501';
   END IF;
   DELETE FROM public.nm_hub_tasks WHERE id = p_task_id;

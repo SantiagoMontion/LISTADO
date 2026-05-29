@@ -58,7 +58,7 @@ export const HUB_PERMISSIONS: Record<HubUserRole, HubPermissions> = {
     viewHubTasks: true,
     createHubTasks: true,
     editHubTasks: true,
-    deleteHubTasks: false,
+    deleteHubTasks: true,
     viewPrintedFiles: true,
     viewDispatchedOrders: true,
     editDispatchedOrders: false,

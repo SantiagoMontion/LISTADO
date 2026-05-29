@@ -30,6 +30,7 @@ import {
   HUB_TASK_ASSIGNEE_LABEL,
   type HubTaskAssignableRole,
 } from '../lib/hubTaskAssignable'
+import { canDeleteHubTasks } from '../lib/hubRoles'
 
 const IMPORTANCE_LABEL: Record<HubImportance, string> = {
   low: 'Baja',
@@ -493,6 +494,7 @@ export function HubTasksApp({
   isAdmin,
   showSentTab = true,
 }: HubTasksAppProps) {
+  const canDeleteTasks = canDeleteHubTasks(profileRole)
   const [rawPending, setRawPending] = useState<NmHubTask[]>([])
   const [rawCompleted, setRawCompleted] = useState<NmHubTask[]>([])
   const [loading, setLoading] = useState(true)
@@ -964,7 +966,7 @@ export function HubTasksApp({
   }
 
   const onDeleteTask = async (t: NmHubTask) => {
-    if (!isAdmin || readOnly) return
+    if (!canDeleteTasks || readOnly) return
     setBusy(true)
     setError(null)
     try {
@@ -1465,7 +1467,7 @@ export function HubTasksApp({
                         </svg>
                       </button>
                     ) : null}
-                    {isAdmin && !readOnly ? (
+                    {canDeleteTasks && !readOnly ? (
                       <button
                         type="button"
                         className="btn-delete-task"

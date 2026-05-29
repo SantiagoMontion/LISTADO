@@ -17,6 +17,10 @@ export function canWriteHubTasks(role: HubUserRole | null | undefined): boolean 
   return getHubPermissions(role)?.createHubTasks ?? false
 }
 
+export function canDeleteHubTasks(role: HubUserRole | null | undefined): boolean {
+  return getHubPermissions(role)?.deleteHubTasks ?? false
+}
+
 export function hubTasksReadOnly(role: HubUserRole | null | undefined): boolean {
   const p = getHubPermissions(role)
   if (!p?.viewHubTasks) return true
