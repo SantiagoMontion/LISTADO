@@ -49,4 +49,16 @@ describe('QuickAddMeasureModal helpers', () => {
       is_priority: false,
     })
   })
+
+  it('mayorista dimensions include Classic/PRO suffix via formatMayoristaDimensions', async () => {
+    const { formatMayoristaDimensions, mayoristaLineMaterialFromOption } = await import(
+      '../lib/nmProdMayorista'
+    )
+    expect(
+      formatMayoristaDimensions('44x22', mayoristaLineMaterialFromOption('Classic')),
+    ).toBe('44x22 - CLASSIC')
+    expect(formatMayoristaDimensions('44x22', mayoristaLineMaterialFromOption('PRO'))).toBe(
+      '44x22 - PRO',
+    )
+  })
 })

@@ -1,4 +1,10 @@
 import { useEffect, useId, useState } from 'react'
+import {
+  formatMayoristaDimensions,
+  MAYORISTA_LINE_MATERIAL_OPTIONS,
+  mayoristaLineMaterialFromOption,
+  type MayoristaLineMaterialOption,
+} from '../lib/nmProdMayorista'
 import type { MaterialTab } from '../lib/types'
 
 export const QUICK_ADD_MATERIAL_OPTIONS = [
@@ -89,6 +95,8 @@ export function QuickAddMeasureModal({
   const [selectedType, setSelectedType] = useState<QuickAddMaterialOption | null>(null)
   const [dimensionInput, setDimensionInput] = useState('')
   const [quantityInput, setQuantityInput] = useState('')
+  const [mayoristaLineMaterial, setMayoristaLineMaterial] =
+    useState<MayoristaLineMaterialOption | null>(null)
 
   const isMayorista = selectedType === 'Mayorista'
 
@@ -97,13 +105,23 @@ export function QuickAddMeasureModal({
     setSelectedType(null)
     setDimensionInput('')
     setQuantityInput('')
+    setMayoristaLineMaterial(null)
   }, [open])
 
   if (!open) return null
 
-  const dimensions = parseQuickDimensions(dimensionInput)
+  const measure = parseQuickDimensions(dimensionInput)
   const parsedQty = isMayorista ? parseQuickQuantity(quantityInput) : 1
-  const canSubmit = selectedType !== null && dimensions !== null && parsedQty !== null && !loading
+  const dimensions =
+    isMayorista && measure && mayoristaLineMaterial
+      ? formatMayoristaDimensions(measure, mayoristaLineMaterialFromOption(mayoristaLineMaterial))
+      : measure
+  const canSubmit =
+    selectedType !== null &&
+    dimensions !== null &&
+    parsedQty !== null &&
+    (!isMayorista || mayoristaLineMaterial !== null) &&
+    !loading
 
   return (
     <div
@@ -133,7 +151,10 @@ export function QuickAddMeasureModal({
                 disabled={loading}
                 onClick={() => {
                   setSelectedType(type)
-                  if (type !== 'Mayorista') setQuantityInput('')
+                  if (type !== 'Mayorista') {
+                    setQuantityInput('')
+                    setMayoristaLineMaterial(null)
+                  }
                 }}
               >
                 {type}
@@ -163,24 +184,43 @@ export function QuickAddMeasureModal({
         </div>
 
         {isMayorista ? (
-          <div className="modal-input-section">
-            <label className="modal-section-label" htmlFor={qtyInputId}>
-              Cantidad
-            </label>
-            <input
-              id={qtyInputId}
-              type="text"
-              inputMode="numeric"
-              className="modal-numeric-input"
-              placeholder="Ej: 5"
-              value={quantityInput}
-              disabled={loading}
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-              onChange={(e) => setQuantityInput(sanitizeQuickQuantityInput(e.target.value))}
-            />
-          </div>
+          <>
+            <div className="modal-input-section">
+              <label className="modal-section-label" htmlFor={qtyInputId}>
+                Cantidad
+              </label>
+              <input
+                id={qtyInputId}
+                type="text"
+                inputMode="numeric"
+                className="modal-numeric-input"
+                placeholder="Ej: 5"
+                value={quantityInput}
+                disabled={loading}
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                onChange={(e) => setQuantityInput(sanitizeQuickQuantityInput(e.target.value))}
+              />
+            </div>
+            <div className="modal-filter-section">
+              <span className="modal-section-label">Material</span>
+              <div className="modal-pill-grid" role="group" aria-label="Classic o PRO">
+                {MAYORISTA_LINE_MATERIAL_OPTIONS.map((lineMat) => (
+                  <button
+                    key={lineMat}
+                    type="button"
+                    className={`modal-type-pill${mayoristaLineMaterial === lineMat ? ' active' : ''}`}
+                    aria-pressed={mayoristaLineMaterial === lineMat}
+                    disabled={loading}
+                    onClick={() => setMayoristaLineMaterial(lineMat)}
+                  >
+                    {lineMat}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
         ) : null}
 
         {error ? (

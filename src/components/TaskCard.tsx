@@ -24,7 +24,10 @@ export function TaskCard({
   variant = 'legacy',
 }: TaskCardProps) {
   const done = task.is_completed || task.current_qty >= task.total_qty
-  const isRectos = task.material_type.trim().toLowerCase() === 'bordes_rectos'
+  const materialTypeNorm = task.material_type.trim().toLowerCase()
+  const isRectos = materialTypeNorm === 'bordes_rectos'
+  const isMayorista = materialTypeNorm === 'mayorista'
+  const showMeasureQtyLikeRectos = isRectos || isMayorista
   const showBulkCut = task.total_qty > 1
   const remainingQty = Math.max(task.total_qty - task.current_qty, 0)
   const displayedQty = showOnlyDecrement ? task.current_qty : remainingQty
@@ -45,7 +48,7 @@ export function TaskCard({
         <div className="cut-info-block" aria-live="polite">
           <h3 className="cut-measurements">
             <span>{task.dimensions}</span>
-            {!isRectos ? (
+            {!showMeasureQtyLikeRectos ? (
               <>
                 <span className="cut-qty-sep"> · </span>
                 <span className="cut-qty" title={done ? 'Cortado' : `Falta cortar: ${displayedQty}`}>
@@ -146,7 +149,7 @@ export function TaskCard({
                 · Faltas
               </span>
             ) : null}
-            <span className="nm-prod-task-separator">{isRectos ? ' ' : ' - '}</span>
+            <span className="nm-prod-task-separator">{showMeasureQtyLikeRectos ? ' ' : ' - '}</span>
             <span
               className="nm-prod-task-qty"
               title={
