@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import {
   mapQuickAddOption,
   parseQuickDimensions,
+  parseQuickQuantity,
   sanitizeQuickDimensionInput,
+  sanitizeQuickQuantityInput,
 } from './QuickAddMeasureModal'
 
 describe('QuickAddMeasureModal helpers', () => {
@@ -19,6 +21,17 @@ describe('QuickAddMeasureModal helpers', () => {
     expect(parseQuickDimensions('classic')).toBe(null)
   })
 
+  it('parseQuickQuantity accepts positive integers', () => {
+    expect(parseQuickQuantity('5')).toBe(5)
+    expect(parseQuickQuantity('0')).toBe(null)
+    expect(parseQuickQuantity('')).toBe(null)
+  })
+
+  it('sanitizeQuickQuantityInput keeps digits only', () => {
+    expect(sanitizeQuickQuantityInput('5u')).toBe('5')
+    expect(sanitizeQuickQuantityInput('12345')).toBe('1234')
+  })
+
   it('mapQuickAddOption maps Falta to faltas row', () => {
     expect(mapQuickAddOption('Falta')).toEqual({
       materialType: 'classic',
@@ -27,6 +40,11 @@ describe('QuickAddMeasureModal helpers', () => {
     })
     expect(mapQuickAddOption('Rectos')).toEqual({
       materialType: 'bordes_rectos',
+      from_faltas: false,
+      is_priority: false,
+    })
+    expect(mapQuickAddOption('Mayorista')).toEqual({
+      materialType: 'mayorista',
       from_faltas: false,
       is_priority: false,
     })

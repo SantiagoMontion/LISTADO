@@ -1,6 +1,12 @@
 import type { HubTaskAssignableRole } from './hubTaskAssignable'
 
-export type MaterialTab = 'classic' | 'pro' | 'alfombras' | 'bordes_rectos' | 'otros'
+export type MaterialTab =
+  | 'classic'
+  | 'pro'
+  | 'alfombras'
+  | 'bordes_rectos'
+  | 'mayorista'
+  | 'otros'
 
 export type { HubTaskAssignableRole } from './hubTaskAssignable'
 

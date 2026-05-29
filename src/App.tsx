@@ -55,7 +55,14 @@ function hubTaskPushListener(profile: NmHubProfile | null | undefined) {
   )
 }
 
-const TAB_ORDER: MaterialTab[] = ['classic', 'pro', 'alfombras', 'bordes_rectos', 'otros']
+const TAB_ORDER: MaterialTab[] = [
+  'classic',
+  'pro',
+  'alfombras',
+  'bordes_rectos',
+  'mayorista',
+  'otros',
+]
 
 function isMaterialTab(v: string): v is MaterialTab {
   return (TAB_ORDER as string[]).includes(v)
@@ -372,6 +379,7 @@ export default function App() {
       pro: 0,
       alfombras: 0,
       bordes_rectos: 0,
+      mayorista: 0,
       otros: 0,
     }
     for (const t of tasksByMainFilter) {
@@ -379,6 +387,13 @@ export default function App() {
     }
     return c
   }, [tasksByMainFilter])
+
+  useEffect(() => {
+    if (mode !== 'manager' || materialsAvailable.length === 0) return
+    if (!materialsAvailable.includes(activeTab)) {
+      setActiveTab(materialsAvailable[0])
+    }
+  }, [mode, materialsAvailable, activeTab])
 
   const visibleTasks = useMemo(() => {
     const tabbed = tasksByMainFilter.filter(
@@ -656,6 +671,7 @@ export default function App() {
     materialType: MaterialTab
     from_faltas: boolean
     is_priority: boolean
+    total_qty: number
   }) => {
     setError(null)
     setQuickAddError(null)
@@ -665,7 +681,7 @@ export default function App() {
       const task = {
         material_type: payload.materialType,
         dimensions: payload.dimensions.trim(),
-        total_qty: 1,
+        total_qty: Math.max(1, Math.floor(payload.total_qty) || 1),
         from_faltas: payload.from_faltas,
         is_priority: payload.is_priority,
       }
@@ -1263,7 +1279,7 @@ export default function App() {
                   ) : allCutInActiveTab && hasPendingInOtherMaterialTab ? (
                     <div className="nm-prod-all-cut-state">
                       <p className="nm-prod-empty-text">
-                        En esta pestaña no hay pendientes. Revisá Classic / Pro / Alfombras / Rectos.
+                        En esta pestaña no hay pendientes. Revisá las otras pestañas de material.
                       </p>
                     </div>
                   ) : (

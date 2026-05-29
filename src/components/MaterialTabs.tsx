@@ -5,6 +5,7 @@ const LABELS: Record<MaterialTab, string> = {
   pro: 'Pro',
   alfombras: 'Alfombras',
   bordes_rectos: 'Rectos',
+  mayorista: 'Mayorista',
   otros: 'Otros',
 }
 
