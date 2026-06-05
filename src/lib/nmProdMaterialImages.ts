@@ -19,15 +19,37 @@ function requireClient() {
   return supabase
 }
 
+const MATERIAL_PREFIX_AT_START =
+  /^(alfombra|classic|faltas|ultra|pro)(?:[\s._\-0-9]|$)/i
+
+function materialKeywordInBasename(base: string, keyword: string): boolean {
+  const esc = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(`(?:^|[\\s._\\-])${esc}(?:[\\s._\\-0-9]|$)`, 'i').test(base)
+}
+
+const MATERIAL_KEYWORDS: { keyword: string; family: NmProdMaterialFamily }[] = [
+  { keyword: 'faltas', family: 'faltas' },
+  { keyword: 'alfombra', family: 'alfombra' },
+  { keyword: 'classic', family: 'classic' },
+  { keyword: 'ultra', family: 'ultra' },
+  { keyword: 'pro', family: 'pro' },
+]
+
 /**
- * Interpreta el nombre de archivo (sin ruta): Classic1, PRO2, FALTAS1, ultra10, Alfombra_3 → familia.
- * El número final no define el material; solo debe coincidir el prefijo de tipo.
+ * Interpreta el nombre de archivo (sin ruta): Classic1, 90x40 Classic, PRO_foto, etc.
+ * Si no hay indicio de material, devuelve null (el modal puede asignar uno manualmente).
  */
 export function parseMaterialFamilyFromFilename(filename: string): NmProdMaterialFamily | null {
   const base = filename.replace(/.*[/\\]/, '').replace(/\.[^.]+$/i, '').trim()
-  const m = base.match(/^(alfombra|classic|faltas|ultra|pro)(?:[\s._-]*\d+)?$/i)
-  if (!m) return null
-  return m[1].toLowerCase() as NmProdMaterialFamily
+  if (!base) return null
+
+  const atStart = base.match(MATERIAL_PREFIX_AT_START)
+  if (atStart) return atStart[1].toLowerCase() as NmProdMaterialFamily
+
+  for (const { keyword, family } of MATERIAL_KEYWORDS) {
+    if (materialKeywordInBasename(base, keyword)) return family
+  }
+  return null
 }
 
 export async function fetchMaterialImagesByFecha(fecha: string): Promise<NmProdMaterialImageRow[]> {

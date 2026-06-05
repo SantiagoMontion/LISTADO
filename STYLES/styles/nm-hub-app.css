@@ -4818,6 +4818,41 @@ body:has(.nm-hub-app--cut-list) {
   color: #8b949e;
 }
 
+.upload-images-modal .upload-images-hint {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: #6b7280;
+}
+
+.upload-images-modal .modal-family-select,
+.upload-images-modal .upload-images-preview-family-select {
+  width: 100%;
+  max-width: 100%;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #121417;
+  color: #fcfdff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: inherit;
+}
+
+.upload-images-modal .upload-images-preview-family-label {
+  display: block;
+  width: 100%;
+}
+
+.upload-images-modal .upload-images-preview-manual {
+  align-self: flex-start;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+  color: #fbbf24;
+}
+
 .upload-images-modal .upload-images-preview-list {
   list-style: none;
   margin: 0;

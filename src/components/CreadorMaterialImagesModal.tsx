@@ -1,37 +1,49 @@
 import { useCallback, useEffect, useId, useRef, useState, type ChangeEvent, type Dispatch, type SetStateAction } from 'react'
 import { normalizeCalendarDate, todayIsoLocal } from '../lib/date'
 import { formatSupabaseOrError } from '../lib/errors'
-import { NM_PROD_MATERIAL_FAMILY_LABEL, parseMaterialFamilyFromFilename, uploadMaterialDayImages } from '../lib/nmProdMaterialImages'
+import {
+  NM_PROD_MATERIAL_FAMILIES,
+  NM_PROD_MATERIAL_FAMILY_LABEL,
+  parseMaterialFamilyFromFilename,
+  uploadMaterialDayImages,
+} from '../lib/nmProdMaterialImages'
 import type { NmProdMaterialFamily } from '../lib/types'
 
-type PendingRow = { localId: string; file: File; family: NmProdMaterialFamily; objectUrl: string }
+type PendingRow = {
+  localId: string
+  file: File
+  family: NmProdMaterialFamily
+  objectUrl: string
+  inferred: boolean
+}
 
 function appendFilesToRows(
   files: File[],
+  defaultFamily: NmProdMaterialFamily,
   setRows: Dispatch<SetStateAction<PendingRow[]>>,
   setError: Dispatch<SetStateAction<string | null>>,
 ) {
   const picked = files.filter((f) => f.type.startsWith('image/'))
   if (picked.length === 0) return
-  const invalid: string[] = []
+  const manualNames: string[] = []
   const toAdd: PendingRow[] = []
   for (const file of picked) {
-    const fam = parseMaterialFamilyFromFilename(file.name)
-    if (!fam) invalid.push(file.name)
-    else {
-      toAdd.push({
-        localId: `${file.name}-${file.size}-${file.lastModified}-${crypto.randomUUID()}`,
-        file,
-        family: fam,
-        objectUrl: URL.createObjectURL(file),
-      })
-    }
+    const inferred = parseMaterialFamilyFromFilename(file.name)
+    const fam = inferred ?? defaultFamily
+    if (!inferred) manualNames.push(file.name)
+    toAdd.push({
+      localId: `${file.name}-${file.size}-${file.lastModified}-${crypto.randomUUID()}`,
+      file,
+      family: fam,
+      objectUrl: URL.createObjectURL(file),
+      inferred: inferred !== null,
+    })
   }
-  if (invalid.length > 0) {
+  if (manualNames.length > 0) {
     setError(
-      invalid.length === 1
-        ? `No se reconoce el material en «${invalid[0]}». El nombre debe empezar con Classic, PRO, Ultra, Alfombra o FALTAS (ej. Classic1, FALTAS1).`
-        : `No se reconoce el material en ${invalid.length} archivos. Ejemplos: Classic1, PRO1, Ultra1, Alfombra1, FALTAS1.`,
+      manualNames.length === 1
+        ? `«${manualNames[0]}» se asignó a ${NM_PROD_MATERIAL_FAMILY_LABEL[defaultFamily]}. Cambiá el material abajo si hace falta.`
+        : `${manualNames.length} archivos sin material en el nombre se asignaron a ${NM_PROD_MATERIAL_FAMILY_LABEL[defaultFamily]}. Revisá o cambiá el material de cada uno.`,
     )
   } else {
     setError(null)
@@ -48,7 +60,9 @@ interface CreadorMaterialImagesModalProps {
 
 export function CreadorMaterialImagesModal({ open, configured, onClose, onDone }: CreadorMaterialImagesModalProps) {
   const titleId = useId()
+  const defaultFamilyId = useId()
   const [fecha, setFecha] = useState(todayIsoLocal)
+  const [defaultFamily, setDefaultFamily] = useState<NmProdMaterialFamily>('classic')
   const [rows, setRows] = useState<PendingRow[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -65,6 +79,7 @@ export function CreadorMaterialImagesModal({ open, configured, onClose, onDone }
   useEffect(() => {
     if (!open) return
     setFecha(todayIsoLocal())
+    setDefaultFamily('classic')
     setError(null)
     setBusy(false)
     setRows((prev) => {
@@ -73,10 +88,17 @@ export function CreadorMaterialImagesModal({ open, configured, onClose, onDone }
     })
   }, [open])
 
-  const onFileInput = useCallback((e: ChangeEvent<HTMLInputElement>) => {
-    const list = e.target.files ? Array.from(e.target.files) : []
-    appendFilesToRows(list, setRows, setError)
-    e.target.value = ''
+  const onFileInput = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      const list = e.target.files ? Array.from(e.target.files) : []
+      appendFilesToRows(list, defaultFamily, setRows, setError)
+      e.target.value = ''
+    },
+    [defaultFamily],
+  )
+
+  const setRowFamily = useCallback((localId: string, family: NmProdMaterialFamily) => {
+    setRows((prev) => prev.map((r) => (r.localId === localId ? { ...r, family } : r)))
   }, [])
 
   const removeRow = useCallback((localId: string) => {
@@ -167,6 +189,28 @@ export function CreadorMaterialImagesModal({ open, configured, onClose, onDone }
           Examinar
         </button>
 
+        <div className="modal-field-group">
+          <label className="modal-field-label" htmlFor={defaultFamilyId}>
+            Material por defecto
+          </label>
+          <p className="upload-images-hint">
+            Si el nombre no incluye Classic, PRO, Ultra, Alfombra o FALTAS, se usa este material.
+          </p>
+          <select
+            id={defaultFamilyId}
+            className="modal-family-select"
+            value={defaultFamily}
+            disabled={!configured || busy}
+            onChange={(e) => setDefaultFamily(e.target.value as NmProdMaterialFamily)}
+          >
+            {NM_PROD_MATERIAL_FAMILIES.map((fam) => (
+              <option key={fam} value={fam}>
+                {NM_PROD_MATERIAL_FAMILY_LABEL[fam]}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {rows.length > 0 ? (
           <>
             <p className="upload-status-text upload-status-text--active">
@@ -179,7 +223,27 @@ export function CreadorMaterialImagesModal({ open, configured, onClose, onDone }
                     <img src={r.objectUrl} alt="" className="upload-images-preview-thumb" />
                   </div>
                   <div className="upload-images-preview-meta">
-                    <span className="upload-images-preview-family">{NM_PROD_MATERIAL_FAMILY_LABEL[r.family]}</span>
+                    <label className="upload-images-preview-family-label">
+                      <span className="nm-hub-sr-only">Material de {r.file.name}</span>
+                      <select
+                        className="upload-images-preview-family-select"
+                        value={r.family}
+                        disabled={busy}
+                        aria-label={`Material de ${r.file.name}`}
+                        onChange={(e) => setRowFamily(r.localId, e.target.value as NmProdMaterialFamily)}
+                      >
+                        {NM_PROD_MATERIAL_FAMILIES.map((fam) => (
+                          <option key={fam} value={fam}>
+                            {NM_PROD_MATERIAL_FAMILY_LABEL[fam]}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    {!r.inferred ? (
+                      <span className="upload-images-preview-manual" title="Material asignado manualmente">
+                        Manual
+                      </span>
+                    ) : null}
                     <button
                       type="button"
                       className="upload-images-preview-remove"
