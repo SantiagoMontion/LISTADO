@@ -2307,6 +2307,14 @@ body:has(.nm-hub-app--cut-list) {
   padding-bottom: 1.5rem;
 }
 
+.nm-hub-app.nm-hub-app--cut-list.nm-hub-app--cut-list-ordenar {
+  padding-bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
+}
+
+.nm-hub-app.nm-hub-app--cut-list.nm-hub-app--cut-list-ordenar-expanded {
+  padding-bottom: calc(7.75rem + env(safe-area-inset-bottom, 0px));
+}
+
 /* Navbar compartida: dashboard + tareas (alineación, sin barra blanca) */
 .nm-hub-app .dashboard-navbar {
   box-sizing: border-box;
@@ -4399,9 +4407,69 @@ body:has(.nm-hub-app--cut-list) {
   gap: 0;
 }
 
-.nm-hub-app--cut-list .cut-list-ordenar-wrap {
+.nm-hub-app--cut-list .cut-list-ordenar-bar {
+  position: fixed;
+  z-index: 40;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  box-sizing: border-box;
   width: 100%;
-  margin-top: 12px;
+  max-width: min(100%, 26rem);
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(to top, #08090a 65%, rgba(8, 9, 10, 0));
+  pointer-events: none;
+}
+
+.nm-hub-app--cut-list .cut-list-ordenar-bar .cut-list-ordenar-btn {
+  pointer-events: auto;
+}
+
+.nm-hub-app--cut-list .cut-list-ordenar-bar--expanded {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.nm-hub-app--cut-list .cut-list-ordenar-merge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background-color: #121417;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: #9099a3;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nm-hub-app--cut-list .cut-list-ordenar-merge-input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: #4ade80;
+  cursor: pointer;
+}
+
+.nm-hub-app--cut-list .cut-list-ordenar-merge:has(.cut-list-ordenar-merge-input:checked) {
+  color: #fcfdff;
+  border-color: rgba(74, 222, 128, 0.35);
+  background-color: rgba(74, 222, 128, 0.08);
+}
+
+.nm-hub-app--cut-list .cut-list-day-label {
+  display: inline-block;
+  margin-top: 2px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #9099a3;
 }
 
 .nm-hub-app--cut-list .cut-list-ordenar-btn {
@@ -4412,7 +4480,7 @@ body:has(.nm-hub-app--cut-list) {
   background-color: #121417;
   border: 1px solid rgba(255, 255, 255, 0.04);
   border-radius: 12px;
-  padding: 12px 16px;
+  padding: 14px 16px;
   color: #535a62;
   font: inherit;
   font-size: 0.9rem;

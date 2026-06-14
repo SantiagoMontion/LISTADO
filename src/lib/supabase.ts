@@ -228,16 +228,54 @@ const TASK_SELECT_WITH_FALTAS =
 const TASK_SELECT_LEGACY =
   'id, report_id, material_type, dimensions, total_qty, current_qty, is_priority, notes, is_completed, created_at'
 
+function mapTaskRows(rows: unknown[] | null): NmProdTask[] {
+  return (rows ?? []).map((row) => ({
+    ...(row as NmProdTask),
+    from_faltas: Boolean((row as { from_faltas?: boolean }).from_faltas),
+  }))
+}
+
+async function resolveTaskSelect(sb: ReturnType<typeof requireSupabase>): Promise<string> {
+  const probe = await sb.from('nm_prod_tasks').select(TASK_SELECT_WITH_FALTAS).limit(1)
+  if (!probe.error) return TASK_SELECT_WITH_FALTAS
+
+  const msg = String((probe.error as { message?: string }).message ?? '')
+  const code = String((probe.error as { code?: string }).code ?? '')
+  if (msg.includes('from_faltas') || msg.includes('fecha_corte') || code === '42703') {
+    if (msg.includes('from_faltas')) return TASK_SELECT_LEGACY
+    return 'id, report_id, material_type, dimensions, total_qty, current_qty, is_priority, from_faltas, notes, is_completed, created_at'
+  }
+  throw probe.error
+}
+
+/** Todas las tareas pendientes de todos los reportes (paginado). */
+export async function fetchAllPendingTasks(): Promise<NmProdTask[]> {
+  const sb = requireSupabase()
+  const select = await resolveTaskSelect(sb)
+  const out: NmProdTask[] = []
+  let from = 0
+
+  while (true) {
+    const { data, error } = await sb
+      .from('nm_prod_tasks')
+      .select(select)
+      .range(from, from + TASK_PROGRESS_PAGE - 1)
+    if (error) throw error
+    const batch = mapTaskRows(data)
+    for (const task of batch) {
+      if (!taskProgressRowDone(task)) out.push(task)
+    }
+    if ((data ?? []).length < TASK_PROGRESS_PAGE) break
+    from += TASK_PROGRESS_PAGE
+  }
+
+  return out
+}
+
 export async function fetchTasks(reportId: string): Promise<NmProdTask[]> {
   const sb = requireSupabase()
-  const mapRows = (rows: unknown[] | null) =>
-    (rows ?? []).map((row) => ({
-      ...(row as NmProdTask),
-      from_faltas: Boolean((row as { from_faltas?: boolean }).from_faltas),
-    }))
-
   const first = await sb.from('nm_prod_tasks').select(TASK_SELECT_WITH_FALTAS).eq('report_id', reportId)
-  if (!first.error) return mapRows(first.data)
+  if (!first.error) return mapTaskRows(first.data)
 
   const msg = String((first.error as { message?: string }).message ?? '')
   const code = String((first.error as { code?: string }).code ?? '')
@@ -249,7 +287,7 @@ export async function fetchTasks(reportId: string): Promise<NmProdTask[]> {
       .select(msg.includes('from_faltas') ? TASK_SELECT_LEGACY : withoutFechaCorte)
       .eq('report_id', reportId)
     if (second.error) throw second.error
-    return mapRows(second.data)
+    return mapTaskRows(second.data)
   }
   throw first.error
 }

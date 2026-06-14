@@ -39,6 +39,7 @@ import {
   fetchReportsWithTasksProgress,
   fetchTasks,
   incrementTaskQty,
+  fetchAllPendingTasks,
   supabase,
   toggleTaskCompleted,
   toggleTaskPriority,
@@ -196,6 +197,11 @@ export default function App() {
   const [stripPackSortByTab, setStripPackSortByTab] = useState<
     Partial<Record<MaterialTab, boolean>>
   >({})
+  const [mergeAllListsByTab, setMergeAllListsByTab] = useState<
+    Partial<Record<MaterialTab, boolean>>
+  >({})
+  const [allPendingTasks, setAllPendingTasks] = useState<NmProdTask[]>([])
+  const [allPendingTasksLoading, setAllPendingTasksLoading] = useState(false)
 
   useEffect(() => {
     if (!showCreadorMaterialImages || path !== '/creador') return
@@ -367,9 +373,65 @@ export default function App() {
     }
   }, [configured, reportId, supabase, scheduleRefreshReports])
 
+  const stripPackSortActive = Boolean(stripPackSortByTab[activeTab])
+  const mergeAllListsActive =
+    stripPackSortActive && Boolean(mergeAllListsByTab[activeTab])
+  const rollWidthForActiveTab = ROLL_WIDTH_BY_TAB[activeTab]
+
+  const reportFechaById = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const r of reports) {
+      map.set(r.id, normalizeCalendarDate(r.fecha))
+    }
+    return map
+  }, [reports])
+
+  const listSourceTasks = mergeAllListsActive ? allPendingTasks : tasks
+
+  const activeTabHasTasks = listSourceTasks.some(
+    (t) => tabForMaterialType(t.material_type) === activeTab,
+  )
+  const showOrdenarBar =
+    mode === 'manager' &&
+    Boolean(reportId) &&
+    tasksLoaded &&
+    rollWidthForActiveTab !== undefined &&
+    (activeTabHasTasks || stripPackSortActive)
+
+  useEffect(() => {
+    setStripPackSortByTab({})
+    setMergeAllListsByTab({})
+  }, [reportId])
+
+  useEffect(() => {
+    if (!configured || mode !== 'manager' || !mergeAllListsActive) {
+      setAllPendingTasksLoading(false)
+      return
+    }
+
+    let cancelled = false
+    setAllPendingTasksLoading(true)
+    void fetchAllPendingTasks()
+      .then((rows) => {
+        if (cancelled) return
+        setAllPendingTasks(rows)
+      })
+      .catch((e: unknown) => {
+        if (cancelled) return
+        setError(formatSupabaseOrError(e))
+      })
+      .finally(() => {
+        if (!cancelled) setAllPendingTasksLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [configured, mode, mergeAllListsActive, reports])
+
   const tasksByMainFilter = useMemo(
-    () => tasks.filter((t) => matchesTaskFilter(t, taskFilter)),
-    [tasks, taskFilter],
+    () => listSourceTasks.filter((t) => matchesTaskFilter(t, taskFilter)),
+    [listSourceTasks, taskFilter],
   )
 
   const materialsAvailable = useMemo(() => {
@@ -399,15 +461,6 @@ export default function App() {
       setActiveTab(materialsAvailable[0])
     }
   }, [mode, materialsAvailable, activeTab])
-
-  const stripPackSortActive = Boolean(stripPackSortByTab[activeTab])
-  const rollWidthForActiveTab = ROLL_WIDTH_BY_TAB[activeTab]
-  const showStripPackOrdenar =
-    rollWidthForActiveTab !== undefined && taskFilter !== 'completed'
-
-  useEffect(() => {
-    setStripPackSortByTab({})
-  }, [reportId])
 
   const visibleTasks = useMemo(() => {
     const tabbed = tasksByMainFilter.filter(
@@ -976,11 +1029,17 @@ export default function App() {
 
   const isListaUpload = mode === 'creator'
   const isCutList = mode === 'manager'
-  const hubShellClass = isListaUpload
-    ? 'nm-hub-app nm-hub-app--lista-upload'
-    : isCutList
-      ? 'nm-hub-app nm-hub-app--cut-list'
-      : 'nm-prod-app'
+  const hubShellClass = [
+    isListaUpload
+      ? 'nm-hub-app nm-hub-app--lista-upload'
+      : isCutList
+        ? 'nm-hub-app nm-hub-app--cut-list'
+        : 'nm-prod-app',
+    showOrdenarBar ? 'nm-hub-app--cut-list-ordenar' : '',
+    showOrdenarBar && stripPackSortActive ? 'nm-hub-app--cut-list-ordenar-expanded' : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   return (
     <>
@@ -1292,12 +1351,20 @@ export default function App() {
             </div>
           )}
           <div className="cut-list-items">
-            {!tasksLoaded && tasks.length === 0 ? (
+            {mergeAllListsActive && allPendingTasksLoading ? (
+              <p className="nm-prod-task-meta">Cargando todas las listas…</p>
+            ) : !tasksLoaded && tasks.length === 0 ? (
               <p className="nm-prod-task-meta">Cargando tareas…</p>
-            ) : tasks.length === 0 ? (
+            ) : tasks.length === 0 && !mergeAllListsActive ? (
               <p className="nm-prod-task-meta">Este reporte no tiene tareas.</p>
             ) : visibleTasks.length === 0 ? (
-                  allCutEntireReport ? (
+                  mergeAllListsActive ? (
+                    <div className="nm-prod-all-cut-state">
+                      <p className="nm-prod-empty-text">
+                        No hay pendientes en esta pestaña en ningún día.
+                      </p>
+                    </div>
+                  ) : allCutEntireReport ? (
                     <div className="nm-prod-all-cut-state">
                       <p className="nm-prod-all-cut-text">Todo cortado! Seguí así</p>
                     </div>
@@ -1325,27 +1392,15 @@ export default function App() {
                       onToggleCompleted={onToggleCompleted}
                       showOnlyDecrement={taskFilter === 'completed'}
                       variant="rebel"
+                      listDayLabel={
+                        mergeAllListsActive
+                          ? formatDayMonth(reportFechaById.get(t.report_id) ?? '')
+                          : undefined
+                      }
                     />
                   ))
             )}
           </div>
-          {showStripPackOrdenar && visibleTasks.length > 0 ? (
-            <div className="cut-list-ordenar-wrap">
-              <button
-                type="button"
-                className={`cut-list-ordenar-btn filter-pill${stripPackSortActive ? ' active' : ''}`}
-                aria-pressed={stripPackSortActive}
-                onClick={() =>
-                  setStripPackSortByTab((prev) => ({
-                    ...prev,
-                    [activeTab]: !prev[activeTab],
-                  }))
-                }
-              >
-                Ordenar
-              </button>
-            </div>
-          ) : null}
           {canDeleteReports && taskFilter === 'completed' && reportId && (
             <div className="nm-prod-delete-list-wrap">
               <button
@@ -1360,6 +1415,45 @@ export default function App() {
           )}
         </section>
       )}
+
+      {showOrdenarBar ? (
+        <div
+          className={`cut-list-ordenar-bar${stripPackSortActive ? ' cut-list-ordenar-bar--expanded' : ''}`}
+          role="toolbar"
+          aria-label="Ordenar lista de corte"
+        >
+          <button
+            type="button"
+            className={`cut-list-ordenar-btn filter-pill${stripPackSortActive ? ' active' : ''}`}
+            aria-pressed={stripPackSortActive}
+            onClick={() =>
+              setStripPackSortByTab((prev) => ({
+                ...prev,
+                [activeTab]: !prev[activeTab],
+              }))
+            }
+          >
+            Ordenar
+          </button>
+          {stripPackSortActive ? (
+            <label className="cut-list-ordenar-merge">
+              <input
+                type="checkbox"
+                className="cut-list-ordenar-merge-input"
+                checked={Boolean(mergeAllListsByTab[activeTab])}
+                disabled={allPendingTasksLoading}
+                onChange={(e) =>
+                  setMergeAllListsByTab((prev) => ({
+                    ...prev,
+                    [activeTab]: e.target.checked,
+                  }))
+                }
+              />
+              <span>Sumar TODAS las listas</span>
+            </label>
+          ) : null}
+        </div>
+      ) : null}
     </div>
     </>
   )

@@ -10,6 +10,8 @@ interface TaskCardProps {
   onToggleCompleted?: (task: NmProdTask) => void
   showOnlyDecrement?: boolean
   variant?: 'legacy' | 'rebel'
+  /** Fecha de la lista (ej. 11/6) cuando se unen listas de varios días. */
+  listDayLabel?: string
 }
 
 export function TaskCard({
@@ -22,6 +24,7 @@ export function TaskCard({
   onToggleCompleted,
   showOnlyDecrement = false,
   variant = 'legacy',
+  listDayLabel,
 }: TaskCardProps) {
   const done = task.is_completed || task.current_qty >= task.total_qty
   const materialTypeNorm = task.material_type.trim().toLowerCase()
@@ -65,6 +68,11 @@ export function TaskCard({
           {task.from_faltas ? (
             <span className="cut-alert-text" title="Cargado desde LISTA FALTAS">
               Faltas
+            </span>
+          ) : null}
+          {listDayLabel ? (
+            <span className="cut-list-day-label" title="Día de la lista">
+              {listDayLabel}
             </span>
           ) : null}
         </div>

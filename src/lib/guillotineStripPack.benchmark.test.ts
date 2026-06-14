@@ -28,20 +28,6 @@ function expandExpected(pedido: StripPackInputLine[]): Array<{ ancho: number; al
   return out
 }
 
-function naiveTotalHeight(pedido: StripPackInputLine[]): number {
-  let total = 0
-  for (const line of pedido) {
-    for (let i = 0; i < line.cant; i++) {
-      total += Math.min(line.ancho, line.alto <= line.ancho ? line.alto : line.ancho)
-      // naive: one strip per piece, natural orientation height = alto if fits width else ancho
-      const h =
-        line.ancho <= CLASSIC_W ? line.alto : line.alto <= CLASSIC_W ? line.ancho : Infinity
-      total += h === Infinity ? 0 : h
-    }
-  }
-  return total
-}
-
 function naiveOnePiecePerStrip(pedido: StripPackInputLine[], rollWidth: number): number {
   let total = 0
   for (const line of pedido) {
