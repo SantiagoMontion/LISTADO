@@ -26,7 +26,9 @@ import { HUB_NAV_EVENT, onHubLinkClick } from './lib/hubNavigate'
 import { normalizeCalendarDate, todayIsoLocal } from './lib/date'
 import { formatSupabaseOrError } from './lib/errors'
 import { parseProductionReport } from './lib/parseReport'
+import { ROLL_WIDTH_BY_TAB } from './lib/guillotineStripPack'
 import { sortTasksForDisplay } from './lib/sortTasks'
+import { sortTasksByStripPack } from './lib/sortTasksByStripPack'
 import { surfaceFromDimensions } from './lib/surface'
 import {
   createReportWithTasks,
@@ -191,6 +193,9 @@ export default function App() {
   const [quickAddError, setQuickAddError] = useState<string | null>(null)
   const [pendingDates, setPendingDates] = useState<Set<string>>(new Set())
   const [materialImgModalOpen, setMaterialImgModalOpen] = useState(false)
+  const [stripPackSortByTab, setStripPackSortByTab] = useState<
+    Partial<Record<MaterialTab, boolean>>
+  >({})
 
   useEffect(() => {
     if (!showCreadorMaterialImages || path !== '/creador') return
@@ -395,6 +400,15 @@ export default function App() {
     }
   }, [mode, materialsAvailable, activeTab])
 
+  const stripPackSortActive = Boolean(stripPackSortByTab[activeTab])
+  const rollWidthForActiveTab = ROLL_WIDTH_BY_TAB[activeTab]
+  const showStripPackOrdenar =
+    rollWidthForActiveTab !== undefined && taskFilter !== 'completed'
+
+  useEffect(() => {
+    setStripPackSortByTab({})
+  }, [reportId])
+
   const visibleTasks = useMemo(() => {
     const tabbed = tasksByMainFilter.filter(
       (t) => tabForMaterialType(t.material_type) === activeTab,
@@ -404,6 +418,9 @@ export default function App() {
       taskFilter === 'completed' ? tabbed.filter((t) => nmProdTaskMatchesCompletedSearch(t, q)) : tabbed
 
     if (taskFilter !== 'completed') {
+      if (stripPackSortActive && rollWidthForActiveTab !== undefined) {
+        return sortTasksByStripPack(searched, rollWidthForActiveTab)
+      }
       return sortTasksForDisplay(searched)
     }
     return [...searched].sort((a, b) => {
@@ -418,7 +435,15 @@ export default function App() {
       if (byRecentCut !== 0) return byRecentCut
       return surfaceFromDimensions(b.dimensions) - surfaceFromDimensions(a.dimensions)
     })
-  }, [tasksByMainFilter, activeTab, taskFilter, completedSearch, completedAtById])
+  }, [
+    tasksByMainFilter,
+    activeTab,
+    taskFilter,
+    completedSearch,
+    completedAtById,
+    stripPackSortActive,
+    rollWidthForActiveTab,
+  ])
 
   const allCutInActiveTab = useMemo(() => {
     if (taskFilter !== 'all') return false
@@ -1304,6 +1329,23 @@ export default function App() {
                   ))
             )}
           </div>
+          {showStripPackOrdenar && visibleTasks.length > 0 ? (
+            <div className="cut-list-ordenar-wrap">
+              <button
+                type="button"
+                className={`cut-list-ordenar-btn filter-pill${stripPackSortActive ? ' active' : ''}`}
+                aria-pressed={stripPackSortActive}
+                onClick={() =>
+                  setStripPackSortByTab((prev) => ({
+                    ...prev,
+                    [activeTab]: !prev[activeTab],
+                  }))
+                }
+              >
+                Ordenar
+              </button>
+            </div>
+          ) : null}
           {canDeleteReports && taskFilter === 'completed' && reportId && (
             <div className="nm-prod-delete-list-wrap">
               <button
