@@ -1,45 +1,63 @@
 import { describe, expect, it } from 'vitest'
 import { guillotineStripPack } from './guillotineStripPack'
-import { sortTasksByStripPack } from './sortTasksByStripPack'
-import type { NmProdTask } from './types'
+import { isMoldMeasure, splitMoldAndPlanTasks } from './moldMeasures'
+
+function wasteArea(result: ReturnType<typeof guillotineStripPack>): number {
+  return result.totalWasteAreaCm2
+}
 
 describe('guillotineStripPack', () => {
-  it('agrupa piezas del mismo alto en tiras y minimiza altura total', () => {
-    const pedido = [
-      { ancho: 60, alto: 30, cant: 1 },
-      { ancho: 61, alto: 30, cant: 1 },
-      { ancho: 40, alto: 60, cant: 2 },
-      { ancho: 35, alto: 90, cant: 1 },
-    ]
+  it('90×40 ×3: plancha de 90 cm con 3 piezas (menos desperdicio que 3×40 cm)', () => {
+    const result = guillotineStripPack([{ ancho: 90, alto: 40, cant: 3 }], 140)
 
-    const result = guillotineStripPack(pedido, 140)
+    expect(result.stripCount).toBe(1)
+    expect(result.strips[0].stripHeight).toBe(90)
+    expect(result.strips[0].pieces).toHaveLength(3)
+    expect(result.strips[0].pieces.every((p) => p.rotated)).toBe(true)
+    expect(result.strips[0].usedWidth).toBe(120)
+    expect(result.strips[0].wasteWidth).toBe(20)
+  })
+
+  it('127×45 ×2: planchas de 45 cm (menos desperdicio que rotar a 127 cm)', () => {
+    const result = guillotineStripPack([{ ancho: 127, alto: 45, cant: 2 }], 140)
 
     expect(result.stripCount).toBe(2)
-    expect(result.unplacedPieceIndices).toEqual([])
-
-    const totalHeight = result.strips.reduce((sum, s) => sum + s.stripHeight, 0)
-    expect(totalHeight).toBe(120)
-
-    const strip90 = result.strips.find((s) => s.stripHeight === 90)
-    expect(strip90?.pieces).toHaveLength(3)
-    expect(strip90?.usedWidth).toBe(115)
-
-    const strip30 = result.strips.find((s) => s.stripHeight === 30)
-    expect(strip30?.pieces).toHaveLength(2)
-    expect(strip30?.usedWidth).toBe(121)
-    expect(strip30?.pieces.every((p) => !p.rotated)).toBe(true)
+    expect(result.strips.every((s) => s.stripHeight === 45)).toBe(true)
+    expect(result.strips.every((s) => s.pieces.length === 1)).toBe(true)
+    expect(result.strips.every((s) => !s.pieces[0].rotated)).toBe(true)
   })
 
-  it('prefiere orientación original cuando cabe en el rollo', () => {
-    const result = guillotineStripPack([{ ancho: 100, alto: 40, cant: 1 }], 128)
-    expect(result.stripCount).toBe(1)
-    expect(result.strips[0].pieces[0].rotated).toBe(false)
+  it('70×30 ×4: 2 planchas de 30 cm con 2 piezas cada una (0 cm² de merma)', () => {
+    const result = guillotineStripPack([{ ancho: 70, alto: 30, cant: 4 }], 140)
+
+    expect(result.stripCount).toBe(2)
+    expect(result.strips.every((s) => s.stripHeight === 30)).toBe(true)
+    expect(result.strips.every((s) => s.pieces.length === 2)).toBe(true)
+    expect(result.totalWasteAreaCm2).toBe(0)
   })
 
-  it('rota piezas cuando la orientación original no cabe en el ancho', () => {
-    const result = guillotineStripPack([{ ancho: 150, alto: 40, cant: 1 }], 140)
+  it('90×40 ×4: 4 planchas de 40 cm (menos merma que apilar 3+1 rotadas)', () => {
+    const normal = guillotineStripPack([{ ancho: 90, alto: 40, cant: 4 }], 140)
+    const rotatedOnly = guillotineStripPack([{ ancho: 90, alto: 40, cant: 3 }], 140)
+
+    expect(normal.stripCount).toBe(4)
+    expect(normal.strips.every((s) => s.stripHeight === 40)).toBe(true)
+    expect(normal.totalWasteAreaCm2).toBeLessThan(
+      rotatedOnly.totalWasteAreaCm2 + 90 * 100,
+    )
+  })
+
+  it('prefiere menos material total entre orientaciones posibles', () => {
+    const rotated = guillotineStripPack([{ ancho: 90, alto: 40, cant: 3 }], 140)
+    const naive = guillotineStripPack([{ ancho: 90, alto: 40, cant: 1 }], 140)
+    expect(wasteArea(rotated)).toBeLessThan(wasteArea(naive) * 3)
+  })
+
+  it('82×32 ×4 en una plancha de 82 cm', () => {
+    const result = guillotineStripPack([{ ancho: 82, alto: 32, cant: 4 }], 140)
     expect(result.stripCount).toBe(1)
-    expect(result.strips[0].pieces[0].rotated).toBe(true)
+    expect(result.strips[0].stripHeight).toBe(82)
+    expect(result.strips[0].pieces).toHaveLength(4)
   })
 
   it('marca piezas imposibles cuando exceden el ancho del rollo', () => {
@@ -47,38 +65,26 @@ describe('guillotineStripPack', () => {
     expect(result.stripCount).toBe(0)
     expect(result.unplacedPieceIndices).toEqual([0])
   })
+
+  it('expone largo total de rollo', () => {
+    const result = guillotineStripPack([{ ancho: 80, alto: 30, cant: 2 }], 140)
+    expect(result.totalRollLengthCm).toBeGreaterThan(0)
+    expect(result.totalRollLengthCm).toBe(
+      result.strips.reduce((s, t) => s + t.stripHeight, 0),
+    )
+  })
 })
 
-describe('sortTasksByStripPack', () => {
-  function task(id: string, dimensions: string, totalQty: number): NmProdTask {
-    return {
-      id,
-      report_id: 'r1',
-      material_type: 'classic',
-      dimensions,
-      total_qty: totalQty,
-      current_qty: 0,
-      is_priority: false,
-      from_faltas: false,
-      notes: null,
-      is_completed: false,
-      created_at: '2026-01-01T00:00:00Z',
-    }
-  }
-
-  it('ordena tareas según el plan de tiras', () => {
+describe('moldMeasures', () => {
+  it('separa 90×40 y 82×32 del plan', () => {
     const tasks = [
-      task('a', '60x30', 1),
-      task('b', '61x30', 1),
-      task('c', '40x60', 2),
-      task('d', '35x90', 1),
+      { dimensions: '90x40' },
+      { dimensions: '82x32' },
+      { dimensions: '127x45' },
     ]
-
-    const ordered = sortTasksByStripPack(tasks, 140)
-    const ids = ordered.map((t) => t.id)
-
-    expect(ids.indexOf('d')).toBeLessThan(ids.indexOf('a'))
-    expect(ids.indexOf('c')).toBeLessThan(ids.indexOf('a'))
-    expect(ids.indexOf('b')).toBeLessThan(ids.indexOf('a'))
+    const { moldTasks, planTasks } = splitMoldAndPlanTasks(tasks)
+    expect(moldTasks.map((t) => t.dimensions)).toEqual(['90x40', '82x32'])
+    expect(planTasks.map((t) => t.dimensions)).toEqual(['127x45'])
+    expect(isMoldMeasure('90X40')).toBe(true)
   })
 })

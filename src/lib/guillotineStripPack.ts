@@ -16,7 +16,6 @@ export interface PackedPiece {
   ancho: number
   alto: number
   rotated: boolean
-  /** Índice en la lista expandida de piezas de entrada. */
   sourcePieceIndex: number
 }
 
@@ -31,8 +30,11 @@ export interface StripPackResult {
   rollWidth: number
   stripCount: number
   strips: StripPlan[]
-  /** Piezas que no caben en el rollo en ninguna orientación. */
   unplacedPieceIndices: number[]
+  /** Suma de alturas de plancha (cm de rollo consumidos en eje). */
+  totalRollLengthCm: number
+  /** Suma de (ancho sobrante × alto de plancha) en cm². */
+  totalWasteAreaCm2: number
 }
 
 interface ExpandedPiece {
@@ -41,23 +43,11 @@ interface ExpandedPiece {
   sourcePieceIndex: number
 }
 
-interface Orientation {
+interface BatchOrientation {
   rotated: boolean
+  stripHeight: number
   pieceWidth: number
-  pieceHeight: number
-}
-
-function orientations(ancho: number, alto: number, rollWidth: number): Orientation[] {
-  const opts: Orientation[] = []
-  if (ancho <= rollWidth) {
-    opts.push({ rotated: false, pieceWidth: ancho, pieceHeight: alto })
-  }
-  if (alto <= rollWidth && alto !== ancho) {
-    opts.push({ rotated: true, pieceWidth: alto, pieceHeight: ancho })
-  } else if (alto <= rollWidth && ancho > rollWidth) {
-    opts.push({ rotated: true, pieceWidth: alto, pieceHeight: ancho })
-  }
-  return opts
+  maxPerStrip: number
 }
 
 function expandPedido(pedido: StripPackInputLine[]): ExpandedPiece[] {
@@ -77,115 +67,213 @@ function expandPedido(pedido: StripPackInputLine[]): ExpandedPiece[] {
   return pieces
 }
 
-function sortPiecesForPacking(pieces: ExpandedPiece[]): ExpandedPiece[] {
-  return [...pieces].sort((a, b) => {
-    if (b.alto !== a.alto) return b.alto - a.alto
-    if (b.ancho !== a.ancho) return b.ancho - a.ancho
-    return a.sourcePieceIndex - b.sourcePieceIndex
-  })
-}
+function orientationsForBatch(ancho: number, alto: number, rollWidth: number): BatchOrientation[] {
+  const candidates: BatchOrientation[] = []
 
-function pickNewStripOrientation(
-  ancho: number,
-  alto: number,
-  rollWidth: number,
-): Orientation | null {
-  const opts = orientations(ancho, alto, rollWidth)
-  if (opts.length === 0) return null
-  const normal = opts.find((o) => !o.rotated)
-  return normal ?? opts[0]
-}
-
-function findBestStripPlacement(
-  piece: ExpandedPiece,
-  strips: StripPlan[],
-  rollWidth: number,
-): { stripIndex: number; orientation: Orientation } | null {
-  let best: { stripIndex: number; orientation: Orientation; score: number } | null = null
-
-  for (let stripIndex = 0; stripIndex < strips.length; stripIndex++) {
-    const strip = strips[stripIndex]
-    const remaining = rollWidth - strip.usedWidth
-    if (remaining <= 0) continue
-
-    for (const orientation of orientations(piece.ancho, piece.alto, rollWidth)) {
-      if (orientation.pieceHeight > strip.stripHeight) continue
-      if (orientation.pieceWidth > remaining) continue
-
-      const leftover = remaining - orientation.pieceWidth
-      const heightMismatch = strip.stripHeight - orientation.pieceHeight
-      const rotationPenalty = orientation.rotated ? 5_000 : 0
-      const score = heightMismatch * 1_000 + leftover + rotationPenalty
-
-      if (!best || score < best.score) {
-        best = { stripIndex, orientation, score }
-      }
+  if (ancho <= rollWidth) {
+    const maxPerStrip = Math.floor(rollWidth / ancho)
+    if (maxPerStrip > 0) {
+      candidates.push({
+        rotated: false,
+        stripHeight: alto,
+        pieceWidth: ancho,
+        maxPerStrip,
+      })
     }
   }
 
-  return best ? { stripIndex: best.stripIndex, orientation: best.orientation } : null
+  if (alto <= rollWidth) {
+    const maxPerStrip = Math.floor(rollWidth / alto)
+    if (maxPerStrip > 0) {
+      candidates.push({
+        rotated: true,
+        stripHeight: ancho,
+        pieceWidth: alto,
+        maxPerStrip,
+      })
+    }
+  }
+
+  return candidates
 }
 
-function addPieceToStrip(
-  strip: StripPlan,
-  piece: ExpandedPiece,
-  orientation: Orientation,
+function stripWasteArea(strip: StripPlan, rollWidth: number, pieceArea: number): number {
+  const materialArea = strip.stripHeight * rollWidth
+  const usedPieceArea = strip.pieces.length * pieceArea
+  return materialArea - usedPieceArea
+}
+
+function buildStripsForOrientation(
+  ancho: number,
+  alto: number,
+  pieceIndices: number[],
+  batch: BatchOrientation,
   rollWidth: number,
-): void {
-  strip.pieces.push({
-    ancho: piece.ancho,
-    alto: piece.alto,
-    rotated: orientation.rotated,
-    sourcePieceIndex: piece.sourcePieceIndex,
-  })
-  strip.usedWidth += orientation.pieceWidth
-  strip.wasteWidth = rollWidth - strip.usedWidth
+): StripPlan[] {
+  const strips: StripPlan[] = []
+  let offset = 0
+
+  while (offset < pieceIndices.length) {
+    const count = Math.min(batch.maxPerStrip, pieceIndices.length - offset)
+    const strip: StripPlan = {
+      stripHeight: batch.stripHeight,
+      usedWidth: batch.pieceWidth * count,
+      wasteWidth: rollWidth - batch.pieceWidth * count,
+      pieces: [],
+    }
+    for (let j = 0; j < count; j++) {
+      strip.pieces.push({
+        ancho,
+        alto,
+        rotated: batch.rotated,
+        sourcePieceIndex: pieceIndices[offset + j],
+      })
+    }
+    strips.push(strip)
+    offset += count
+  }
+
+  return strips
+}
+
+/** Elige normal vs rotada minimizando área de material desperdiciada en todo el grupo. */
+function packIdenticalGroupMinWaste(
+  ancho: number,
+  alto: number,
+  pieceIndices: number[],
+  rollWidth: number,
+): { strips: StripPlan[]; unplaced: number[] } {
+  const candidates = orientationsForBatch(ancho, alto, rollWidth)
+  if (candidates.length === 0) {
+    return { strips: [], unplaced: pieceIndices }
+  }
+
+  const pieceArea = ancho * alto
+  let bestStrips: StripPlan[] | null = null
+  let bestWaste = Infinity
+  let bestLength = Infinity
+
+  for (const batch of candidates) {
+    const strips = buildStripsForOrientation(ancho, alto, pieceIndices, batch, rollWidth)
+    const waste = strips.reduce((sum, s) => sum + stripWasteArea(s, rollWidth, pieceArea), 0)
+    const length = strips.reduce((sum, s) => sum + s.stripHeight, 0)
+
+    if (
+      waste < bestWaste ||
+      (waste === bestWaste && length < bestLength) ||
+      (waste === bestWaste && length === bestLength && (bestStrips?.length ?? Infinity) > strips.length)
+    ) {
+      bestWaste = waste
+      bestLength = length
+      bestStrips = strips
+    }
+  }
+
+  return { strips: bestStrips ?? [], unplaced: [] }
+}
+
+/** Une planchas del mismo alto si caben juntas en el ancho del rollo (menos cortes en eje). */
+function mergeStripsSameHeight(strips: StripPlan[], rollWidth: number): StripPlan[] {
+  const byHeight = new Map<number, StripPlan[]>()
+
+  for (const strip of strips) {
+    const list = byHeight.get(strip.stripHeight) ?? []
+    list.push({
+      ...strip,
+      pieces: [...strip.pieces],
+    })
+    byHeight.set(strip.stripHeight, list)
+  }
+
+  const merged: StripPlan[] = []
+
+  for (const group of byHeight.values()) {
+    group.sort((a, b) => b.usedWidth - a.usedWidth)
+    const open: StripPlan[] = []
+
+    for (const strip of group) {
+      let placed = false
+      for (const target of open) {
+        if (target.usedWidth + strip.usedWidth <= rollWidth) {
+          target.pieces.push(...strip.pieces)
+          target.usedWidth += strip.usedWidth
+          target.wasteWidth = rollWidth - target.usedWidth
+          placed = true
+          break
+        }
+      }
+      if (!placed) {
+        open.push(strip)
+      }
+    }
+
+    merged.push(...open)
+  }
+
+  return merged.sort((a, b) => b.stripHeight - a.stripHeight)
+}
+
+function summarizeResult(strips: StripPlan[]): Pick<StripPackResult, 'totalRollLengthCm' | 'totalWasteAreaCm2'> {
+  let totalRollLengthCm = 0
+  let totalWasteAreaCm2 = 0
+
+  for (const strip of strips) {
+    totalRollLengthCm += strip.stripHeight
+    totalWasteAreaCm2 += strip.stripHeight * strip.wasteWidth
+  }
+
+  return { totalRollLengthCm, totalWasteAreaCm2 }
 }
 
 /**
- * Heurística Best-Fit Decreasing Height para empaquetado en tiras de guillotina
- * (corte horizontal en eje + piezas lado a lado en el ancho W del rollo).
+ * Empaqueta cada medida igual con la orientación que menos material desperdicia,
+ * luego fusiona planchas del mismo alto cuando caben en el rollo.
  */
 export function guillotineStripPack(
   pedido: StripPackInputLine[],
   rollWidth: number,
 ): StripPackResult {
   if (rollWidth <= 0) {
-    return { rollWidth, stripCount: 0, strips: [], unplacedPieceIndices: [] }
+    return {
+      rollWidth,
+      stripCount: 0,
+      strips: [],
+      unplacedPieceIndices: [],
+      totalRollLengthCm: 0,
+      totalWasteAreaCm2: 0,
+    }
   }
 
   const expanded = expandPedido(pedido)
-  const sorted = sortPiecesForPacking(expanded)
-  const strips: StripPlan[] = []
+  const groups = new Map<string, ExpandedPiece[]>()
+
+  for (const piece of expanded) {
+    const key = `${piece.ancho}x${piece.alto}`
+    const list = groups.get(key) ?? []
+    list.push(piece)
+    groups.set(key, list)
+  }
+
+  const groupStrips: StripPlan[] = []
   const unplacedPieceIndices: number[] = []
 
-  for (const piece of sorted) {
-    const placement = findBestStripPlacement(piece, strips, rollWidth)
-    if (placement) {
-      addPieceToStrip(strips[placement.stripIndex], piece, placement.orientation, rollWidth)
-      continue
-    }
-
-    const newOrientation = pickNewStripOrientation(piece.ancho, piece.alto, rollWidth)
-    if (!newOrientation || newOrientation.pieceWidth > rollWidth) {
-      unplacedPieceIndices.push(piece.sourcePieceIndex)
-      continue
-    }
-
-    const strip: StripPlan = {
-      stripHeight: newOrientation.pieceHeight,
-      usedWidth: 0,
-      wasteWidth: rollWidth,
-      pieces: [],
-    }
-    addPieceToStrip(strip, piece, newOrientation, rollWidth)
-    strips.push(strip)
+  for (const key of groups.keys()) {
+    const pieces = groups.get(key) ?? []
+    const [ancho, alto] = key.split('x').map(Number)
+    const indices = pieces.map((p) => p.sourcePieceIndex)
+    const packed = packIdenticalGroupMinWaste(ancho, alto, indices, rollWidth)
+    groupStrips.push(...packed.strips)
+    unplacedPieceIndices.push(...packed.unplaced)
   }
+
+  const strips = mergeStripsSameHeight(groupStrips, rollWidth)
+  const totals = summarizeResult(strips)
 
   return {
     rollWidth,
     stripCount: strips.length,
     strips,
     unplacedPieceIndices,
+    ...totals,
   }
 }

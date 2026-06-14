@@ -4,14 +4,11 @@ import type { NmProdTask } from './types'
 
 export interface OperatorStripPiece {
   label: string
-  ancho: number
-  alto: number
-  rotated: boolean
+  count: number
 }
 
 export interface OperatorCutStrip {
   stripNumber: number
-  /** Cuántas tiras iguales cortar seguidas (mismo corte en eje y mismas piezas). */
   sheetCount: number
   stripHeight: number
   usedWidth: number
@@ -23,6 +20,7 @@ export interface OperatorCutPlan {
   rollWidth: number
   stripCount: number
   totalRollLengthCm: number
+  totalWasteAreaCm2: number
   strips: OperatorCutStrip[]
   unplaced: Array<{ label: string; dimensions: string }>
 }
@@ -32,16 +30,27 @@ function qtyForPlan(task: NmProdTask, useCompletedQty: boolean): number {
   return Math.max(task.total_qty - task.current_qty, 0)
 }
 
-function pieceLabel(ancho: number, alto: number, rotated: boolean): string {
-  if (rotated) return `${alto}×${ancho} (rotada)`
+function pieceLabel(ancho: number, alto: number): string {
   return `${ancho}×${alto}`
 }
 
 function stripSignature(strip: StripPlan): string {
-  const parts = strip.pieces.map((p) =>
-    pieceLabel(p.ancho, p.alto, p.rotated),
-  )
+  const tallies = new Map<string, number>()
+  for (const p of strip.pieces) {
+    const label = pieceLabel(p.ancho, p.alto)
+    tallies.set(label, (tallies.get(label) ?? 0) + 1)
+  }
+  const parts = [...tallies.entries()].map(([label, n]) => (n > 1 ? `${label}×${n}` : label))
   return `${strip.stripHeight}|${parts.join('+')}`
+}
+
+function aggregatePieces(strip: StripPlan): OperatorStripPiece[] {
+  const tallies = new Map<string, number>()
+  for (const p of strip.pieces) {
+    const label = pieceLabel(p.ancho, p.alto)
+    tallies.set(label, (tallies.get(label) ?? 0) + 1)
+  }
+  return [...tallies.entries()].map(([label, count]) => ({ label, count }))
 }
 
 function groupIdenticalStrips(strips: StripPlan[]): OperatorCutStrip[] {
@@ -59,19 +68,13 @@ function groupIdenticalStrips(strips: StripPlan[]): OperatorCutStrip[] {
       stripHeight: current.stripHeight,
       usedWidth: current.usedWidth,
       wasteWidth: current.wasteWidth,
-      pieces: current.pieces.map((p) => ({
-        label: pieceLabel(p.ancho, p.alto, p.rotated),
-        ancho: p.ancho,
-        alto: p.alto,
-        rotated: p.rotated,
-      })),
+      pieces: aggregatePieces(current),
     })
     i += count
   }
   return grouped
 }
 
-/** Arma el plan de corte legible para el operario a partir de las tareas pendientes. */
 export function buildOperatorCutPlan(
   tasks: NmProdTask[],
   rollWidth: number,
@@ -94,7 +97,6 @@ export function buildOperatorCutPlan(
   if (pedido.length === 0) return null
 
   const result = guillotineStripPack(pedido, rollWidth)
-  const totalRollLengthCm = result.strips.reduce((sum, s) => sum + s.stripHeight, 0)
 
   const unplaced = result.unplacedPieceIndices.map((idx) => ({
     label: pieceMeta[idx]?.dimensions ?? `#${idx}`,
@@ -104,8 +106,14 @@ export function buildOperatorCutPlan(
   return {
     rollWidth: result.rollWidth,
     stripCount: result.stripCount,
-    totalRollLengthCm,
+    totalRollLengthCm: result.totalRollLengthCm,
+    totalWasteAreaCm2: result.totalWasteAreaCm2,
     strips: groupIdenticalStrips(result.strips),
     unplaced,
   }
+}
+
+export function formatOperatorPieceLine(piece: OperatorStripPiece): string {
+  if (piece.count > 1) return `${piece.count} × ${piece.label}`
+  return piece.label
 }

@@ -1,8 +1,8 @@
 import type { OperatorCutPlan } from '../lib/buildOperatorCutPlan'
+import { formatOperatorPieceLine } from '../lib/buildOperatorCutPlan'
 
 interface CutStripPlanViewProps {
   plan: OperatorCutPlan
-  materialLabel: string
 }
 
 function sheetCountLabel(count: number): string {
@@ -10,25 +10,23 @@ function sheetCountLabel(count: number): string {
   return `${count} planchas iguales`
 }
 
-export function CutStripPlanView({ plan, materialLabel }: CutStripPlanViewProps) {
+function formatMeters(cm: number): string {
+  const m = cm / 100
+  return m >= 10 ? `${m.toFixed(1)} m` : `${m.toFixed(2)} m`
+}
+
+export function CutStripPlanView({ plan }: CutStripPlanViewProps) {
   return (
     <div className="cut-strip-plan">
-      <header className="cut-strip-plan__summary">
-        <p className="cut-strip-plan__summary-title">Plan de corte — {materialLabel}</p>
-        <p className="cut-strip-plan__summary-meta">
-          Rollo {plan.rollWidth} cm · {plan.stripCount}{' '}
-          {plan.stripCount === 1 ? 'tira' : 'tiras'} · {plan.totalRollLengthCm} cm de largo total
-        </p>
-        <p className="cut-strip-plan__summary-hint">
-          Cortá en orden. Cada tira = un corte horizontal; las medidas salen una al lado de la otra.
-        </p>
-      </header>
+      <p className="cut-strip-plan__total-meters">
+        Metros de rollo: {formatMeters(plan.totalRollLengthCm)}
+      </p>
 
       <ol className="cut-strip-plan__list">
         {plan.strips.map((strip) => (
           <li key={strip.stripNumber} className="cut-strip-plan__card">
             <div className="cut-strip-plan__card-head">
-              <span className="cut-strip-plan__badge">Tira {strip.stripNumber}</span>
+              <span className="cut-strip-plan__badge">Plancha {strip.stripNumber}</span>
               <span className="cut-strip-plan__sheets">{sheetCountLabel(strip.sheetCount)}</span>
             </div>
             <p className="cut-strip-plan__cut-size">
@@ -43,7 +41,7 @@ export function CutStripPlanView({ plan, materialLabel }: CutStripPlanViewProps)
             <div className="cut-strip-plan__pieces">
               <span className="cut-strip-plan__pieces-label">Sale:</span>
               <p className="cut-strip-plan__pieces-inline">
-                {strip.pieces.map((p) => p.label).join('  +  ')}
+                {strip.pieces.map((p) => formatOperatorPieceLine(p)).join('  +  ')}
               </p>
             </div>
           </li>

@@ -4472,12 +4472,38 @@ body:has(.nm-hub-app--cut-list) {
   color: #9099a3;
 }
 
+.nm-hub-app--cut-list .cut-mold-section {
+  margin-bottom: 16px;
+}
+
+.nm-hub-app--cut-list .cut-mold-section__title,
+.nm-hub-app--cut-list .cut-plan-section__title {
+  margin: 0 0 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #737a82;
+}
+
+.nm-hub-app--cut-list .cut-plan-section {
+  margin-top: 4px;
+}
+
 /* Plan de corte (modo ORDENAR) */
 .nm-hub-app--cut-list .cut-strip-plan {
   display: flex;
   flex-direction: column;
   gap: 14px;
   padding-bottom: 8px;
+}
+
+.nm-hub-app--cut-list .cut-strip-plan__total-meters {
+  margin: 0 0 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #9099a3;
+  text-align: center;
 }
 
 .nm-hub-app--cut-list .cut-strip-plan__summary {

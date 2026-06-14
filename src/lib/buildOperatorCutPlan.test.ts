@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildOperatorCutPlan } from './buildOperatorCutPlan'
+import { buildOperatorCutPlan, formatOperatorPieceLine } from './buildOperatorCutPlan'
 import type { NmProdTask } from './types'
 
 function task(id: string, dimensions: string, totalQty: number): NmProdTask {
@@ -19,20 +19,12 @@ function task(id: string, dimensions: string, totalQty: number): NmProdTask {
 }
 
 describe('buildOperatorCutPlan', () => {
-  it('agrupa tiras iguales y describe medidas para el operario', () => {
-    const plan = buildOperatorCutPlan(
-      [
-        task('a', '90x40', 3),
-        task('b', '50x40', 3),
-        task('c', '82x32', 1),
-      ],
-      140,
-    )
-
-    expect(plan).not.toBeNull()
-    expect(plan!.stripCount).toBe(4)
-    const paired = plan!.strips.find((s) => s.sheetCount === 3 && s.stripHeight === 40)
-    expect(paired?.pieces.map((p) => p.label)).toEqual(['90×40', '50×40'])
+  it('agrupa planchas iguales y muestra cantidad por medida', () => {
+    const plan = buildOperatorCutPlan([task('a', '127x45', 2)], 140)
+    expect(plan?.strips[0].stripHeight).toBe(45)
+    expect(plan?.strips[0].sheetCount).toBe(2)
+    expect(plan?.strips[0].pieces[0]).toEqual({ label: '127×45', count: 1 })
+    expect(formatOperatorPieceLine(plan!.strips[0].pieces[0])).toBe('127×45')
   })
 
   it('devuelve null si no hay piezas pendientes', () => {

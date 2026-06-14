@@ -28,6 +28,7 @@ import { normalizeCalendarDate, todayIsoLocal } from './lib/date'
 import { formatSupabaseOrError } from './lib/errors'
 import { parseProductionReport } from './lib/parseReport'
 import { buildOperatorCutPlan } from './lib/buildOperatorCutPlan'
+import { splitMoldAndPlanTasks } from './lib/moldMeasures'
 import { ROLL_WIDTH_BY_TAB } from './lib/guillotineStripPack'
 import { sortTasksForDisplay } from './lib/sortTasks'
 import { surfaceFromDimensions } from './lib/surface'
@@ -125,10 +126,6 @@ function nmProdCompletedSearchRank(task: NmProdTask, q: string): number {
   return 4
 }
 
-const TAB_MATERIAL_LABEL: Partial<Record<MaterialTab, string>> = {
-  classic: 'Classic',
-  pro: 'Pro',
-}
 
 function tabbedTasksForOrdenar(
   tasksByMainFilter: NmProdTask[],
@@ -489,14 +486,21 @@ export default function App() {
     [tasksByMainFilter, activeTab, taskFilter, completedSearch],
   )
 
+  const { moldTasks, planTasks } = useMemo(
+    () => splitMoldAndPlanTasks(ordenarInputTasks),
+    [ordenarInputTasks],
+  )
+
   const operatorCutPlan = useMemo(() => {
     if (!stripPackSortActive || rollWidthForActiveTab === undefined) return null
     return buildOperatorCutPlan(
-      ordenarInputTasks,
+      planTasks,
       rollWidthForActiveTab,
       taskFilter === 'completed',
     )
-  }, [stripPackSortActive, rollWidthForActiveTab, ordenarInputTasks, taskFilter])
+  }, [stripPackSortActive, rollWidthForActiveTab, planTasks, taskFilter])
+
+  const sortedMoldTasks = useMemo(() => sortTasksForDisplay(moldTasks), [moldTasks])
 
   const visibleTasks = useMemo(() => {
     if (stripPackSortActive) return ordenarInputTasks
@@ -1386,15 +1390,45 @@ export default function App() {
             {stripPackSortActive ? (
               mergeAllListsActive && allPendingTasksLoading ? (
                 <p className="nm-prod-task-meta">Calculando plan de corte…</p>
-              ) : operatorCutPlan ? (
-                <CutStripPlanView
-                  plan={operatorCutPlan}
-                  materialLabel={TAB_MATERIAL_LABEL[activeTab] ?? activeTab}
-                />
               ) : (
-                <div className="nm-prod-all-cut-state">
-                  <p className="nm-prod-empty-text">No hay medidas pendientes para ordenar.</p>
-                </div>
+                <>
+                  {sortedMoldTasks.length > 0 ? (
+                    <section className="cut-mold-section" aria-label="Medidas con molde">
+                      <p className="cut-mold-section__title">Con molde</p>
+                      {sortedMoldTasks.map((t) => (
+                        <TaskCard
+                          key={t.id}
+                          task={t}
+                          busy={busyId === t.id}
+                          canEdit={canEditTasks}
+                          onIncrement={onIncrement}
+                          onDecrement={onDecrement}
+                          onTogglePriority={onTogglePriority}
+                          onToggleCompleted={onToggleCompleted}
+                          showOnlyDecrement={taskFilter === 'completed'}
+                          variant="rebel"
+                          listDayLabel={
+                            mergeAllListsActive
+                              ? formatDayMonth(reportFechaById.get(t.report_id) ?? '')
+                              : undefined
+                          }
+                        />
+                      ))}
+                    </section>
+                  ) : null}
+                  {operatorCutPlan ? (
+                    <section className="cut-plan-section" aria-label="Plan de planchas">
+                      {sortedMoldTasks.length > 0 ? (
+                        <p className="cut-plan-section__title">Medidas a planchar</p>
+                      ) : null}
+                      <CutStripPlanView plan={operatorCutPlan} />
+                    </section>
+                  ) : sortedMoldTasks.length === 0 ? (
+                    <div className="nm-prod-all-cut-state">
+                      <p className="nm-prod-empty-text">No hay medidas pendientes para ordenar.</p>
+                    </div>
+                  ) : null}
+                </>
               )
             ) : mergeAllListsActive && allPendingTasksLoading ? (
               <p className="nm-prod-task-meta">Cargando todas las listas…</p>
