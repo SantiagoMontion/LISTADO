@@ -10,18 +10,9 @@ function sheetCountLabel(count: number): string {
   return `${count} planchas iguales`
 }
 
-function formatMeters(cm: number): string {
-  const m = cm / 100
-  return m >= 10 ? `${m.toFixed(1)} m` : `${m.toFixed(2)} m`
-}
-
 export function CutStripPlanView({ plan }: CutStripPlanViewProps) {
   return (
     <div className="cut-strip-plan">
-      <p className="cut-strip-plan__total-meters">
-        Metros de rollo: {formatMeters(plan.totalRollLengthCm)}
-      </p>
-
       <ol className="cut-strip-plan__list">
         {plan.strips.map((strip) => (
           <li key={strip.stripNumber} className="cut-strip-plan__card">

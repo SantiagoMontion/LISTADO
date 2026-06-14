@@ -117,3 +117,34 @@ export function formatOperatorPieceLine(piece: OperatorStripPiece): string {
   if (piece.count > 1) return `${piece.count} × ${piece.label}`
   return piece.label
 }
+
+function tasksToPedidoLines(
+  tasks: NmProdTask[],
+  useCompletedQty: boolean,
+): StripPackInputLine[] {
+  const pedido: StripPackInputLine[] = []
+  for (const task of tasks) {
+    const measure = parseTaskMeasure(task.dimensions)
+    if (!measure) continue
+    const cant = qtyForPlan(task, useCompletedQty)
+    if (cant <= 0) continue
+    pedido.push({ ...measure, cant })
+  }
+  return pedido
+}
+
+/** Metros de rollo (cm) para un conjunto de tareas, usando el empaquetado óptimo. */
+export function computeRollLengthCmFromTasks(
+  tasks: NmProdTask[],
+  rollWidth: number,
+  useCompletedQty = false,
+): number {
+  const pedido = tasksToPedidoLines(tasks, useCompletedQty)
+  if (pedido.length === 0) return 0
+  return guillotineStripPack(pedido, rollWidth).totalRollLengthCm
+}
+
+export function formatRollMeters(cm: number): string {
+  const m = cm / 100
+  return m >= 10 ? `${m.toFixed(1)} m` : `${m.toFixed(2)} m`
+}

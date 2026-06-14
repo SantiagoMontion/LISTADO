@@ -27,8 +27,13 @@ import { HUB_NAV_EVENT, onHubLinkClick } from './lib/hubNavigate'
 import { normalizeCalendarDate, todayIsoLocal } from './lib/date'
 import { formatSupabaseOrError } from './lib/errors'
 import { parseProductionReport } from './lib/parseReport'
-import { buildOperatorCutPlan } from './lib/buildOperatorCutPlan'
-import { splitMoldAndPlanTasks } from './lib/moldMeasures'
+import { buildOperatorCutPlan, computeRollLengthCmFromTasks, formatRollMeters } from './lib/buildOperatorCutPlan'
+import {
+  firstPendingMoldSource,
+  lastCutMoldSource,
+  mergeMoldTasksByMeasure,
+  splitMoldAndPlanTasks,
+} from './lib/moldMeasures'
 import { ROLL_WIDTH_BY_TAB } from './lib/guillotineStripPack'
 import { sortTasksForDisplay } from './lib/sortTasks'
 import { surfaceFromDimensions } from './lib/surface'
@@ -499,6 +504,25 @@ export default function App() {
       taskFilter === 'completed',
     )
   }, [stripPackSortActive, rollWidthForActiveTab, planTasks, taskFilter])
+
+  const mergedMoldGroups = useMemo(() => {
+    if (!mergeAllListsActive) return null
+    return mergeMoldTasksByMeasure(moldTasks)
+  }, [mergeAllListsActive, moldTasks])
+
+  const totalRollLengthCm = useMemo(() => {
+    if (!stripPackSortActive || rollWidthForActiveTab === undefined) return 0
+    const useCompleted = taskFilter === 'completed'
+    const moldCm = computeRollLengthCmFromTasks(moldTasks, rollWidthForActiveTab, useCompleted)
+    const planCm = computeRollLengthCmFromTasks(planTasks, rollWidthForActiveTab, useCompleted)
+    return moldCm + planCm
+  }, [
+    stripPackSortActive,
+    rollWidthForActiveTab,
+    moldTasks,
+    planTasks,
+    taskFilter,
+  ])
 
   const sortedMoldTasks = useMemo(() => sortTasksForDisplay(moldTasks), [moldTasks])
 
@@ -1392,28 +1416,56 @@ export default function App() {
                 <p className="nm-prod-task-meta">Calculando plan de corte…</p>
               ) : (
                 <>
+                  {totalRollLengthCm > 0 ? (
+                    <p className="cut-strip-plan__total-meters">
+                      Metros de rollo (mts): {formatRollMeters(totalRollLengthCm)}
+                    </p>
+                  ) : null}
                   {sortedMoldTasks.length > 0 ? (
                     <section className="cut-mold-section" aria-label="Medidas con molde">
                       <p className="cut-mold-section__title">Con molde</p>
-                      {sortedMoldTasks.map((t) => (
-                        <TaskCard
-                          key={t.id}
-                          task={t}
-                          busy={busyId === t.id}
-                          canEdit={canEditTasks}
-                          onIncrement={onIncrement}
-                          onDecrement={onDecrement}
-                          onTogglePriority={onTogglePriority}
-                          onToggleCompleted={onToggleCompleted}
-                          showOnlyDecrement={taskFilter === 'completed'}
-                          variant="rebel"
-                          listDayLabel={
-                            mergeAllListsActive
-                              ? formatDayMonth(reportFechaById.get(t.report_id) ?? '')
-                              : undefined
-                          }
-                        />
-                      ))}
+                      {mergedMoldGroups
+                        ? mergedMoldGroups.map((group) => (
+                            <TaskCard
+                              key={group.measureKey}
+                              task={group.displayTask}
+                              busy={group.sources.some((t) => busyId === t.id)}
+                              canEdit={canEditTasks}
+                              onIncrement={() => {
+                                const next = firstPendingMoldSource(group.sources)
+                                if (next) void onIncrement(next)
+                              }}
+                              onDecrement={() => {
+                                const prev = lastCutMoldSource(group.sources)
+                                if (prev) void onDecrement(prev)
+                              }}
+                              onTogglePriority={() => {
+                                const target =
+                                  group.sources.find((t) => t.is_priority) ?? group.sources[0]
+                                void onTogglePriority(target)
+                              }}
+                              onToggleCompleted={() => {
+                                const target = firstPendingMoldSource(group.sources) ?? group.sources[0]
+                                void runToggleCompleted(target)
+                              }}
+                              showOnlyDecrement={taskFilter === 'completed'}
+                              variant="rebel"
+                            />
+                          ))
+                        : sortedMoldTasks.map((t) => (
+                            <TaskCard
+                              key={t.id}
+                              task={t}
+                              busy={busyId === t.id}
+                              canEdit={canEditTasks}
+                              onIncrement={onIncrement}
+                              onDecrement={onDecrement}
+                              onTogglePriority={onTogglePriority}
+                              onToggleCompleted={onToggleCompleted}
+                              showOnlyDecrement={taskFilter === 'completed'}
+                              variant="rebel"
+                            />
+                          ))}
                     </section>
                   ) : null}
                   {operatorCutPlan ? (

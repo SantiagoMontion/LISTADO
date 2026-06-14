@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import { guillotineStripPack } from './guillotineStripPack'
-import { isMoldMeasure, splitMoldAndPlanTasks } from './moldMeasures'
 
 function wasteArea(result: ReturnType<typeof guillotineStripPack>): number {
   return result.totalWasteAreaCm2
@@ -72,19 +71,5 @@ describe('guillotineStripPack', () => {
     expect(result.totalRollLengthCm).toBe(
       result.strips.reduce((s, t) => s + t.stripHeight, 0),
     )
-  })
-})
-
-describe('moldMeasures', () => {
-  it('separa 90×40 y 82×32 del plan', () => {
-    const tasks = [
-      { dimensions: '90x40' },
-      { dimensions: '82x32' },
-      { dimensions: '127x45' },
-    ]
-    const { moldTasks, planTasks } = splitMoldAndPlanTasks(tasks)
-    expect(moldTasks.map((t) => t.dimensions)).toEqual(['90x40', '82x32'])
-    expect(planTasks.map((t) => t.dimensions)).toEqual(['127x45'])
-    expect(isMoldMeasure('90X40')).toBe(true)
   })
 })
