@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { CutStripPlanView } from './components/CutStripPlanView'
 import { CreadorMaterialImagesModal } from './components/CreadorMaterialImagesModal'
 import { QuickAddMeasureModal } from './components/QuickAddMeasureModal'
 import { HubDispatchedOrdersApp } from './components/HubDispatchedOrdersApp'
@@ -26,9 +27,9 @@ import { HUB_NAV_EVENT, onHubLinkClick } from './lib/hubNavigate'
 import { normalizeCalendarDate, todayIsoLocal } from './lib/date'
 import { formatSupabaseOrError } from './lib/errors'
 import { parseProductionReport } from './lib/parseReport'
+import { buildOperatorCutPlan } from './lib/buildOperatorCutPlan'
 import { ROLL_WIDTH_BY_TAB } from './lib/guillotineStripPack'
 import { sortTasksForDisplay } from './lib/sortTasks'
-import { sortTasksByStripPack } from './lib/sortTasksByStripPack'
 import { surfaceFromDimensions } from './lib/surface'
 import {
   createReportWithTasks,
@@ -122,6 +123,27 @@ function nmProdCompletedSearchRank(task: NmProdTask, q: string): number {
   if (d.includes(q)) return 2
   if (n.includes(q)) return 3
   return 4
+}
+
+const TAB_MATERIAL_LABEL: Partial<Record<MaterialTab, string>> = {
+  classic: 'Classic',
+  pro: 'Pro',
+}
+
+function tabbedTasksForOrdenar(
+  tasksByMainFilter: NmProdTask[],
+  activeTab: MaterialTab,
+  taskFilter: TaskFilter,
+  completedSearch: string,
+): NmProdTask[] {
+  const tabbed = tasksByMainFilter.filter(
+    (t) => tabForMaterialType(t.material_type) === activeTab,
+  )
+  const q = completedSearch.trim().toLowerCase()
+  if (taskFilter === 'completed') {
+    return tabbed.filter((t) => nmProdTaskMatchesCompletedSearch(t, q))
+  }
+  return tabbed
 }
 
 export default function App() {
@@ -462,18 +484,30 @@ export default function App() {
     }
   }, [mode, materialsAvailable, activeTab])
 
-  const visibleTasks = useMemo(() => {
-    const tabbed = tasksByMainFilter.filter(
-      (t) => tabForMaterialType(t.material_type) === activeTab,
+  const ordenarInputTasks = useMemo(
+    () => tabbedTasksForOrdenar(tasksByMainFilter, activeTab, taskFilter, completedSearch),
+    [tasksByMainFilter, activeTab, taskFilter, completedSearch],
+  )
+
+  const operatorCutPlan = useMemo(() => {
+    if (!stripPackSortActive || rollWidthForActiveTab === undefined) return null
+    return buildOperatorCutPlan(
+      ordenarInputTasks,
+      rollWidthForActiveTab,
+      taskFilter === 'completed',
     )
+  }, [stripPackSortActive, rollWidthForActiveTab, ordenarInputTasks, taskFilter])
+
+  const visibleTasks = useMemo(() => {
+    if (stripPackSortActive) return ordenarInputTasks
+
     const q = completedSearch.trim().toLowerCase()
     const searched =
-      taskFilter === 'completed' ? tabbed.filter((t) => nmProdTaskMatchesCompletedSearch(t, q)) : tabbed
+      taskFilter === 'completed'
+        ? ordenarInputTasks.filter((t) => nmProdTaskMatchesCompletedSearch(t, q))
+        : ordenarInputTasks
 
     if (taskFilter !== 'completed') {
-      if (stripPackSortActive && rollWidthForActiveTab !== undefined) {
-        return sortTasksByStripPack(searched, rollWidthForActiveTab)
-      }
       return sortTasksForDisplay(searched)
     }
     return [...searched].sort((a, b) => {
@@ -489,13 +523,11 @@ export default function App() {
       return surfaceFromDimensions(b.dimensions) - surfaceFromDimensions(a.dimensions)
     })
   }, [
-    tasksByMainFilter,
-    activeTab,
+    ordenarInputTasks,
     taskFilter,
     completedSearch,
     completedAtById,
     stripPackSortActive,
-    rollWidthForActiveTab,
   ])
 
   const allCutInActiveTab = useMemo(() => {
@@ -1351,7 +1383,20 @@ export default function App() {
             </div>
           )}
           <div className="cut-list-items">
-            {mergeAllListsActive && allPendingTasksLoading ? (
+            {stripPackSortActive ? (
+              mergeAllListsActive && allPendingTasksLoading ? (
+                <p className="nm-prod-task-meta">Calculando plan de corte…</p>
+              ) : operatorCutPlan ? (
+                <CutStripPlanView
+                  plan={operatorCutPlan}
+                  materialLabel={TAB_MATERIAL_LABEL[activeTab] ?? activeTab}
+                />
+              ) : (
+                <div className="nm-prod-all-cut-state">
+                  <p className="nm-prod-empty-text">No hay medidas pendientes para ordenar.</p>
+                </div>
+              )
+            ) : mergeAllListsActive && allPendingTasksLoading ? (
               <p className="nm-prod-task-meta">Cargando todas las listas…</p>
             ) : !tasksLoaded && tasks.length === 0 ? (
               <p className="nm-prod-task-meta">Cargando tareas…</p>
@@ -1433,7 +1478,7 @@ export default function App() {
               }))
             }
           >
-            Ordenar
+            {stripPackSortActive ? 'Ver lista' : 'Ordenar'}
           </button>
           {stripPackSortActive ? (
             <label className="cut-list-ordenar-merge">

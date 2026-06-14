@@ -4472,6 +4472,171 @@ body:has(.nm-hub-app--cut-list) {
   color: #9099a3;
 }
 
+/* Plan de corte (modo ORDENAR) */
+.nm-hub-app--cut-list .cut-strip-plan {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 8px;
+}
+
+.nm-hub-app--cut-list .cut-strip-plan__summary {
+  margin: 0;
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(74, 222, 128, 0.08);
+  border: 1px solid rgba(74, 222, 128, 0.25);
+}
+
+.nm-hub-app--cut-list .cut-strip-plan__summary-title {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fcfdff;
+}
+
+.nm-hub-app--cut-list .cut-strip-plan__summary-meta {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #4ade80;
+}
+
+.nm-hub-app--cut-list .cut-strip-plan__summary-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: #9099a3;
+}
+
+.nm-hub-app--cut-list .cut-strip-plan__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.nm-hub-app--cut-list .cut-strip-plan__card {
+  margin: 0;
+  padding: 14px;
+  border-radius: 14px;
+  background: #121417;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.nm-hub-app--cut-list .cut-strip-plan__card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.nm-hub-app--cut-list .cut-strip-plan__badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: #fcfdff;
+  color: #08090a;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.nm-hub-app--cut-list .cut-strip-plan__sheets {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #4ade80;
+}
+
+.nm-hub-app--cut-list .cut-strip-plan__cut-size {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+  color: #fcfdff;
+}
+
+.nm-hub-app--cut-list .cut-strip-plan__cut-size strong {
+  font-size: 1.25rem;
+  color: #4ade80;
+}
+
+.nm-hub-app--cut-list .cut-strip-plan__width {
+  margin: 0 0 12px;
+  font-size: 0.85rem;
+  color: #9099a3;
+}
+
+.nm-hub-app--cut-list .cut-strip-plan__waste {
+  color: #737a82;
+}
+
+.nm-hub-app--cut-list .cut-strip-plan__pieces {
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.nm-hub-app--cut-list .cut-strip-plan__pieces-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #737a82;
+}
+
+.nm-hub-app--cut-list .cut-strip-plan__pieces-inline {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.5;
+  color: #fcfdff;
+  word-break: break-word;
+}
+
+.nm-hub-app--cut-list .cut-strip-plan__pieces-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.nm-hub-app--cut-list .cut-strip-plan__pieces-list li {
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #181a1f;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fcfdff;
+}
+
+.nm-hub-app--cut-list .cut-strip-plan__unplaced {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.35);
+}
+
+.nm-hub-app--cut-list .cut-strip-plan__unplaced-title {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #f87171;
+}
+
+.nm-hub-app--cut-list .cut-strip-plan__unplaced ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: #fca5a5;
+  font-size: 0.9rem;
+}
+
 .nm-hub-app--cut-list .cut-list-ordenar-btn {
   display: block;
   width: 100%;
