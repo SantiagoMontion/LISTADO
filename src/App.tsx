@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CutStripPlanView } from './components/CutStripPlanView'
-import { MaterialMetersLine } from './components/MaterialMetersLine'
 import { CreadorMaterialImagesModal } from './components/CreadorMaterialImagesModal'
 import { QuickAddMeasureModal } from './components/QuickAddMeasureModal'
 import { HubDispatchedOrdersApp } from './components/HubDispatchedOrdersApp'
@@ -31,12 +30,9 @@ import { parseProductionReport } from './lib/parseReport'
 import {
   buildOperatorCutPlan,
   computePlanchaSummaryFromTasks,
-  computeRollLengthCmFromTasks,
   formatPlanchaHint,
 } from './lib/buildOperatorCutPlan'
 import {
-  firstPendingMoldSource,
-  lastCutMoldSource,
   mergeMoldTasksByMeasure,
   splitMoldAndPlanTasks,
 } from './lib/moldMeasures'
@@ -219,6 +215,10 @@ export default function App() {
   const [completedSearch, setCompletedSearch] = useState('')
   const [completedAtById, setCompletedAtById] = useState<Record<string, number>>({})
   const [pendingCutTask, setPendingCutTask] = useState<NmProdTask | null>(null)
+  const [pendingMoldCutBatch, setPendingMoldCutBatch] = useState<{
+    sourceIds: string[]
+    remainingQty: number
+  } | null>(null)
   const [pendingDeleteReportId, setPendingDeleteReportId] = useState<string | null>(null)
   const [pendingQuickAdd, setPendingQuickAdd] = useState(false)
   const [quickAddError, setQuickAddError] = useState<string | null>(null)
@@ -228,6 +228,9 @@ export default function App() {
   const [mergeAllListsChecked, setMergeAllListsChecked] = useState(false)
   const [allPendingTasks, setAllPendingTasks] = useState<NmProdTask[]>([])
   const [allPendingTasksLoading, setAllPendingTasksLoading] = useState(false)
+  const [dismissedOrdenarStripHeights, setDismissedOrdenarStripHeights] = useState<Set<number>>(
+    () => new Set(),
+  )
 
   useEffect(() => {
     if (!showCreadorMaterialImages || path !== '/creador') return
@@ -425,7 +428,14 @@ export default function App() {
   useEffect(() => {
     setStripPackSortActive(false)
     setMergeAllListsChecked(false)
+    setDismissedOrdenarStripHeights(new Set())
   }, [reportId])
+
+  useEffect(() => {
+    if (!stripPackSortActive) {
+      setDismissedOrdenarStripHeights(new Set())
+    }
+  }, [stripPackSortActive])
 
   useEffect(() => {
     if (!configured || mode !== 'manager' || !mergeAllListsActive) {
@@ -509,24 +519,6 @@ export default function App() {
     if (!mergeAllListsActive) return null
     return mergeMoldTasksByMeasure(moldTasks)
   }, [mergeAllListsActive, moldTasks])
-
-  const moldRollLengthCm = useMemo(() => {
-    if (!stripPackSortActive || rollWidthForActiveTab === undefined) return 0
-    return computeRollLengthCmFromTasks(
-      moldTasks,
-      rollWidthForActiveTab,
-      taskFilter === 'completed',
-    )
-  }, [stripPackSortActive, rollWidthForActiveTab, moldTasks, taskFilter])
-
-  const planRollLengthCm = useMemo(() => {
-    if (!stripPackSortActive || rollWidthForActiveTab === undefined) return 0
-    return computeRollLengthCmFromTasks(
-      planTasks,
-      rollWidthForActiveTab,
-      taskFilter === 'completed',
-    )
-  }, [stripPackSortActive, rollWidthForActiveTab, planTasks, taskFilter])
 
   const moldPlanchaHints = useMemo(() => {
     if (!stripPackSortActive || rollWidthForActiveTab === undefined) {
@@ -718,6 +710,23 @@ export default function App() {
     suppressRealtimeUntilRef.current = Date.now() + 900
   }, [])
 
+  const toggleDismissOrdenarStrip = useCallback((stripHeight: number) => {
+    setDismissedOrdenarStripHeights((prev) => {
+      const next = new Set(prev)
+      if (next.has(stripHeight)) next.delete(stripHeight)
+      else next.add(stripHeight)
+      return next
+    })
+  }, [])
+
+  const resolveMoldSourceTasks = useCallback(
+    (sources: NmProdTask[]): NmProdTask[] => {
+      const pool = mergeAllListsActive ? allPendingTasks : tasks
+      return sources.map((s) => pool.find((t) => t.id === s.id) ?? s)
+    },
+    [mergeAllListsActive, allPendingTasks, tasks],
+  )
+
   const onIncrement = async (task: NmProdTask) => {
     setBusyId(task.id)
     setError(null)
@@ -815,6 +824,40 @@ export default function App() {
     setPendingCutTask(null)
     await runToggleCompleted(task)
   }
+
+  const confirmCutAllMoldBatch = async () => {
+    if (!pendingMoldCutBatch) return
+    const ids = pendingMoldCutBatch.sourceIds
+    setPendingMoldCutBatch(null)
+    const pool = mergeAllListsActive ? allPendingTasks : tasks
+    for (const id of ids) {
+      const t = pool.find((x) => x.id === id)
+      if (t && !t.is_completed && t.current_qty < t.total_qty) {
+        await runToggleCompleted(t)
+      }
+    }
+  }
+
+  const requestCutAllMoldSources = useCallback(
+    (sources: NmProdTask[]) => {
+      const fresh = resolveMoldSourceTasks(sources)
+      const allDone = fresh.every((t) => t.is_completed || t.current_qty >= t.total_qty)
+      if (allDone) {
+        void (async () => {
+          for (const t of fresh) {
+            if (t.is_completed) await runToggleCompleted(t)
+          }
+        })()
+        return
+      }
+      const remaining = fresh.reduce(
+        (sum, t) => sum + Math.max(t.total_qty - t.current_qty, 0),
+        0,
+      )
+      setPendingMoldCutBatch({ sourceIds: fresh.map((t) => t.id), remainingQty: remaining })
+    },
+    [resolveMoldSourceTasks],
+  )
 
   const executeDeleteReport = async (id: string) => {
     setError(null)
@@ -1328,6 +1371,33 @@ export default function App() {
         </div>
       )}
 
+      {pendingMoldCutBatch && (
+        <div className="nm-prod-modal-backdrop" role="presentation">
+          <section className="nm-prod-modal" role="dialog" aria-modal="true">
+            <h3 className="nm-prod-modal-title">Confirmar corte</h3>
+            <p className="nm-prod-modal-text">
+              Estas seguro de cortar todas las {pendingMoldCutBatch.remainingQty} unidades?
+            </p>
+            <div className="nm-prod-row">
+              <button
+                type="button"
+                className="nm-prod-btn"
+                onClick={() => setPendingMoldCutBatch(null)}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="nm-prod-btn nm-prod-btn-primary"
+                onClick={() => void confirmCutAllMoldBatch()}
+              >
+                Cortar
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
       {pendingDeleteReportId && (
         <div className="nm-prod-modal-backdrop" role="presentation">
           <section className="nm-prod-modal" role="dialog" aria-modal="true">
@@ -1455,7 +1525,6 @@ export default function App() {
                   {sortedMoldTasks.length > 0 ? (
                     <section className="cut-mold-section" aria-label="Planchar">
                       <p className="cut-mold-section__title">Planchar</p>
-                      <MaterialMetersLine cm={moldRollLengthCm} />
                       {mergedMoldGroups
                         ? mergedMoldGroups.map((group) => (
                             <TaskCard
@@ -1463,26 +1532,16 @@ export default function App() {
                               task={group.displayTask}
                               busy={group.sources.some((t) => busyId === t.id)}
                               canEdit={canEditTasks}
-                              onIncrement={() => {
-                                const next = firstPendingMoldSource(group.sources)
-                                if (next) void onIncrement(next)
-                              }}
-                              onDecrement={() => {
-                                const prev = lastCutMoldSource(group.sources)
-                                if (prev) void onDecrement(prev)
-                              }}
                               onTogglePriority={() => {
                                 const target =
                                   group.sources.find((t) => t.is_priority) ?? group.sources[0]
                                 void onTogglePriority(target)
                               }}
-                              onToggleCompleted={() => {
-                                const target = firstPendingMoldSource(group.sources) ?? group.sources[0]
-                                void runToggleCompleted(target)
-                              }}
+                              onToggleCompleted={() => requestCutAllMoldSources(group.sources)}
                               showOnlyDecrement={taskFilter === 'completed'}
                               variant="rebel"
                               ordenarPlanchaHint={moldPlanchaHints.get(group.measureKey)}
+                              ordenarPlancharMode
                             />
                           ))
                         : sortedMoldTasks.map((t) => (
@@ -1491,13 +1550,12 @@ export default function App() {
                               task={t}
                               busy={busyId === t.id}
                               canEdit={canEditTasks}
-                              onIncrement={onIncrement}
-                              onDecrement={onDecrement}
                               onTogglePriority={onTogglePriority}
                               onToggleCompleted={onToggleCompleted}
                               showOnlyDecrement={taskFilter === 'completed'}
                               variant="rebel"
                               ordenarPlanchaHint={moldPlanchaHints.get(t.id)}
+                              ordenarPlancharMode
                             />
                           ))}
                     </section>
@@ -1507,7 +1565,16 @@ export default function App() {
                       {sortedMoldTasks.length > 0 ? (
                         <p className="cut-plan-section__title">Personalizados</p>
                       ) : null}
-                      <CutStripPlanView plan={operatorCutPlan} materialMetersCm={planRollLengthCm} />
+                      <CutStripPlanView
+                        plan={operatorCutPlan}
+                        planTasks={planTasks}
+                        canEdit={canEditTasks}
+                        busy={busyId !== null}
+                        dismissedStripHeights={dismissedOrdenarStripHeights}
+                        onToggleDismissStrip={toggleDismissOrdenarStrip}
+                        onIncrementTask={onIncrement}
+                        onDecrementTask={onDecrement}
+                      />
                     </section>
                   ) : sortedMoldTasks.length === 0 ? (
                     <div className="nm-prod-all-cut-state">

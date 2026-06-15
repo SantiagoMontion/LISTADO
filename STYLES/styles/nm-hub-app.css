@@ -4559,6 +4559,17 @@ body:has(.nm-hub-app--cut-list) {
   border-radius: 14px;
   background: #121417;
   border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: opacity 0.2s ease, filter 0.2s ease;
+}
+
+.nm-hub-app--cut-list .cut-strip-plan__card--dismissed {
+  opacity: 0.42;
+  filter: grayscale(1);
+}
+
+.nm-hub-app--cut-list .cut-strip-plan__dismiss-btn {
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .nm-hub-app--cut-list .cut-strip-plan__card-head {
@@ -4635,6 +4646,33 @@ body:has(.nm-hub-app--cut-list) {
   font-weight: 700;
   line-height: 1.4;
   color: #fcfdff;
+}
+
+.nm-hub-app--cut-list .cut-strip-plan__piece-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.nm-hub-app--cut-list .cut-strip-plan__piece-label {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.nm-hub-app--cut-list .cut-strip-plan__piece-check {
+  display: inline-flex;
+  flex-shrink: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.nm-hub-app--cut-list .cut-strip-plan__piece-check-input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: #4ade80;
+  cursor: pointer;
 }
 
 .nm-hub-app--cut-list .cut-strip-plan__pieces-inline {
@@ -4749,6 +4787,7 @@ body:has(.nm-hub-app--cut-list) {
 
 /* Filas de corte */
 .nm-hub-app--cut-list .cut-item-row {
+  position: relative;
   background-color: #121417;
   border: 1px solid rgba(255, 255, 255, 0.02);
   border-radius: 14px;
@@ -4756,6 +4795,39 @@ body:has(.nm-hub-app--cut-list) {
   margin-bottom: 10px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
   box-sizing: border-box;
+  transition: opacity 0.2s ease, filter 0.2s ease;
+}
+
+.nm-hub-app--cut-list .cut-item-row--ordenar-dismissed {
+  opacity: 0.42;
+  filter: grayscale(1);
+}
+
+.nm-hub-app--cut-list .cut-item-row__dismiss-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1;
+}
+
+.nm-hub-app--cut-list .cut-item-row--ordenar .cut-item-row__body {
+  padding-right: 44px;
+}
+
+.nm-hub-app--cut-list .cut-ordenar-measure-check {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 0 0 8px;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.nm-hub-app--cut-list .cut-ordenar-measure-check-input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: #4ade80;
+  cursor: pointer;
 }
 
 .nm-hub-app--cut-list .cut-item-row__body {

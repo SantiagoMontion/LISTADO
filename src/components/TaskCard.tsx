@@ -14,6 +14,11 @@ interface TaskCardProps {
   listDayLabel?: string
   /** Instrucción de planchas (modo ORDENAR, medidas con molde). */
   ordenarPlanchaHint?: string
+  /** Modo ORDENAR en Planchar: solo ✂ (cortar todas) y ★. */
+  ordenarPlancharMode?: boolean
+  /** Modo ORDENAR en Personalizados: tarjeta apagada (solo visual). */
+  ordenarDismissed?: boolean
+  onToggleOrdenarDismiss?: () => void
 }
 
 export function TaskCard({
@@ -28,6 +33,9 @@ export function TaskCard({
   variant = 'legacy',
   listDayLabel,
   ordenarPlanchaHint,
+  ordenarPlancharMode = false,
+  ordenarDismissed = false,
+  onToggleOrdenarDismiss,
 }: TaskCardProps) {
   const done = task.is_completed || task.current_qty >= task.total_qty
   const materialTypeNorm = task.material_type.trim().toLowerCase()
@@ -44,12 +52,26 @@ export function TaskCard({
       'cut-item-row',
       isAlert ? 'alert-state' : 'normal-state',
       done ? 'cut-item-row--completed' : '',
+      ordenarDismissed ? 'cut-item-row--ordenar-dismissed' : '',
+      onToggleOrdenarDismiss ? 'cut-item-row--ordenar' : '',
     ]
       .filter(Boolean)
       .join(' ')
 
     return (
       <article className={rowClass} data-task-id={task.id}>
+        {onToggleOrdenarDismiss && !ordenarPlancharMode ? (
+          <button
+            type="button"
+            className={`cut-item-row__dismiss-btn btn-utility-rebel${ordenarDismissed ? ' cut-item-row__dismiss-btn--active' : ''}`}
+            aria-pressed={ordenarDismissed}
+            aria-label={ordenarDismissed ? 'Reactivar medida' : 'Marcar medida como hecha'}
+            title={ordenarDismissed ? 'Reactivar medida' : 'Marcar medida como hecha'}
+            onClick={onToggleOrdenarDismiss}
+          >
+            ✂
+          </button>
+        ) : null}
         <div className="cut-item-row__body">
         <div className="cut-info-block" aria-live="polite">
           <h3 className="cut-measurements">
@@ -83,7 +105,32 @@ export function TaskCard({
           ) : null}
         </div>
         <div className="cut-actions-group">
-          {canEdit ? (
+          {canEdit && ordenarPlancharMode ? (
+            <>
+              <button
+                type="button"
+                className={`btn-utility-rebel${task.is_completed ? ' btn-utility-rebel--active' : ''}`}
+                disabled={busy}
+                onClick={() => onToggleCompleted?.(task)}
+                aria-pressed={task.is_completed}
+                aria-label={task.is_completed ? 'Desmarcar corte total' : 'Marcar corte total'}
+                title={task.is_completed ? 'Desmarcar corte total' : 'Marcar corte total'}
+              >
+                ✂
+              </button>
+              <button
+                type="button"
+                className={`btn-utility-rebel${task.is_priority ? ' btn-utility-rebel--priority' : ''}`}
+                disabled={busy}
+                onClick={() => onTogglePriority?.(task)}
+                aria-pressed={task.is_priority}
+                aria-label={task.is_priority ? 'Quitar prioridad' : 'Marcar prioridad'}
+                title={task.is_priority ? 'Quitar prioridad' : 'Marcar prioridad'}
+              >
+                ★
+              </button>
+            </>
+          ) : canEdit ? (
             showOnlyDecrement ? (
               <button
                 type="button"

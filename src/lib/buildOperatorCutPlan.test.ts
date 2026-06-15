@@ -25,7 +25,7 @@ describe('buildOperatorCutPlan', () => {
     expect(plan?.strips[0].stripHeight).toBe(45)
     expect(plan?.strips[0].sheetCount).toBe(2)
     expect(plan?.strips[0].pieces[0]).toEqual({ label: '127×45', count: 2 })
-    expect(formatOperatorPieceLine(plan!.strips[0].pieces[0])).toBe('2 × 127×45')
+    expect(formatOperatorPieceLine(plan!.strips[0].pieces[0])).toBe('127×45 x2')
   })
 
   it('varias planchas iguales → una tarjeta con el total', () => {

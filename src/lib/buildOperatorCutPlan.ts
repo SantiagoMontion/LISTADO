@@ -129,7 +129,7 @@ export function buildOperatorCutPlan(
 }
 
 export function formatOperatorPieceLine(piece: OperatorStripPiece): string {
-  if (piece.count > 1) return `${piece.count} × ${piece.label}`
+  if (piece.count > 1) return `${piece.label} x${piece.count}`
   return piece.label
 }
 
