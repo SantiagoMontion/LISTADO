@@ -14,6 +14,8 @@ export interface OperatorCutStrip {
   usedWidth: number
   wasteWidth: number
   pieces: OperatorStripPiece[]
+  /** Varias disposiciones en el ancho para el mismo largo. */
+  mixedLayouts: boolean
 }
 
 export interface OperatorCutPlan {
@@ -34,49 +36,56 @@ function pieceLabel(ancho: number, alto: number): string {
   return `${ancho}×${alto}`
 }
 
-function stripSignature(strip: StripPlan): string {
+function aggregatePiecesFromStrips(strips: StripPlan[]): OperatorStripPiece[] {
+  const tallies = new Map<string, number>()
+  for (const strip of strips) {
+    for (const p of strip.pieces) {
+      const label = pieceLabel(p.ancho, p.alto)
+      tallies.set(label, (tallies.get(label) ?? 0) + 1)
+    }
+  }
+  return [...tallies.entries()].map(([label, count]) => ({ label, count }))
+}
+
+function layoutSignature(strip: StripPlan): string {
   const tallies = new Map<string, number>()
   for (const p of strip.pieces) {
     const label = pieceLabel(p.ancho, p.alto)
     tallies.set(label, (tallies.get(label) ?? 0) + 1)
   }
   const parts = [...tallies.entries()].map(([label, n]) => (n > 1 ? `${label}×${n}` : label))
-  return `${strip.stripHeight}|${parts.join('+')}`
+  return `${strip.usedWidth}|${parts.join('+')}`
 }
 
-function aggregatePieces(strip: StripPlan): OperatorStripPiece[] {
-  const tallies = new Map<string, number>()
-  for (const p of strip.pieces) {
-    const label = pieceLabel(p.ancho, p.alto)
-    tallies.set(label, (tallies.get(label) ?? 0) + 1)
-  }
-  return [...tallies.entries()].map(([label, count]) => ({ label, count }))
-}
-
-function groupIdenticalStrips(strips: StripPlan[]): OperatorCutStrip[] {
-  const buckets = new Map<string, { strip: StripPlan; count: number }>()
-  const order: string[] = []
+/** Agrupa todas las planchas del mismo largo (corte en eje). */
+function groupStripsByHeight(strips: StripPlan[]): OperatorCutStrip[] {
+  const buckets = new Map<number, StripPlan[]>()
+  const order: number[] = []
 
   for (const strip of strips) {
-    const sig = stripSignature(strip)
-    const bucket = buckets.get(sig)
-    if (bucket) {
-      bucket.count += 1
+    const list = buckets.get(strip.stripHeight)
+    if (list) {
+      list.push(strip)
     } else {
-      buckets.set(sig, { strip, count: 1 })
-      order.push(sig)
+      buckets.set(strip.stripHeight, [strip])
+      order.push(strip.stripHeight)
     }
   }
 
-  return order.map((sig, idx) => {
-    const { strip, count } = buckets.get(sig)!
+  return order.map((height, idx) => {
+    const group = buckets.get(height)!
+    const layoutSigs = new Set(group.map(layoutSignature))
+    const sameLayout = layoutSigs.size === 1
+    const ref = group[0]
+
     return {
       stripNumber: idx + 1,
-      sheetCount: count,
-      stripHeight: strip.stripHeight,
-      usedWidth: strip.usedWidth,
-      wasteWidth: strip.wasteWidth,
-      pieces: aggregatePieces(strip),
+      sheetCount: group.length,
+      stripHeight: height,
+      usedWidth: sameLayout ? ref.usedWidth : 0,
+      wasteWidth: sameLayout ? ref.wasteWidth : 0,
+      pieces: aggregatePiecesFromStrips(group),
+      mixedLayouts: !sameLayout,
     }
   })
 }
@@ -114,7 +123,7 @@ export function buildOperatorCutPlan(
     stripCount: result.stripCount,
     totalRollLengthCm: result.totalRollLengthCm,
     totalWasteAreaCm2: result.totalWasteAreaCm2,
-    strips: groupIdenticalStrips(result.strips),
+    strips: groupStripsByHeight(result.strips),
     unplaced,
   }
 }

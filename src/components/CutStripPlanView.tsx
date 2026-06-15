@@ -7,9 +7,8 @@ interface CutStripPlanViewProps {
   totalRollLengthCm?: number
 }
 
-function sheetCountLabel(count: number): string {
-  if (count === 1) return '1 plancha'
-  return `${count} planchas`
+function sheetCountWord(count: number): string {
+  return count === 1 ? 'plancha' : 'planchas'
 }
 
 export function CutStripPlanView({ plan, totalRollLengthCm }: CutStripPlanViewProps) {
@@ -26,17 +25,19 @@ export function CutStripPlanView({ plan, totalRollLengthCm }: CutStripPlanViewPr
           <li key={strip.stripNumber} className="cut-strip-plan__card">
             <div className="cut-strip-plan__card-head">
               <span className="cut-strip-plan__badge">{strip.stripNumber}</span>
-              <span className="cut-strip-plan__sheets">{sheetCountLabel(strip.sheetCount)}</span>
             </div>
             <p className="cut-strip-plan__cut-size">
-              Cortar <strong>{strip.stripHeight}cm</strong> de largo
+              Necesitas <strong>{strip.sheetCount}</strong> {sheetCountWord(strip.sheetCount)} de{' '}
+              <strong>{strip.stripHeight}cm</strong> de largo
             </p>
-            <p className="cut-strip-plan__width">
-              Ancho usado: {strip.usedWidth} cm
-              {strip.wasteWidth > 0 ? (
-                <span className="cut-strip-plan__waste"> · sobra {strip.wasteWidth} cm</span>
-              ) : null}
-            </p>
+            {!strip.mixedLayouts && strip.usedWidth > 0 ? (
+              <p className="cut-strip-plan__width">
+                Ancho usado: {strip.usedWidth} cm
+                {strip.wasteWidth > 0 ? (
+                  <span className="cut-strip-plan__waste"> · sobra {strip.wasteWidth} cm</span>
+                ) : null}
+              </p>
+            ) : null}
             <div className="cut-strip-plan__pieces">
               <span className="cut-strip-plan__pieces-label">Salen</span>
               <p className="cut-strip-plan__pieces-inline">

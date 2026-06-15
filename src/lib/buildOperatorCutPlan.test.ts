@@ -24,8 +24,8 @@ describe('buildOperatorCutPlan', () => {
     expect(plan?.strips).toHaveLength(1)
     expect(plan?.strips[0].stripHeight).toBe(45)
     expect(plan?.strips[0].sheetCount).toBe(2)
-    expect(plan?.strips[0].pieces[0]).toEqual({ label: '127×45', count: 1 })
-    expect(formatOperatorPieceLine(plan!.strips[0].pieces[0])).toBe('127×45')
+    expect(plan?.strips[0].pieces[0]).toEqual({ label: '127×45', count: 2 })
+    expect(formatOperatorPieceLine(plan!.strips[0].pieces[0])).toBe('2 × 127×45')
   })
 
   it('varias planchas iguales → una tarjeta con el total', () => {
@@ -33,7 +33,18 @@ describe('buildOperatorCutPlan', () => {
     expect(plan?.strips).toHaveLength(1)
     expect(plan?.strips[0].stripHeight).toBe(30)
     expect(plan?.strips[0].sheetCount).toBe(2)
-    expect(plan?.strips[0].pieces).toEqual([{ label: '70×30', count: 2 }])
+    expect(plan?.strips[0].pieces).toEqual([{ label: '70×30', count: 4 }])
+  })
+
+  it('une planchas del mismo largo aunque tengan distinto ancho usado', () => {
+    const plan = buildOperatorCutPlan(
+      [task('a', '25x25', 5), task('b', '65x25', 1), task('c', '47x25', 1)],
+      140,
+    )
+    const twentyFive = plan?.strips.filter((s) => s.stripHeight === 25) ?? []
+    expect(twentyFive).toHaveLength(1)
+    expect(twentyFive[0].sheetCount).toBeGreaterThanOrEqual(2)
+    expect(twentyFive[0].mixedLayouts).toBe(true)
   })
 
   it('une planchas iguales aunque no sean consecutivas en el empaquetado', () => {
