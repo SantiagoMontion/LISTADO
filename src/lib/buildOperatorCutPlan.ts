@@ -54,25 +54,31 @@ function aggregatePieces(strip: StripPlan): OperatorStripPiece[] {
 }
 
 function groupIdenticalStrips(strips: StripPlan[]): OperatorCutStrip[] {
-  const grouped: OperatorCutStrip[] = []
-  let i = 0
-  while (i < strips.length) {
-    const current = strips[i]
-    let count = 1
-    while (i + count < strips.length && stripSignature(strips[i + count]) === stripSignature(current)) {
-      count += 1
+  const buckets = new Map<string, { strip: StripPlan; count: number }>()
+  const order: string[] = []
+
+  for (const strip of strips) {
+    const sig = stripSignature(strip)
+    const bucket = buckets.get(sig)
+    if (bucket) {
+      bucket.count += 1
+    } else {
+      buckets.set(sig, { strip, count: 1 })
+      order.push(sig)
     }
-    grouped.push({
-      stripNumber: grouped.length + 1,
-      sheetCount: count,
-      stripHeight: current.stripHeight,
-      usedWidth: current.usedWidth,
-      wasteWidth: current.wasteWidth,
-      pieces: aggregatePieces(current),
-    })
-    i += count
   }
-  return grouped
+
+  return order.map((sig, idx) => {
+    const { strip, count } = buckets.get(sig)!
+    return {
+      stripNumber: idx + 1,
+      sheetCount: count,
+      stripHeight: strip.stripHeight,
+      usedWidth: strip.usedWidth,
+      wasteWidth: strip.wasteWidth,
+      pieces: aggregatePieces(strip),
+    }
+  })
 }
 
 export function buildOperatorCutPlan(

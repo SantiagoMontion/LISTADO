@@ -21,10 +21,29 @@ function task(id: string, dimensions: string, totalQty: number): NmProdTask {
 describe('buildOperatorCutPlan', () => {
   it('agrupa planchas iguales y muestra cantidad por medida', () => {
     const plan = buildOperatorCutPlan([task('a', '127x45', 2)], 140)
+    expect(plan?.strips).toHaveLength(1)
     expect(plan?.strips[0].stripHeight).toBe(45)
     expect(plan?.strips[0].sheetCount).toBe(2)
     expect(plan?.strips[0].pieces[0]).toEqual({ label: '127×45', count: 1 })
     expect(formatOperatorPieceLine(plan!.strips[0].pieces[0])).toBe('127×45')
+  })
+
+  it('varias planchas iguales → una tarjeta con el total', () => {
+    const plan = buildOperatorCutPlan([task('a', '70x30', 4)], 140)
+    expect(plan?.strips).toHaveLength(1)
+    expect(plan?.strips[0].stripHeight).toBe(30)
+    expect(plan?.strips[0].sheetCount).toBe(2)
+    expect(plan?.strips[0].pieces).toEqual([{ label: '70×30', count: 2 }])
+  })
+
+  it('une planchas iguales aunque no sean consecutivas en el empaquetado', () => {
+    const plan = buildOperatorCutPlan(
+      [task('a', '70x30', 2), task('b', '60x65', 1), task('c', '70x30', 2)],
+      140,
+    )
+    const thirty = plan?.strips.filter((s) => s.stripHeight === 30) ?? []
+    expect(thirty).toHaveLength(1)
+    expect(thirty[0].sheetCount).toBe(2)
   })
 
   it('devuelve null si no hay piezas pendientes', () => {

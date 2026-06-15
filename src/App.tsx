@@ -218,12 +218,8 @@ export default function App() {
   const [quickAddError, setQuickAddError] = useState<string | null>(null)
   const [pendingDates, setPendingDates] = useState<Set<string>>(new Set())
   const [materialImgModalOpen, setMaterialImgModalOpen] = useState(false)
-  const [stripPackSortByTab, setStripPackSortByTab] = useState<
-    Partial<Record<MaterialTab, boolean>>
-  >({})
-  const [mergeAllListsByTab, setMergeAllListsByTab] = useState<
-    Partial<Record<MaterialTab, boolean>>
-  >({})
+  const [stripPackSortActive, setStripPackSortActive] = useState(false)
+  const [mergeAllListsChecked, setMergeAllListsChecked] = useState(false)
   const [allPendingTasks, setAllPendingTasks] = useState<NmProdTask[]>([])
   const [allPendingTasksLoading, setAllPendingTasksLoading] = useState(false)
 
@@ -397,10 +393,8 @@ export default function App() {
     }
   }, [configured, reportId, supabase, scheduleRefreshReports])
 
-  const stripPackSortActive = Boolean(stripPackSortByTab[activeTab])
-  const mergeAllListsActive =
-    stripPackSortActive && Boolean(mergeAllListsByTab[activeTab])
   const rollWidthForActiveTab = ROLL_WIDTH_BY_TAB[activeTab]
+  const mergeAllListsActive = stripPackSortActive && mergeAllListsChecked
 
   const reportFechaById = useMemo(() => {
     const map = new Map<string, string>()
@@ -423,8 +417,8 @@ export default function App() {
     (activeTabHasTasks || stripPackSortActive)
 
   useEffect(() => {
-    setStripPackSortByTab({})
-    setMergeAllListsByTab({})
+    setStripPackSortActive(false)
+    setMergeAllListsChecked(false)
   }, [reportId])
 
   useEffect(() => {
@@ -1416,14 +1410,14 @@ export default function App() {
                 <p className="nm-prod-task-meta">Calculando plan de corte…</p>
               ) : (
                 <>
-                  {totalRollLengthCm > 0 ? (
+                  {!operatorCutPlan && totalRollLengthCm > 0 ? (
                     <p className="cut-strip-plan__total-meters">
                       Metros de rollo (mts): {formatRollMeters(totalRollLengthCm)}
                     </p>
                   ) : null}
                   {sortedMoldTasks.length > 0 ? (
-                    <section className="cut-mold-section" aria-label="Medidas con molde">
-                      <p className="cut-mold-section__title">Con molde</p>
+                    <section className="cut-mold-section" aria-label="Planchar">
+                      <p className="cut-mold-section__title">Planchar</p>
                       {mergedMoldGroups
                         ? mergedMoldGroups.map((group) => (
                             <TaskCard
@@ -1469,11 +1463,14 @@ export default function App() {
                     </section>
                   ) : null}
                   {operatorCutPlan ? (
-                    <section className="cut-plan-section" aria-label="Plan de planchas">
+                    <section className="cut-plan-section" aria-label="Personalizados">
                       {sortedMoldTasks.length > 0 ? (
-                        <p className="cut-plan-section__title">Medidas a planchar</p>
+                        <p className="cut-plan-section__title">Personalizados</p>
                       ) : null}
-                      <CutStripPlanView plan={operatorCutPlan} />
+                      <CutStripPlanView
+                        plan={operatorCutPlan}
+                        totalRollLengthCm={totalRollLengthCm}
+                      />
                     </section>
                   ) : sortedMoldTasks.length === 0 ? (
                     <div className="nm-prod-all-cut-state">
@@ -1557,12 +1554,7 @@ export default function App() {
             type="button"
             className={`cut-list-ordenar-btn filter-pill${stripPackSortActive ? ' active' : ''}`}
             aria-pressed={stripPackSortActive}
-            onClick={() =>
-              setStripPackSortByTab((prev) => ({
-                ...prev,
-                [activeTab]: !prev[activeTab],
-              }))
-            }
+            onClick={() => setStripPackSortActive((prev) => !prev)}
           >
             {stripPackSortActive ? 'Ver lista' : 'Ordenar'}
           </button>
@@ -1571,14 +1563,9 @@ export default function App() {
               <input
                 type="checkbox"
                 className="cut-list-ordenar-merge-input"
-                checked={Boolean(mergeAllListsByTab[activeTab])}
+                checked={mergeAllListsChecked}
                 disabled={allPendingTasksLoading}
-                onChange={(e) =>
-                  setMergeAllListsByTab((prev) => ({
-                    ...prev,
-                    [activeTab]: e.target.checked,
-                  }))
-                }
+                onChange={(e) => setMergeAllListsChecked(e.target.checked)}
               />
               <span>Sumar TODAS las listas</span>
             </label>
