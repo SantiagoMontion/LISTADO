@@ -4476,6 +4476,15 @@ body:has(.nm-hub-app--cut-list) {
   margin-bottom: 16px;
 }
 
+.nm-hub-app--cut-list .cut-mold-plancha-hint {
+  margin: 6px 0 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.45;
+  color: #9099a3;
+  white-space: pre-line;
+}
+
 .nm-hub-app--cut-list .cut-mold-section__title,
 .nm-hub-app--cut-list .cut-plan-section__title {
   margin: 0 0 10px;
@@ -4613,6 +4622,19 @@ body:has(.nm-hub-app--cut-list) {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: #737a82;
+}
+
+.nm-hub-app--cut-list .cut-strip-plan__pieces-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: #fcfdff;
 }
 
 .nm-hub-app--cut-list .cut-strip-plan__pieces-inline {

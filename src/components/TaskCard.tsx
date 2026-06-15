@@ -12,6 +12,8 @@ interface TaskCardProps {
   variant?: 'legacy' | 'rebel'
   /** Fecha de la lista (ej. 11/6) cuando se unen listas de varios días. */
   listDayLabel?: string
+  /** Instrucción de planchas (modo ORDENAR, medidas con molde). */
+  ordenarPlanchaHint?: string
 }
 
 export function TaskCard({
@@ -25,6 +27,7 @@ export function TaskCard({
   showOnlyDecrement = false,
   variant = 'legacy',
   listDayLabel,
+  ordenarPlanchaHint,
 }: TaskCardProps) {
   const done = task.is_completed || task.current_qty >= task.total_qty
   const materialTypeNorm = task.material_type.trim().toLowerCase()
@@ -74,6 +77,9 @@ export function TaskCard({
             <span className="cut-list-day-label" title="Día de la lista">
               {listDayLabel}
             </span>
+          ) : null}
+          {ordenarPlanchaHint ? (
+            <p className="cut-mold-plancha-hint">{ordenarPlanchaHint}</p>
           ) : null}
         </div>
         <div className="cut-actions-group">

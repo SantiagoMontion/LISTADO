@@ -1,24 +1,23 @@
 import type { OperatorCutPlan } from '../lib/buildOperatorCutPlan'
-import { formatOperatorPieceLine, formatRollMeters } from '../lib/buildOperatorCutPlan'
+import { formatOperatorPieceLine } from '../lib/buildOperatorCutPlan'
+import { MaterialMetersLine } from './MaterialMetersLine'
 
 interface CutStripPlanViewProps {
   plan: OperatorCutPlan
-  /** Total incl. molde; si no se pasa, usa solo el plan de planchas. */
-  totalRollLengthCm?: number
+  /** Metros de material solo de esta sección (personalizados). */
+  materialMetersCm?: number
 }
 
 function sheetCountWord(count: number): string {
   return count === 1 ? 'plancha' : 'planchas'
 }
 
-export function CutStripPlanView({ plan, totalRollLengthCm }: CutStripPlanViewProps) {
-  const rollCm = totalRollLengthCm ?? plan.totalRollLengthCm
+export function CutStripPlanView({ plan, materialMetersCm }: CutStripPlanViewProps) {
+  const rollCm = materialMetersCm ?? plan.totalRollLengthCm
 
   return (
     <div className="cut-strip-plan">
-      <p className="cut-strip-plan__total-meters">
-        Metros de rollo (mts): {formatRollMeters(rollCm)}
-      </p>
+      <MaterialMetersLine cm={rollCm} />
 
       <ol className="cut-strip-plan__list">
         {plan.strips.map((strip) => (
@@ -40,9 +39,11 @@ export function CutStripPlanView({ plan, totalRollLengthCm }: CutStripPlanViewPr
             ) : null}
             <div className="cut-strip-plan__pieces">
               <span className="cut-strip-plan__pieces-label">Salen</span>
-              <p className="cut-strip-plan__pieces-inline">
-                {strip.pieces.map((p) => formatOperatorPieceLine(p)).join('  +  ')}
-              </p>
+              <ul className="cut-strip-plan__pieces-lines">
+                {strip.pieces.map((p, i) => (
+                  <li key={`${p.label}-${i}`}>{formatOperatorPieceLine(p)}</li>
+                ))}
+              </ul>
             </div>
           </li>
         ))}

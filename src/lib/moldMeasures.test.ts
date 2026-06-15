@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { computeRollLengthCmFromTasks, formatRollMeters } from './buildOperatorCutPlan'
+import { computeRollLengthCmFromTasks, formatMaterialMeters, formatPlanchaHint } from './buildOperatorCutPlan'
 import {
   firstPendingMoldSource,
   isMoldMeasure,
@@ -81,8 +81,13 @@ describe('computeRollLengthCmFromTasks', () => {
     expect(moldCm + planCm).toBe(90 + 90)
   })
 
-  it('formatRollMeters', () => {
-    expect(formatRollMeters(90)).toBe('0.90 m')
-    expect(formatRollMeters(1500)).toBe('15.0 m')
+  it('formatMaterialMeters', () => {
+    expect(formatMaterialMeters(90)).toBe('0.9mts')
+    expect(formatMaterialMeters(8000)).toBe('80mts')
+    expect(formatMaterialMeters(8690)).toBe('86.9mts')
+  })
+
+  it('formatPlanchaHint para 90×40 ×5', () => {
+    expect(formatPlanchaHint([{ count: 2, heightCm: 90 }])).toBe('2 planchas de 90cm de largo')
   })
 })

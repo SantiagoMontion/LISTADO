@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CutStripPlanView } from './components/CutStripPlanView'
+import { MaterialMetersLine } from './components/MaterialMetersLine'
 import { CreadorMaterialImagesModal } from './components/CreadorMaterialImagesModal'
 import { QuickAddMeasureModal } from './components/QuickAddMeasureModal'
 import { HubDispatchedOrdersApp } from './components/HubDispatchedOrdersApp'
@@ -27,7 +28,12 @@ import { HUB_NAV_EVENT, onHubLinkClick } from './lib/hubNavigate'
 import { normalizeCalendarDate, todayIsoLocal } from './lib/date'
 import { formatSupabaseOrError } from './lib/errors'
 import { parseProductionReport } from './lib/parseReport'
-import { buildOperatorCutPlan, computeRollLengthCmFromTasks, formatRollMeters } from './lib/buildOperatorCutPlan'
+import {
+  buildOperatorCutPlan,
+  computePlanchaSummaryFromTasks,
+  computeRollLengthCmFromTasks,
+  formatPlanchaHint,
+} from './lib/buildOperatorCutPlan'
 import {
   firstPendingMoldSource,
   lastCutMoldSource,
@@ -394,7 +400,7 @@ export default function App() {
   }, [configured, reportId, supabase, scheduleRefreshReports])
 
   const rollWidthForActiveTab = ROLL_WIDTH_BY_TAB[activeTab]
-  const mergeAllListsActive = stripPackSortActive && mergeAllListsChecked
+  const mergeAllListsActive = mergeAllListsChecked
 
   const reportFechaById = useMemo(() => {
     const map = new Map<string, string>()
@@ -504,17 +510,53 @@ export default function App() {
     return mergeMoldTasksByMeasure(moldTasks)
   }, [mergeAllListsActive, moldTasks])
 
-  const totalRollLengthCm = useMemo(() => {
+  const moldRollLengthCm = useMemo(() => {
     if (!stripPackSortActive || rollWidthForActiveTab === undefined) return 0
+    return computeRollLengthCmFromTasks(
+      moldTasks,
+      rollWidthForActiveTab,
+      taskFilter === 'completed',
+    )
+  }, [stripPackSortActive, rollWidthForActiveTab, moldTasks, taskFilter])
+
+  const planRollLengthCm = useMemo(() => {
+    if (!stripPackSortActive || rollWidthForActiveTab === undefined) return 0
+    return computeRollLengthCmFromTasks(
+      planTasks,
+      rollWidthForActiveTab,
+      taskFilter === 'completed',
+    )
+  }, [stripPackSortActive, rollWidthForActiveTab, planTasks, taskFilter])
+
+  const moldPlanchaHints = useMemo(() => {
+    if (!stripPackSortActive || rollWidthForActiveTab === undefined) {
+      return new Map<string, string>()
+    }
     const useCompleted = taskFilter === 'completed'
-    const moldCm = computeRollLengthCmFromTasks(moldTasks, rollWidthForActiveTab, useCompleted)
-    const planCm = computeRollLengthCmFromTasks(planTasks, rollWidthForActiveTab, useCompleted)
-    return moldCm + planCm
+    const hints = new Map<string, string>()
+
+    if (mergedMoldGroups) {
+      for (const group of mergedMoldGroups) {
+        const summary = computePlanchaSummaryFromTasks(
+          group.sources,
+          rollWidthForActiveTab,
+          useCompleted,
+        )
+        if (summary) hints.set(group.measureKey, formatPlanchaHint(summary.groups))
+      }
+    } else {
+      for (const t of moldTasks) {
+        const summary = computePlanchaSummaryFromTasks([t], rollWidthForActiveTab, useCompleted)
+        if (summary) hints.set(t.id, formatPlanchaHint(summary.groups))
+      }
+    }
+
+    return hints
   }, [
     stripPackSortActive,
     rollWidthForActiveTab,
+    mergedMoldGroups,
     moldTasks,
-    planTasks,
     taskFilter,
   ])
 
@@ -1090,7 +1132,7 @@ export default function App() {
         ? 'nm-hub-app nm-hub-app--cut-list'
         : 'nm-prod-app',
     showOrdenarBar ? 'nm-hub-app--cut-list-ordenar' : '',
-    showOrdenarBar && stripPackSortActive ? 'nm-hub-app--cut-list-ordenar-expanded' : '',
+    showOrdenarBar ? 'nm-hub-app--cut-list-ordenar-expanded' : '',
   ]
     .filter(Boolean)
     .join(' ')
@@ -1410,14 +1452,10 @@ export default function App() {
                 <p className="nm-prod-task-meta">Calculando plan de corte…</p>
               ) : (
                 <>
-                  {!operatorCutPlan && totalRollLengthCm > 0 ? (
-                    <p className="cut-strip-plan__total-meters">
-                      Metros de rollo (mts): {formatRollMeters(totalRollLengthCm)}
-                    </p>
-                  ) : null}
                   {sortedMoldTasks.length > 0 ? (
                     <section className="cut-mold-section" aria-label="Planchar">
                       <p className="cut-mold-section__title">Planchar</p>
+                      <MaterialMetersLine cm={moldRollLengthCm} />
                       {mergedMoldGroups
                         ? mergedMoldGroups.map((group) => (
                             <TaskCard
@@ -1444,6 +1482,7 @@ export default function App() {
                               }}
                               showOnlyDecrement={taskFilter === 'completed'}
                               variant="rebel"
+                              ordenarPlanchaHint={moldPlanchaHints.get(group.measureKey)}
                             />
                           ))
                         : sortedMoldTasks.map((t) => (
@@ -1458,6 +1497,7 @@ export default function App() {
                               onToggleCompleted={onToggleCompleted}
                               showOnlyDecrement={taskFilter === 'completed'}
                               variant="rebel"
+                              ordenarPlanchaHint={moldPlanchaHints.get(t.id)}
                             />
                           ))}
                     </section>
@@ -1467,10 +1507,7 @@ export default function App() {
                       {sortedMoldTasks.length > 0 ? (
                         <p className="cut-plan-section__title">Personalizados</p>
                       ) : null}
-                      <CutStripPlanView
-                        plan={operatorCutPlan}
-                        totalRollLengthCm={totalRollLengthCm}
-                      />
+                      <CutStripPlanView plan={operatorCutPlan} materialMetersCm={planRollLengthCm} />
                     </section>
                   ) : sortedMoldTasks.length === 0 ? (
                     <div className="nm-prod-all-cut-state">
@@ -1546,7 +1583,7 @@ export default function App() {
 
       {showOrdenarBar ? (
         <div
-          className={`cut-list-ordenar-bar${stripPackSortActive ? ' cut-list-ordenar-bar--expanded' : ''}`}
+          className="cut-list-ordenar-bar cut-list-ordenar-bar--expanded"
           role="toolbar"
           aria-label="Ordenar lista de corte"
         >
@@ -1558,18 +1595,16 @@ export default function App() {
           >
             {stripPackSortActive ? 'Ver lista' : 'Ordenar'}
           </button>
-          {stripPackSortActive ? (
-            <label className="cut-list-ordenar-merge">
-              <input
-                type="checkbox"
-                className="cut-list-ordenar-merge-input"
-                checked={mergeAllListsChecked}
-                disabled={allPendingTasksLoading}
-                onChange={(e) => setMergeAllListsChecked(e.target.checked)}
-              />
-              <span>Sumar TODAS las listas</span>
-            </label>
-          ) : null}
+          <label className="cut-list-ordenar-merge">
+            <input
+              type="checkbox"
+              className="cut-list-ordenar-merge-input"
+              checked={mergeAllListsChecked}
+              disabled={allPendingTasksLoading}
+              onChange={(e) => setMergeAllListsChecked(e.target.checked)}
+            />
+            <span>Sumar TODAS las listas</span>
+          </label>
         </div>
       ) : null}
     </div>

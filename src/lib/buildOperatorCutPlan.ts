@@ -159,7 +159,42 @@ export function computeRollLengthCmFromTasks(
   return guillotineStripPack(pedido, rollWidth).totalRollLengthCm
 }
 
-export function formatRollMeters(cm: number): string {
+export function formatMaterialMeters(cm: number): string {
   const m = cm / 100
-  return m >= 10 ? `${m.toFixed(1)} m` : `${m.toFixed(2)} m`
+  if (Math.abs(m - Math.round(m)) < 0.05) return `${Math.round(m)}mts`
+  return `${m.toFixed(1)}mts`
+}
+
+/** @deprecated Usar formatMaterialMeters */
+export function formatRollMeters(cm: number): string {
+  return formatMaterialMeters(cm)
+}
+
+export interface PlanchaLengthGroup {
+  count: number
+  heightCm: number
+}
+
+export function computePlanchaSummaryFromTasks(
+  tasks: NmProdTask[],
+  rollWidth: number,
+  useCompletedQty = false,
+): { rollLengthCm: number; groups: PlanchaLengthGroup[] } | null {
+  const pedido = tasksToPedidoLines(tasks, useCompletedQty)
+  if (pedido.length === 0) return null
+  const result = guillotineStripPack(pedido, rollWidth)
+  const grouped = groupStripsByHeight(result.strips)
+  return {
+    rollLengthCm: result.totalRollLengthCm,
+    groups: grouped.map((s) => ({ count: s.sheetCount, heightCm: s.stripHeight })),
+  }
+}
+
+export function formatPlanchaHint(groups: PlanchaLengthGroup[]): string {
+  return groups
+    .map(
+      ({ count, heightCm }) =>
+        `${count} ${count === 1 ? 'plancha' : 'planchas'} de ${heightCm}cm de largo`,
+    )
+    .join('\n')
 }
