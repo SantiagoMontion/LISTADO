@@ -210,23 +210,6 @@ export function getLogisticsApiHint(): string | null {
   return 'Configurá VITE_ANDREANI_API_URL en Vercel con la URL de Railway.'
 }
 
-function parseSseChunk(buffer: string, onEvent: (event: LogisticsEvent) => void): string {
-  const parts = buffer.split('\n\n')
-  const rest = parts.pop() ?? ''
-  for (const part of parts) {
-    for (const line of part.split('\n')) {
-      if (!line.startsWith('data: ')) continue
-      try {
-        const payload = JSON.parse(line.slice(6)) as LogisticsEvent
-        onEvent(payload)
-      } catch {
-        /* ignore malformed */
-      }
-    }
-  }
-  return rest
-}
-
 export function streamExport(
   options: { since?: string },
   onEvent: (event: LogisticsEvent) => void,
