@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { HubBrandBar } from './HubBrandBar'
+import { HubDesktopNav } from './HubDesktopNav'
 import {
-  checkLogisticsApiHealth,
   fetchLogisticsStatus,
   getLogisticsApiHint,
+  probeLogisticsApiHealth,
   streamExport,
   streamImport,
   triggerDownload,
@@ -12,8 +13,10 @@ import {
   type LogisticsLogLevel,
   type LogisticsMetrics,
 } from '../lib/logisticaAndreaniApi'
+import type { HubUserRole } from '../lib/types'
 
 interface HubLogisticaAndreaniAppProps {
+  profileRole?: HubUserRole | null
   adminSignOut?: boolean
 }
 
@@ -48,6 +51,7 @@ function formatTime(): string {
 }
 
 export function HubLogisticaAndreaniApp({
+  profileRole,
   adminSignOut = false,
 }: HubLogisticaAndreaniAppProps) {
   const configHint = getLogisticsApiHint()
@@ -85,11 +89,12 @@ export function HubLogisticaAndreaniApp({
         setStatusError(configHint)
         return
       }
-      const online = await checkLogisticsApiHealth()
-      setApiOnline(online)
-      if (!online) {
+      const probe = await probeLogisticsApiHealth()
+      setApiOnline(probe.ok)
+      if (!probe.ok) {
         setStatusError(
-          'No se pudo conectar con Railway. Revisá que el servicio esté activo y la URL en Vercel.',
+          probe.error ||
+            'No se pudo conectar con Railway. Revisá VITE_ANDREANI_API_URL y CORS en Railway.',
         )
         return
       }
@@ -189,6 +194,8 @@ export function HubLogisticaAndreaniApp({
         />
       </header>
 
+      <HubDesktopNav role={profileRole} />
+
       <div className="logistica-page">
         <section className="logistica-page__head">
           <div>
@@ -212,7 +219,7 @@ export function HubLogisticaAndreaniApp({
             {configHint}
           </div>
         )}
-        {apiOnline === false && !configHint && (
+        {apiOnline === false && !configHint && !statusError && (
           <div className="logistica-alert logistica-alert--warn" role="alert">
             Motor Andreani no responde. Revisá Railway y la variable VITE_ANDREANI_API_URL en Vercel.
           </div>

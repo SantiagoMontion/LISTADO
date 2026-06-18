@@ -170,7 +170,7 @@ export function QuickAddMeasureModal({
           <input
             id={inputId}
             type="text"
-            inputMode="numeric"
+            inputMode="text"
             className="modal-numeric-input"
             placeholder="Ej: 90x40"
             value={dimensionInput}

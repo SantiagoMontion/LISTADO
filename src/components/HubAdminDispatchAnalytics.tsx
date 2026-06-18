@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { HubBrandBar } from './HubBrandBar'
+import { HubDesktopNav } from './HubDesktopNav'
 import { hubNavigate } from '../lib/hubNavigate'
 import { todayIsoLocal } from '../lib/date'
 import { formatSupabaseOrError } from '../lib/errors'
@@ -196,6 +197,8 @@ export function HubAdminDispatchAnalytics({
           integratedSubtitleTone="muted"
         />
       </header>
+
+      <HubDesktopNav role={role} />
 
       <div className="admin-analytics-holder">
         <section className="week-pager-rebel" aria-label="Semana de consulta">

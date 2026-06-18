@@ -104,12 +104,34 @@ function friendlyParseError(body: string, status: number): string {
   return `Error del servidor (HTTP ${status})`
 }
 
+function isNetworkFailure(err: unknown): boolean {
+  if (!(err instanceof TypeError)) return false
+  const msg = err.message.toLowerCase()
+  return msg.includes('networkerror') || msg.includes('failed to fetch') || msg.includes('network')
+}
+
+function wrapFetchError(err: unknown): LogisticsApiError {
+  if (err instanceof LogisticsApiError) return err
+  if (isNetworkFailure(err)) {
+    return new LogisticsApiError(
+      'No se pudo conectar con Railway (bloqueo CORS o URL incorrecta). En Railway: NOTBRAIN_PUBLIC_URL = tu URL de Vercel. En Vercel: VITE_ANDREANI_API_URL = URL de Railway (sin barra final). VITE_ANDREANI_API_KEY = clave secreta (no la URL). Redeploy en ambos.',
+    )
+  }
+  if (err instanceof Error) return new LogisticsApiError(err.message)
+  return new LogisticsApiError('Error de red al contactar el motor Andreani.')
+}
+
 async function fetchApiJson<T>(path: string, init?: RequestInit): Promise<T> {
   assertApiConfigured()
-  const res = await fetch(withAuth(`${apiBase()}${path}`), {
-    ...init,
-    headers: { ...headers(), ...(init?.headers ?? {}) },
-  })
+  let res: Response
+  try {
+    res = await fetch(withAuth(`${apiBase()}${path}`), {
+      ...init,
+      headers: { ...headers(), ...(init?.headers ?? {}) },
+    })
+  } catch (err: unknown) {
+    throw wrapFetchError(err)
+  }
   const body = await res.text()
   let data: T
   try {
@@ -135,6 +157,17 @@ export async function checkLogisticsApiHealth(): Promise<boolean> {
     return data.status === 'ok'
   } catch {
     return false
+  }
+}
+
+export async function probeLogisticsApiHealth(): Promise<{ ok: boolean; error?: string }> {
+  try {
+    assertApiConfigured()
+    const data = await fetchApiJson<LogisticsHealthResponse>('/api/health')
+    return { ok: data.status === 'ok' }
+  } catch (err: unknown) {
+    const message = err instanceof LogisticsApiError ? err.message : wrapFetchError(err).message
+    return { ok: false, error: message }
   }
 }
 

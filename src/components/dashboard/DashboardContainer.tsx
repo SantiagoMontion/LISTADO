@@ -16,6 +16,7 @@ import {
   Taller1Dashboard,
   Taller2Dashboard,
 } from './roleDashboards'
+import { HubDesktopNav } from '../HubDesktopNav'
 import { HubPushNotificationSetup } from '../HubPushNotificationSetup'
 
 interface DashboardContainerProps {
@@ -110,6 +111,8 @@ export function DashboardContainer({
       <header className="dashboard-navbar">
         <HubBrandBar integratedDashboard adminSignOut={role === 'admin'} />
       </header>
+
+      {!guestMode ? <HubDesktopNav role={role} /> : null}
 
       {!guestMode ? (
         <div className="header-section">

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { HubBrandBar } from './HubBrandBar'
+import { HubDesktopNav } from './HubDesktopNav'
 import { HUB_NAV_EVENT, hubNavigate } from '../lib/hubNavigate'
 import {
   addMonthsToYearMonth,
@@ -14,6 +15,7 @@ import {
   fetchHubDispatchedCountsForMonth,
   sumHubDispatchedCounts,
 } from '../lib/hubDispatchedOrdersApi'
+import type { HubUserRole } from '../lib/types'
 
 const WEEKDAY_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'] as const
 
@@ -36,12 +38,14 @@ function readMonthFromUrl(): string {
 interface HubDispatchedStatsAppProps {
   configured: boolean
   isAdmin: boolean
+  profileRole?: HubUserRole | null
   adminSignOut?: boolean
 }
 
 export function HubDispatchedStatsApp({
   configured,
   isAdmin,
+  profileRole,
   adminSignOut = false,
 }: HubDispatchedStatsAppProps) {
   const [yearMonth, setYearMonth] = useState(() =>
@@ -139,6 +143,8 @@ export function HubDispatchedStatsApp({
           integratedSubtitleTone="muted"
         />
       </header>
+
+      <HubDesktopNav role={profileRole} />
 
       {error ? (
         <p className="nm-hub-error hub-dispatched-stats-feedback" role="alert">

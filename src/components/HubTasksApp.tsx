@@ -20,6 +20,7 @@ import { addDaysToIsoDate, formatDayMonthShort, normalizeCalendarDate, todayIsoL
 import { supabase } from '../lib/supabase'
 import type { HubImportance, HubUserRole, NmHubTask } from '../lib/types'
 import { HubBrandBar } from './HubBrandBar'
+import { HubDesktopNav } from './HubDesktopNav'
 import { HubImageLightbox } from './HubImageLightbox'
 import { HubTaskNotesPanel } from './HubTaskNotesPanel'
 import { HubPushNotificationSetup } from './HubPushNotificationSetup'
@@ -1041,6 +1042,8 @@ export function HubTasksApp({
           }
         />
       </header>
+
+      <HubDesktopNav role={profileRole} />
 
       {error ? (
         <p className="nm-hub-error" role="alert">

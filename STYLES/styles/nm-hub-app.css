@@ -1,10 +1,13 @@
 /* NOTMID Hub — layout móvil (panel + tareas + login) */
 .nm-hub-app {
+  --nm-hub-rail-max: 26rem;
+  --nm-hub-padding-x: 0.75rem;
   box-sizing: border-box;
-  max-width: min(100%, 26rem);
+  max-width: min(100%, var(--nm-hub-rail-max));
   margin: 0 auto;
   min-height: 100dvh;
-  padding: max(0.75rem, env(safe-area-inset-top, 0px)) 0.75rem max(1rem, env(safe-area-inset-bottom, 0px));
+  padding: max(0.75rem, env(safe-area-inset-top, 0px)) var(--nm-hub-padding-x)
+    max(1rem, env(safe-area-inset-bottom, 0px));
   background: #0a0a0a;
   color: #f1f5f9;
   font-family: var(--font-family, 'Inter', system-ui, sans-serif);
@@ -2291,7 +2294,7 @@ body:has(.nm-hub-app--cut-list) {
 
 .nm-hub-app.nm-hub-app--lista-upload {
   min-height: 100dvh;
-  max-width: min(100%, 26rem);
+  max-width: min(100%, var(--nm-hub-rail-max));
   background: transparent;
   color: var(--text-rebel-primary);
   font-family: var(--font-rebel-main);
@@ -2300,7 +2303,7 @@ body:has(.nm-hub-app--cut-list) {
 
 .nm-hub-app.nm-hub-app--cut-list {
   min-height: 100dvh;
-  max-width: min(100%, 26rem);
+  max-width: min(100%, var(--nm-hub-rail-max));
   background: transparent;
   color: var(--text-rebel-primary);
   font-family: var(--font-rebel-main);
@@ -2334,10 +2337,15 @@ body:has(.nm-hub-app--cut-list) {
 .nm-hub-app.nm-hub-app--tasks .dashboard-navbar,
 .nm-hub-app.nm-hub-app--printed-files .dashboard-navbar,
 .nm-hub-app.nm-hub-app--lista-upload .dashboard-navbar,
-.nm-hub-app.nm-hub-app--cut-list .dashboard-navbar {
-  width: calc(100% + 1.5rem);
-  max-width: calc(100% + 1.5rem);
-  margin-inline: -0.75rem;
+.nm-hub-app.nm-hub-app--cut-list .dashboard-navbar,
+.nm-hub-app.nm-hub-app--dispatched-orders .dashboard-navbar,
+.nm-hub-app.nm-hub-app--dispatched-stats .dashboard-navbar,
+.nm-hub-app.nm-hub-app--dispatch-analytics .dashboard-navbar,
+.nm-hub-app.nm-hub-app--cut-analytics .dashboard-navbar,
+.nm-hub-app.nm-hub-app--logistica-andreani .dashboard-navbar {
+  width: calc(100% + (var(--nm-hub-padding-x) * 2));
+  max-width: calc(100% + (var(--nm-hub-padding-x) * 2));
+  margin-inline: calc(-1 * var(--nm-hub-padding-x));
 }
 
 /* Safe-area pegada arriba */
@@ -4415,7 +4423,7 @@ body:has(.nm-hub-app--cut-list) {
   transform: translateX(-50%);
   box-sizing: border-box;
   width: 100%;
-  max-width: min(100%, 26rem);
+  max-width: min(100%, var(--nm-hub-rail-max));
   padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
   background: linear-gradient(to top, #08090a 65%, rgba(8, 9, 10, 0));
   pointer-events: none;
@@ -6036,5 +6044,158 @@ body:has(.nm-hub-app--logistica-andreani) {
 
   .logistica-held-cards {
     display: none;
+  }
+}
+
+/* ==========================================================================
+   NOT BRAIN — escritorio (768px+ y 1100px+)
+   ========================================================================== */
+
+.hub-desktop-nav {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  body:has(.nm-hub-app:not(.nm-hub-app--logistica-andreani)) {
+    background-color: #08090a;
+    background-image: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(56, 189, 248, 0.06), transparent);
+  }
+
+  .nm-hub-app:not(.nm-hub-app--logistica-andreani) {
+    --nm-hub-rail-max: 52rem;
+    --nm-hub-padding-x: 1.25rem;
+  }
+
+  .nm-hub-app.nm-hub-app--logistica-andreani {
+    --nm-hub-rail-max: 100%;
+    --nm-hub-padding-x: 1.25rem;
+  }
+
+  .hub-desktop-nav {
+    display: block;
+    width: calc(100% + (var(--nm-hub-padding-x) * 2));
+    max-width: calc(100% + (var(--nm-hub-padding-x) * 2));
+    margin: 0 calc(-1 * var(--nm-hub-padding-x)) 0.85rem;
+    padding: 0.55rem var(--nm-hub-padding-x);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(10, 12, 15, 0.92);
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  .hub-desktop-nav__list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    min-width: min-content;
+  }
+
+  .hub-desktop-nav__link {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.42rem 0.72rem;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: #94a3b8;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: color 0.15s, background 0.15s, border-color 0.15s;
+  }
+
+  .hub-desktop-nav__link:hover {
+    color: #e2e8f0;
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .hub-desktop-nav__link--active {
+    color: #f8fafc;
+    border-color: rgba(56, 189, 248, 0.35);
+    background: rgba(56, 189, 248, 0.1);
+  }
+
+  .nm-hub-app--dashboard .header-section {
+    padding-inline: 1rem;
+  }
+
+  .nm-hub-app--dashboard .cards-container-rebel {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    padding: 0 1rem 1.5rem;
+  }
+
+  .nm-hub-app--dashboard .status-bar-rebel {
+    margin-inline: 1rem;
+  }
+
+  .nm-hub-app--printed-files {
+    --printed-feed-columns: 3;
+  }
+
+  .nm-hub-app.nm-hub-app--dispatched-stats .hub-dispatched-stats-grid {
+    gap: 8px;
+  }
+
+  .nm-hub-app.nm-hub-app--dispatch-analytics .admin-analytics-holder,
+  .nm-hub-app.nm-hub-app--cut-analytics .admin-analytics-holder {
+    padding-inline: 1.25rem;
+  }
+
+  .nm-hub-app.nm-hub-app--tasks ul.nm-hub-task-list.tasks-list-rebel {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    align-items: start;
+  }
+
+  .nm-hub-app.nm-hub-app--tasks ul.nm-hub-task-list.tasks-list-rebel > li {
+    height: 100%;
+  }
+
+  .nm-hub-app.nm-hub-app--lista-upload .lista-upload-container {
+    max-width: 40rem;
+    margin-inline: auto;
+  }
+
+  .nm-hub-app.nm-hub-app--tasks .task-card-rebel.nm-hub-task-item {
+    margin-bottom: 0;
+  }
+}
+
+@media (min-width: 1100px) {
+  .nm-hub-app:not(.nm-hub-app--logistica-andreani) {
+    --nm-hub-rail-max: 72rem;
+    --nm-hub-padding-x: 1.5rem;
+  }
+
+  .nm-hub-app--dashboard .cards-container-rebel {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .nm-hub-app--printed-files {
+    --printed-feed-columns: 4;
+  }
+
+  .nm-hub-app.nm-hub-app--dispatch-analytics .kpi-analytics-grid,
+  .nm-hub-app.nm-hub-app--cut-analytics .kpi-analytics-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .nm-hub-app.nm-hub-app--tasks ul.nm-hub-task-list.tasks-list-rebel {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .nm-hub-app--login > .nm-hub-card {
+    width: 100%;
+    max-width: 26rem;
+    margin-inline: auto;
   }
 }

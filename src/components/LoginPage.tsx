@@ -31,7 +31,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="nm-hub-app">
+    <div className="nm-hub-app nm-hub-app--login">
       <header className="nm-hub-header">
         <HubBrandBar />
       </header>

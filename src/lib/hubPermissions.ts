@@ -238,3 +238,46 @@ export function hubDashboardLinks(day: string = todayIsoLocal()) {
     logisticaAndreani: '/logistica-andreani',
   } as const
 }
+
+export interface HubDesktopNavItem {
+  href: string
+  label: string
+}
+
+/** Enlaces del menú horizontal (solo escritorio). */
+export function hubDesktopNavLinks(
+  role: HubUserRole | null | undefined,
+): HubDesktopNavItem[] {
+  const perms = getHubPermissions(role)
+  if (!perms) return []
+
+  const day = todayIsoLocal()
+  const d = encodeURIComponent(day)
+  const links = hubDashboardLinks(day)
+  const items: HubDesktopNavItem[] = [{ href: '/', label: 'Inicio' }]
+
+  if (perms.viewHubTasks) {
+    items.push({ href: `/tareas?d=${d}`, label: 'Tareas' })
+  }
+  if (perms.viewCutList) {
+    items.push({ href: links.cutList, label: 'Lista corte' })
+  }
+  if (perms.uploadProductionList) {
+    items.push({ href: links.uploadList, label: 'Subir lista' })
+  }
+  if (perms.viewPrintedFiles) {
+    items.push({ href: links.printedFiles, label: 'Impresos' })
+  }
+  if (perms.viewDispatchedOrders) {
+    items.push({ href: links.dispatchedOrders, label: 'Despachos' })
+  }
+  if (perms.viewLogisticaAndreani) {
+    items.push({ href: links.logisticaAndreani, label: 'Andreani' })
+  }
+  if (role === 'admin') {
+    items.push({ href: links.dispatchAnalytics, label: 'Analítica desp.' })
+    items.push({ href: links.cutAnalytics, label: 'Analítica corte' })
+  }
+
+  return items
+}

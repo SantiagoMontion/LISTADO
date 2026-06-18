@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { HubBrandBar } from './HubBrandBar'
+import { HubDesktopNav } from './HubDesktopNav'
 import { HubImageLightbox } from './HubImageLightbox'
 import { HUB_NAV_EVENT } from '../lib/hubNavigate'
 import { addDaysToIsoDate, formatDayMonthShort, normalizeCalendarDate, todayIsoLocal } from '../lib/date'
@@ -11,7 +12,7 @@ import {
   signedMaterialImageUrl,
   signedMaterialImageUrlsByPath,
 } from '../lib/nmProdMaterialImages'
-import type { NmProdMaterialFamily, NmProdMaterialImageRow } from '../lib/types'
+import type { HubUserRole, NmProdMaterialFamily, NmProdMaterialImageRow } from '../lib/types'
 
 function normalizePathname(): string {
   let p = (window.location.pathname || '/').toLowerCase()
@@ -27,10 +28,15 @@ function readDayFromUrl(): string {
 
 interface HubPrintedFilesAppProps {
   configured: boolean
+  profileRole?: HubUserRole | null
   adminSignOut?: boolean
 }
 
-export function HubPrintedFilesApp({ configured, adminSignOut = false }: HubPrintedFilesAppProps) {
+export function HubPrintedFilesApp({
+  configured,
+  profileRole,
+  adminSignOut = false,
+}: HubPrintedFilesAppProps) {
   const [day, setDay] = useState(() =>
     typeof window !== 'undefined' ? readDayFromUrl() || todayIsoLocal() : todayIsoLocal(),
   )
@@ -208,6 +214,8 @@ export function HubPrintedFilesApp({ configured, adminSignOut = false }: HubPrin
           integratedSubtitleTone="muted"
         />
       </header>
+
+      <HubDesktopNav role={profileRole} />
 
       {error ? (
         <p className="nm-hub-error nm-hub-printed-feedback" role="alert">

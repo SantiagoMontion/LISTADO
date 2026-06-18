@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { HubBrandBar } from './HubBrandBar'
+import { HubDesktopNav } from './HubDesktopNav'
 import { HUB_NAV_EVENT, hubNavigate } from '../lib/hubNavigate'
 import {
   addDaysToIsoDate,
@@ -10,6 +11,7 @@ import {
 } from '../lib/date'
 import { formatSupabaseOrError } from '../lib/errors'
 import { fetchHubDispatchedCount, setHubDispatchedCount } from '../lib/hubDispatchedOrdersApi'
+import type { HubUserRole } from '../lib/types'
 
 const CARGAR_PATH = '/pedidos-despachados/cargar'
 
@@ -36,12 +38,14 @@ function parseDraftCount(raw: string): number | null {
 interface HubDispatchedOrdersAppProps {
   configured: boolean
   isAdmin: boolean
+  profileRole?: HubUserRole | null
   adminSignOut?: boolean
 }
 
 export function HubDispatchedOrdersApp({
   configured,
   isAdmin,
+  profileRole,
   adminSignOut = false,
 }: HubDispatchedOrdersAppProps) {
   const [day, setDay] = useState(() =>
@@ -187,6 +191,8 @@ export function HubDispatchedOrdersApp({
           }
         />
       </header>
+
+      <HubDesktopNav role={profileRole} />
 
       {error ? (
         <p className="nm-hub-error nm-hub-dispatched-feedback" role="alert">

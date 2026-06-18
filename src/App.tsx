@@ -19,6 +19,7 @@ import { canDeleteManejadorReport, canEditManejadorList, hubTasksReadOnly } from
 import { HubEntrarRedirect } from './components/HubEntrarRedirect'
 import { HubHome } from './components/HubHome'
 import { HubBrandBar } from './components/HubBrandBar'
+import { HubDesktopNav } from './components/HubDesktopNav'
 import { HubLoadingScreen } from './components/HubLoadingScreen'
 import { HubRoleBlocked } from './components/HubRoleBlocked'
 import { HubTasksApp } from './components/HubTasksApp'
@@ -1026,7 +1027,11 @@ export default function App() {
     getHubPermissions(profile?.role)?.viewPrintedFiles
   ) {
     return (
-      <HubPrintedFilesApp configured={configured} adminSignOut={profile?.role === 'admin'} />
+      <HubPrintedFilesApp
+        configured={configured}
+        profileRole={profile?.role}
+        adminSignOut={profile?.role === 'admin'}
+      />
     )
   }
 
@@ -1087,7 +1092,10 @@ export default function App() {
     getHubPermissions(profile.role)?.viewLogisticaAndreani
   ) {
     return (
-      <HubLogisticaAndreaniApp adminSignOut={profile.role === 'admin'} />
+      <HubLogisticaAndreaniApp
+        profileRole={profile.role}
+        adminSignOut={profile.role === 'admin'}
+      />
     )
   }
 
@@ -1104,6 +1112,7 @@ export default function App() {
       <HubDispatchedOrdersApp
         configured={configured}
         isAdmin={profile.role === 'admin'}
+        profileRole={profile.role}
         adminSignOut={profile.role === 'admin'}
       />
     )
@@ -1122,6 +1131,7 @@ export default function App() {
       <HubDispatchedStatsApp
         configured={configured}
         isAdmin={profile.role === 'admin'}
+        profileRole={profile.role}
         adminSignOut={profile.role === 'admin'}
       />
     )
@@ -1242,6 +1252,10 @@ export default function App() {
           }
         />
       </header>
+
+      {(isListaUpload || isCutList) && profile?.role ? (
+        <HubDesktopNav role={profile.role} />
+      ) : null}
 
       {mode === 'home' && !isHubHome && (
         <section className="nm-prod-section" aria-label="Navegación">
