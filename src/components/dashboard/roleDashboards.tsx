@@ -68,6 +68,12 @@ export function AdminDashboard({ stats }: RoleDashboardProps) {
         icon="✂"
         title="Analítica de corte"
       />
+      <DashboardCard
+        href={links.logisticaAndreani}
+        accent="files"
+        icon="⧉"
+        title="Logística Andreani"
+      />
     </nav>
   )
 }

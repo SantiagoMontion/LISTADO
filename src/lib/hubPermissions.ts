@@ -15,6 +15,7 @@ export interface HubPermissions {
   viewPrintedFiles: boolean
   viewDispatchedOrders: boolean
   editDispatchedOrders: boolean
+  viewLogisticaAndreani: boolean
   viewDashboardSummary: boolean
 }
 
@@ -32,6 +33,7 @@ export const HUB_PERMISSIONS: Record<HubUserRole, HubPermissions> = {
     viewPrintedFiles: true,
     viewDispatchedOrders: true,
     editDispatchedOrders: true,
+    viewLogisticaAndreani: true,
     viewDashboardSummary: true,
   },
   lista_creator: {
@@ -47,6 +49,7 @@ export const HUB_PERMISSIONS: Record<HubUserRole, HubPermissions> = {
     viewPrintedFiles: false,
     viewDispatchedOrders: false,
     editDispatchedOrders: false,
+    viewLogisticaAndreani: false,
     viewDashboardSummary: true,
   },
   taller_1: {
@@ -62,6 +65,7 @@ export const HUB_PERMISSIONS: Record<HubUserRole, HubPermissions> = {
     viewPrintedFiles: true,
     viewDispatchedOrders: true,
     editDispatchedOrders: false,
+    viewLogisticaAndreani: false,
     viewDashboardSummary: true,
   },
   online_1: {
@@ -77,6 +81,7 @@ export const HUB_PERMISSIONS: Record<HubUserRole, HubPermissions> = {
     viewPrintedFiles: false,
     viewDispatchedOrders: false,
     editDispatchedOrders: false,
+    viewLogisticaAndreani: false,
     viewDashboardSummary: true,
   },
   taller_2: {
@@ -92,6 +97,7 @@ export const HUB_PERMISSIONS: Record<HubUserRole, HubPermissions> = {
     viewPrintedFiles: false,
     viewDispatchedOrders: false,
     editDispatchedOrders: false,
+    viewLogisticaAndreani: false,
     viewDashboardSummary: false,
   },
 }
@@ -119,6 +125,7 @@ export type HubAppPath =
   | '/pedidos-despachados/cargar'
   | '/pedidos-despachados/analitica'
   | '/lista-corte/analitica'
+  | '/logistica-andreani'
   | '/entrar'
 
 export function canAccessHubPath(
@@ -150,6 +157,8 @@ export function canAccessHubPath(
       return role === 'admin'
     case '/lista-corte/analitica':
       return role === 'admin'
+    case '/logistica-andreani':
+      return perms.viewLogisticaAndreani
     default:
       return false
   }
@@ -168,6 +177,7 @@ export function normalizeHubPath(path: string): HubAppPath | string {
   if (p === '/pedidos-despachados/analitica') return '/pedidos-despachados/analitica'
   if (p === '/lista-corte/analitica') return '/lista-corte/analitica'
   if (p === '/pedidos-despachados') return '/pedidos-despachados'
+  if (p === '/logistica-andreani') return '/logistica-andreani'
   if (p === '' || p === '/') return '/'
   return p
 }
@@ -205,6 +215,9 @@ export function hubPathBlockedMessage(path: string, role: HubUserRole | null | u
   if (p === '/lista-corte/analitica') {
     return `El perfil «${label}» no accede a la analítica de corte.`
   }
+  if (p === '/logistica-andreani') {
+    return `El perfil «${label}» no accede a logística Andreani.`
+  }
   return 'No tenés permiso para esta pantalla.'
 }
 
@@ -222,5 +235,6 @@ export function hubDashboardLinks(day: string = todayIsoLocal()) {
     dispatchedOrders: `/pedidos-despachados?m=${d.slice(0, 7)}`,
     dispatchAnalytics: '/pedidos-despachados/analitica',
     cutAnalytics: '/lista-corte/analitica',
+    logisticaAndreani: '/logistica-andreani',
   } as const
 }

@@ -3,6 +3,7 @@ import { CutStripPlanView } from './components/CutStripPlanView'
 import { CreadorMaterialImagesModal } from './components/CreadorMaterialImagesModal'
 import { QuickAddMeasureModal } from './components/QuickAddMeasureModal'
 import { HubDispatchedOrdersApp } from './components/HubDispatchedOrdersApp'
+import { HubLogisticaAndreaniApp } from './components/HubLogisticaAndreaniApp'
 import { HubAdminCutAnalytics } from './components/HubAdminCutAnalytics'
 import { HubAdminDispatchAnalytics } from './components/HubAdminDispatchAnalytics'
 import { HubDispatchedStatsApp } from './components/HubDispatchedStatsApp'
@@ -181,6 +182,7 @@ export default function App() {
   const isHubCutAnalytics = path === '/lista-corte/analitica'
   const isHubDispatchedCalendar =
     path === '/pedidos-despachados' || path === '/pedidos-despachados/estadisticas'
+  const isLogisticaAndreani = path === '/logistica-andreani'
   const isHubHome = path === '/' || path === ''
 
   const [reports, setReports] = useState<NmProdReport[]>([])
@@ -991,7 +993,8 @@ export default function App() {
     (isHubDispatchedCalendar ||
       isHubDispatchedCargar ||
       isHubDispatchedAnalytics ||
-      isHubCutAnalytics) &&
+      isHubCutAnalytics ||
+      isLogisticaAndreani) &&
     !profileReady
   ) {
     return <HubLoadingScreen label="Cargando perfil…" />
@@ -1034,7 +1037,8 @@ export default function App() {
     (isHubDispatchedCalendar ||
       isHubDispatchedCargar ||
       isHubDispatchedAnalytics ||
-      isHubCutAnalytics) &&
+      isHubCutAnalytics ||
+      isLogisticaAndreani) &&
     profileReady &&
     !profile
   ) {
@@ -1069,6 +1073,24 @@ export default function App() {
         configured={configured}
         role={profile.role}
         adminSignOut
+      />
+    )
+  }
+
+  if (
+    authEnabled &&
+    authReady &&
+    session &&
+    isLogisticaAndreani &&
+    profileReady &&
+    profile &&
+    getHubPermissions(profile.role)?.viewLogisticaAndreani
+  ) {
+    return (
+      <HubLogisticaAndreaniApp
+        configured={configured}
+        isAdmin={profile.role === 'admin'}
+        adminSignOut={profile.role === 'admin'}
       />
     )
   }
@@ -1131,7 +1153,7 @@ export default function App() {
 
   if (
     !authEnabled &&
-    (isHubDispatchedCalendar || isHubDispatchedCargar || isHubDispatchedAnalytics || isHubCutAnalytics)
+    (isHubDispatchedCalendar || isHubDispatchedCargar || isHubDispatchedAnalytics || isHubCutAnalytics || isLogisticaAndreani)
   ) {
     return (
       <div className="nm-hub-app">
