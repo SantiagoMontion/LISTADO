@@ -2,17 +2,20 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { HubBrandBar } from './HubBrandBar'
 import { HubDesktopNav } from './HubDesktopNav'
 import {
+  createSendTrackingJob,
   fetchLogisticsStatus,
+  fetchSendTrackingJobs,
   getLogisticsApiHint,
   probeLogisticsApiHealth,
   streamExport,
-  streamImport,
-  streamSyncTrackings,
+  streamSendTrackingJob,
   triggerDownload,
   type HeldOrder,
   type LogisticsEvent,
   type LogisticsLogLevel,
   type LogisticsMetrics,
+  type SendTrackingJobSummary,
+  type SendTrackingResult,
 } from '../lib/logisticaAndreaniApi'
 import type { HubUserRole } from '../lib/types'
 
@@ -30,9 +33,7 @@ interface LogLine {
 
 const EMPTY_METRICS: LogisticsMetrics = {
   pending_export: 0,
-  ready_to_dispatch: 0,
-  in_transit: 0,
-  delivered: 0,
+  missing_tracking: 0,
   errors: 0,
 }
 
@@ -51,6 +52,15 @@ function formatTime(): string {
   })
 }
 
+function renderLogLines(lines: LogLine[]) {
+  return lines.map((line) => (
+    <div key={line.id} className="logistica-console__line">
+      <span className="logistica-console__ts">[{line.ts}]</span>
+      <span className={LOG_CLASS[line.level]}>{line.message}</span>
+    </div>
+  ))
+}
+
 export function HubLogisticaAndreaniApp({
   profileRole,
   adminSignOut = false,
@@ -62,23 +72,41 @@ export function HubLogisticaAndreaniApp({
   const [loadingStatus, setLoadingStatus] = useState(false)
   const [statusError, setStatusError] = useState<string | null>(null)
 
-  const [busy, setBusy] = useState(false)
-  const [progress, setProgress] = useState(0)
-  const [progressLabel, setProgressLabel] = useState('')
-  const [logs, setLogs] = useState<LogLine[]>([])
-  const [dragOver, setDragOver] = useState(false)
+  const [exportRunning, setExportRunning] = useState(false)
+  const [exportFinished, setExportFinished] = useState(false)
+  const [exportProgress, setExportProgress] = useState(0)
+  const [exportLogs, setExportLogs] = useState<LogLine[]>([])
+
+  const [sendRunning, setSendRunning] = useState(false)
+  const [sendFinished, setSendFinished] = useState(false)
+  const [sendLogs, setSendLogs] = useState<LogLine[]>([])
+  const [sendResults, setSendResults] = useState<SendTrackingResult[]>([])
+  const [sendSummary, setSendSummary] = useState<{ ok: number; fail: number } | null>(null)
+  const [jobHistory, setJobHistory] = useState<SendTrackingJobSummary[]>([])
+  const [expandedJobId, setExpandedJobId] = useState<string | null>(null)
+
   const [sinceDate, setSinceDate] = useState('')
   const [showSinceDate, setShowSinceDate] = useState(false)
 
-  const logIdRef = useRef(0)
-  const logsEndRef = useRef<HTMLDivElement>(null)
+  const exportLogIdRef = useRef(0)
+  const sendLogIdRef = useRef(0)
   const streamCloserRef = useRef<(() => void) | null>(null)
 
-  const pushLog = useCallback((level: LogisticsLogLevel, message: string) => {
-    logIdRef.current += 1
-    setLogs((prev) => [
+  const anyBusy = exportRunning || sendRunning
+
+  const pushExportLog = useCallback((level: LogisticsLogLevel, message: string) => {
+    exportLogIdRef.current += 1
+    setExportLogs((prev) => [
       ...prev.slice(-400),
-      { id: logIdRef.current, level, message, ts: formatTime() },
+      { id: exportLogIdRef.current, level, message, ts: formatTime() },
+    ])
+  }, [])
+
+  const pushSendLog = useCallback((level: LogisticsLogLevel, message: string) => {
+    sendLogIdRef.current += 1
+    setSendLogs((prev) => [
+      ...prev.slice(-400),
+      { id: sendLogIdRef.current, level, message, ts: formatTime() },
     ])
   }, [])
 
@@ -100,9 +128,13 @@ export function HubLogisticaAndreaniApp({
         )
         return
       }
-      const data = await fetchLogisticsStatus()
+      const [data, jobsData] = await Promise.all([
+        fetchLogisticsStatus(),
+        fetchSendTrackingJobs().catch(() => ({ jobs: [] })),
+      ])
       setMetrics(data.metrics)
       setHeldOrders(data.held_orders)
+      setJobHistory(jobsData.jobs)
     } catch (err: unknown) {
       setApiOnline(false)
       setStatusError(err instanceof Error ? err.message : 'Error al consultar estado')
@@ -111,33 +143,58 @@ export function HubLogisticaAndreaniApp({
     }
   }, [configHint])
 
-  const handleEvent = useCallback(
+  const handleExportEvent = useCallback(
     (event: LogisticsEvent) => {
       if (event.type === 'log') {
-        pushLog(event.level ?? 'info', event.message)
+        pushExportLog(event.level ?? 'info', event.message)
       } else if (event.type === 'progress') {
-        setProgress(event.percent ?? 0)
-        setProgressLabel(event.message)
-        pushLog('info', event.message)
+        setExportProgress(event.percent ?? 0)
       } else if (event.type === 'complete') {
-        setProgress(100)
-        setProgressLabel(event.message)
-        pushLog('success', event.message)
+        setExportProgress(100)
+        pushExportLog('success', event.message)
         const summary = event.data?.summary as { filename?: string } | undefined
         const downloadName =
           (event.data?.download_name as string | undefined) || summary?.filename
         if (downloadName) {
           triggerDownload(downloadName)
-          pushLog('success', `Descarga iniciada: ${downloadName}`)
+          pushExportLog('success', `Descarga iniciada: ${downloadName}`)
         }
-        setBusy(false)
+        setExportRunning(false)
+        setExportFinished(true)
         void refreshStatus()
       } else if (event.type === 'error') {
-        pushLog('error', event.message)
-        setBusy(false)
+        pushExportLog('error', event.message)
+        setExportRunning(false)
+        setExportFinished(true)
       }
     },
-    [pushLog, refreshStatus],
+    [pushExportLog, refreshStatus],
+  )
+
+  const handleSendEvent = useCallback(
+    (event: LogisticsEvent) => {
+      if (event.type === 'log') {
+        pushSendLog(event.level ?? 'info', event.message)
+      } else if (event.type === 'complete') {
+        pushSendLog(event.level ?? 'success', event.message)
+        const job = event.data?.job as SendTrackingJobSummary | undefined
+        if (job?.results) {
+          setSendResults(job.results)
+          setSendSummary({
+            ok: job.ok_count ?? 0,
+            fail: job.fail_count ?? 0,
+          })
+        }
+        setSendRunning(false)
+        setSendFinished(true)
+        void refreshStatus()
+      } else if (event.type === 'error') {
+        pushSendLog('error', event.message)
+        setSendRunning(false)
+        setSendFinished(true)
+      }
+    },
+    [pushSendLog, refreshStatus],
   )
 
   useEffect(() => {
@@ -149,53 +206,42 @@ export function HubLogisticaAndreaniApp({
     }
   }, [refreshStatus])
 
-  useEffect(() => {
-    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [logs])
-
   const startExport = () => {
-    if (busy) return
+    if (anyBusy) return
     streamCloserRef.current?.()
-    setBusy(true)
-    setProgress(0)
-    setProgressLabel('Iniciando exportación…')
-    setLogs([])
-    pushLog('info', 'Generando carga masiva Andreani…')
-    const { close } = streamExport({ since: sinceDate || undefined }, handleEvent)
+    setExportRunning(true)
+    setExportFinished(false)
+    setExportProgress(0)
+    setExportLogs([])
+    exportLogIdRef.current = 0
+    pushExportLog('info', 'Generando carga masiva Andreani…')
+    const { close } = streamExport({ since: sinceDate || undefined }, handleExportEvent)
     streamCloserRef.current = close
   }
 
-  const startSync = () => {
-    if (busy) return
+  const startSendTrackings = async () => {
+    if (anyBusy) return
     streamCloserRef.current?.()
-    setBusy(true)
-    setProgress(0)
-    setProgressLabel('Buscando seguimientos en Shopify…')
-    setLogs([])
-    pushLog('info', 'Sincronizando números de envío desde pedidos…')
-    const { close } = streamSyncTrackings(handleEvent)
-    streamCloserRef.current = close
-  }
-
-  const runImport = async (file: File) => {
-    if (busy) return
-    setBusy(true)
-    setProgress(0)
-    setProgressLabel('Importando trackings…')
-    pushLog('info', `Archivo recibido: ${file.name}`)
+    setSendRunning(true)
+    setSendFinished(false)
+    setSendLogs([])
+    setSendResults([])
+    setSendSummary(null)
+    sendLogIdRef.current = 0
+    pushSendLog('info', 'Creando job en Railway…')
     try {
-      await streamImport(file, handleEvent)
+      const { job_id } = await createSendTrackingJob()
+      pushSendLog(
+        'info',
+        'Job creado. Ejecutá send_trackings_worker.bat en la PC del taller o en tu casa.',
+      )
+      const { close } = streamSendTrackingJob(job_id, handleSendEvent)
+      streamCloserRef.current = close
     } catch (err: unknown) {
-      pushLog('error', err instanceof Error ? err.message : 'Error en importación')
-      setBusy(false)
+      pushSendLog('error', err instanceof Error ? err.message : 'No se pudo crear el job')
+      setSendRunning(false)
+      setSendFinished(true)
     }
-  }
-
-  const onDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    setDragOver(false)
-    const file = e.dataTransfer.files[0]
-    if (file) void runImport(file)
   }
 
   return (
@@ -241,6 +287,13 @@ export function HubLogisticaAndreaniApp({
           </div>
         )}
 
+        {sendRunning && (
+          <div className="logistica-alert logistica-alert--info" role="status">
+            Esperando worker en PC… Abrí <strong>scripts/send_trackings_worker.bat</strong> en el
+            taller o en tu casa (solo mientras dure este envío).
+          </div>
+        )}
+
         <section className="logistica-metrics" aria-label="Resumen de envíos">
           <article className="logistica-metric">
             <p className="logistica-metric__label">Listos para crear etiqueta</p>
@@ -250,25 +303,11 @@ export function HubLogisticaAndreaniApp({
             <p className="logistica-metric__desc">Pagados, sin enviar, sin etiqueta</p>
           </article>
           <article className="logistica-metric">
-            <p className="logistica-metric__label">Despachados sin seguimiento</p>
+            <p className="logistica-metric__label">Sin seguimiento</p>
             <p className="logistica-metric__value logistica-metric__value--violet">
-              {metrics.ready_to_dispatch}
+              {metrics.missing_tracking}
             </p>
-            <p className="logistica-metric__desc">Con tag ETIQUETA, sin tracking</p>
-          </article>
-          <article className="logistica-metric">
-            <p className="logistica-metric__label">Enviados</p>
-            <p className="logistica-metric__value logistica-metric__value--cyan">
-              {metrics.in_transit}
-            </p>
-            <p className="logistica-metric__desc">Seguimiento activo</p>
-          </article>
-          <article className="logistica-metric">
-            <p className="logistica-metric__label">Entregados</p>
-            <p className="logistica-metric__value logistica-metric__value--green">
-              {metrics.delivered}
-            </p>
-            <p className="logistica-metric__desc">Últimos 45 días</p>
+            <p className="logistica-metric__desc">Pendientes de cargar en Shopify</p>
           </article>
           <article className="logistica-metric">
             <p className="logistica-metric__label">Con error</p>
@@ -311,87 +350,119 @@ export function HubLogisticaAndreaniApp({
                 type="button"
                 className="logistica-btn-primary"
                 onClick={startExport}
-                disabled={busy || apiOnline === false || Boolean(configHint)}
+                disabled={anyBusy || apiOnline === false || Boolean(configHint)}
               >
-                Generar carga masiva
+                {exportRunning ? 'Generando…' : 'Generar carga masiva'}
               </button>
+
+              {exportRunning ? (
+                <div className="logistica-panel-progress" aria-label="Progreso de exportación">
+                  <div className="logistica-progress__bar">
+                    <div
+                      className="logistica-progress__fill"
+                      style={{ width: `${exportProgress}%` }}
+                    />
+                  </div>
+                </div>
+              ) : null}
+
+              {exportFinished && exportLogs.length > 0 ? (
+                <details className="logistica-logs-toggle">
+                  <summary>Ver logs</summary>
+                  <div className="logistica-console__body">{renderLogLines(exportLogs)}</div>
+                </details>
+              ) : null}
             </article>
 
             <article className="logistica-panel">
-              <h2 className="logistica-panel__title">Sincronizar seguimientos</h2>
+              <h2 className="logistica-panel__title">Enviar seguimientos</h2>
               <p className="logistica-panel__text">
-                Lee el número de envío guardado en cada pedido (atributo Andreani_Numero_Envio) y
-                crea el fulfillment en Shopify automáticamente.
+                Fase 2: Shopify por API + Andreani headless. Mismo flujo en taller y en casa.
               </p>
+              <ol className="logistica-steps-hint">
+                <li>Ejecutá <code>send_trackings_worker.bat</code> en la PC donde estés</li>
+                <li>Apretá el botón de abajo</li>
+              </ol>
               <button
                 type="button"
                 className="logistica-btn-primary"
-                onClick={startSync}
-                disabled={busy || apiOnline === false || Boolean(configHint)}
+                onClick={() => void startSendTrackings()}
+                disabled={anyBusy || apiOnline === false || Boolean(configHint)}
               >
-                Sincronizar desde Shopify
+                {sendRunning ? 'Enviando seguimientos…' : 'Mandar seguimientos'}
               </button>
-              <details className="logistica-optional-upload">
-                <summary>Subir Excel manual (opcional)</summary>
-                <p className="logistica-panel__text">
-                  Si tenés el Excel de resultados del portal Andreani, podés importarlo acá.
-                </p>
-                <div
-                  className={`logistica-dropzone logistica-dropzone--compact ${dragOver ? 'logistica-dropzone--active' : ''}`}
-                  onDragOver={(e) => {
-                    e.preventDefault()
-                    setDragOver(true)
-                  }}
-                  onDragLeave={() => setDragOver(false)}
-                  onDrop={onDrop}
-                >
-                  <p className="logistica-dropzone__hint">.xlsx · arrastrar y soltar</p>
-                  <label className="logistica-file-btn">
-                    <input
-                      type="file"
-                      accept=".xlsx,.xls"
-                      hidden
-                      disabled={busy}
-                      onChange={(e) => {
-                        const f = e.target.files?.[0]
-                        if (f) void runImport(f)
-                        e.target.value = ''
-                      }}
-                    />
-                    Elegir archivo
-                  </label>
+
+              {sendSummary ? (
+                <div className="logistica-send-summary">
+                  <span className="logistica-send-summary__ok">{sendSummary.ok} OK</span>
+                  <span className="logistica-send-summary__fail">{sendSummary.fail} fallidos</span>
                 </div>
-              </details>
+              ) : null}
+
+              {sendResults.length > 0 ? (
+                <ul className="logistica-send-results">
+                  {sendResults.map((row) => (
+                    <li
+                      key={`${row.order_name}-${row.customer}-${row.status}`}
+                      className={
+                        row.status === 'ok'
+                          ? 'logistica-send-results__item logistica-send-results__item--ok'
+                          : 'logistica-send-results__item logistica-send-results__item--fail'
+                      }
+                    >
+                      <span className="logistica-send-results__order">{row.order_name}</span>
+                      <span className="logistica-send-results__customer">{row.customer}</span>
+                      {row.status === 'ok' ? (
+                        <span className="logistica-send-results__tracking">{row.tracking}</span>
+                      ) : (
+                        <span className="logistica-send-results__detail">{row.detail}</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+
+              {sendFinished && sendLogs.length > 0 ? (
+                <details className="logistica-logs-toggle">
+                  <summary>Ver logs</summary>
+                  <div className="logistica-console__body">{renderLogLines(sendLogs)}</div>
+                </details>
+              ) : null}
             </article>
           </div>
-
-          <article className="logistica-panel">
-            <div className="logistica-progress__head">
-              <h2 className="logistica-panel__title">Progreso</h2>
-              <span className="logistica-progress__pct">{progress}%</span>
-            </div>
-            <div className="logistica-progress__bar">
-              <div className="logistica-progress__fill" style={{ width: `${progress}%` }} />
-            </div>
-            <p className="logistica-progress__label">{progressLabel}</p>
-
-            <div className="logistica-console">
-              <div className="logistica-console__head">consola · live</div>
-              <div className="logistica-console__body">
-                {logs.length === 0 && (
-                  <p className="logistica-console__msg--info">Esperando tarea…</p>
-                )}
-                {logs.map((line) => (
-                  <div key={line.id} className="logistica-console__line">
-                    <span className="logistica-console__ts">[{line.ts}]</span>
-                    <span className={LOG_CLASS[line.level]}>{line.message}</span>
-                  </div>
-                ))}
-                <div ref={logsEndRef} />
-              </div>
-            </div>
-          </article>
         </section>
+
+        {jobHistory.length > 0 ? (
+          <section className="logistica-panel logistica-job-history">
+            <h2 className="logistica-panel__title">Historial de envíos</h2>
+            <ul className="logistica-job-history__list">
+              {jobHistory.map((job) => (
+                <li key={job.id} className="logistica-job-history__item">
+                  <button
+                    type="button"
+                    className="logistica-job-history__head"
+                    onClick={() =>
+                      setExpandedJobId((prev) => (prev === job.id ? null : job.id))
+                    }
+                  >
+                    <span>{new Date(job.created_at).toLocaleString('es-AR')}</span>
+                    <span className={`logistica-job-history__status logistica-job-history__status--${job.status}`}>
+                      {job.status}
+                    </span>
+                    <span>
+                      {job.ok_count ?? 0} OK · {job.fail_count ?? 0} fallidos
+                    </span>
+                  </button>
+                  {expandedJobId === job.id ? (
+                    <p className="logistica-job-history__meta">
+                      Worker: {job.worker_id || '—'}
+                    </p>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
 
         <section className="logistica-panel logistica-held">
           <div className="logistica-held__head">

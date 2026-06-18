@@ -12,9 +12,7 @@ export interface LogisticsEvent {
 
 export interface LogisticsMetrics {
   pending_export: number
-  ready_to_dispatch: number
-  in_transit: number
-  delivered: number
+  missing_tracking: number
   errors: number
 }
 
@@ -32,10 +30,40 @@ export interface LogisticsStatusResponse {
   store_domain: string
 }
 
+export interface SendTrackingResult {
+  order_name: string | null
+  order_id: number | null
+  customer: string
+  status: string
+  detail: string
+  tracking: string
+}
+
+export interface SendTrackingJobSummary {
+  id: string
+  status: string
+  created_at: string
+  started_at?: string | null
+  finished_at?: string | null
+  ok_count?: number
+  fail_count?: number
+  processed_count?: number
+  worker_id?: string | null
+  results?: SendTrackingResult[]
+  logs?: Array<{ id: number; ts: string; level: string; message: string }>
+}
+
+export interface SendTrackingJobListResponse {
+  jobs: SendTrackingJobSummary[]
+}
+
 export interface LogisticsHealthResponse {
   status: string
   shopify_configured?: boolean
+  shopify_ok?: boolean
   store?: string
+  send_trackings_available?: boolean
+  send_trackings_mode?: string
 }
 
 export class LogisticsApiError extends Error {
@@ -163,7 +191,10 @@ export async function checkLogisticsApiHealth(): Promise<boolean> {
   }
 }
 
-export async function probeLogisticsApiHealth(): Promise<{ ok: boolean; error?: string }> {
+export async function probeLogisticsApiHealth(): Promise<{
+  ok: boolean
+  error?: string
+}> {
   try {
     assertApiConfigured()
     const data = await fetchApiJson<LogisticsHealthResponse>('/api/health')
@@ -233,7 +264,22 @@ export function streamExport(
   return { close: () => es.close() }
 }
 
-export function streamSyncTrackings(
+export async function createSendTrackingJob(): Promise<{ job_id: string; status: string }> {
+  return fetchApiJson<{ job_id: string; status: string }>('/api/logistics/send-trackings/jobs', {
+    method: 'POST',
+  })
+}
+
+export async function fetchSendTrackingJobs(): Promise<SendTrackingJobListResponse> {
+  return fetchApiJson<SendTrackingJobListResponse>('/api/logistics/send-trackings/jobs')
+}
+
+export async function fetchSendTrackingJob(jobId: string): Promise<SendTrackingJobSummary> {
+  return fetchApiJson<SendTrackingJobSummary>(`/api/logistics/send-trackings/jobs/${encodeURIComponent(jobId)}`)
+}
+
+export function streamSendTrackingJob(
+  jobId: string,
   onEvent: (event: LogisticsEvent) => void,
 ): { close: () => void } {
   assertApiConfigured()
@@ -241,7 +287,7 @@ export function streamSyncTrackings(
   const key = apiKey()
   if (key) params.set('api_key', key)
   const qs = params.toString()
-  const url = `${apiBase()}/api/logistics/sync/stream${qs ? `?${qs}` : ''}`
+  const url = `${apiBase()}/api/logistics/send-trackings/jobs/${encodeURIComponent(jobId)}/stream${qs ? `?${qs}` : ''}`
   const es = new EventSource(url)
 
   es.onmessage = (msg) => {
@@ -250,7 +296,7 @@ export function streamSyncTrackings(
     } catch {
       onEvent({
         type: 'error',
-        message: 'Respuesta inválida del servidor durante la sincronización.',
+        message: 'Respuesta inválida del servidor.',
         level: 'error',
       })
     }
@@ -259,44 +305,13 @@ export function streamSyncTrackings(
   es.onerror = () => {
     onEvent({
       type: 'error',
-      message: 'Conexión interrumpida con Railway. Revisá que el servicio esté activo.',
+      message: 'Conexión interrumpida con Railway.',
       level: 'error',
     })
     es.close()
   }
 
   return { close: () => es.close() }
-}
-
-export async function streamImport(
-  file: File,
-  onEvent: (event: LogisticsEvent) => void,
-): Promise<void> {
-  assertApiConfigured()
-  const form = new FormData()
-  form.append('file', file)
-  const url = withAuth(`${apiBase()}/api/logistics/import/stream`)
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: headers(),
-    body: form,
-  })
-  if (!res.ok || !res.body) {
-    const body = await res.text()
-    throw new LogisticsApiError(friendlyParseError(body, res.status))
-  }
-
-  const reader = res.body.getReader()
-  const decoder = new TextDecoder()
-  let buffer = ''
-
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-    buffer += decoder.decode(value, { stream: true })
-    buffer = parseSseChunk(buffer, onEvent)
-  }
-  if (buffer.trim()) parseSseChunk(`${buffer}\n\n`, onEvent)
 }
 
 export function downloadExportUrl(filename: string): string {

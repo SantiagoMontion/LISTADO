@@ -5672,7 +5672,137 @@ body:has(.nm-hub-app--logistica-andreani) {
 .logistica-alert--warn {
   border: 1px solid rgba(251, 191, 36, 0.35);
   background: rgba(251, 191, 36, 0.08);
-  color: #fde68a;
+  color: #fcd34d;
+}
+
+.logistica-alert--info {
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  background: rgba(56, 189, 248, 0.08);
+  color: #7dd3fc;
+}
+
+.logistica-steps-hint {
+  margin: 0.65rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: #94a3b8;
+}
+
+.logistica-steps-hint code {
+  font-size: 0.78rem;
+  color: #e2e8f0;
+}
+
+.logistica-send-summary {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.logistica-send-summary__ok {
+  color: #4ade80;
+}
+
+.logistica-send-summary__fail {
+  color: #f87171;
+}
+
+.logistica-send-results {
+  list-style: none;
+  margin: 0.85rem 0 0;
+  padding: 0;
+  max-height: 280px;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+}
+
+.logistica-send-results__item {
+  display: grid;
+  grid-template-columns: 5rem 1fr auto;
+  gap: 0.5rem;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.8rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.logistica-send-results__item--ok {
+  background: rgba(74, 222, 128, 0.05);
+}
+
+.logistica-send-results__item--fail {
+  background: rgba(248, 113, 113, 0.06);
+}
+
+.logistica-send-results__order {
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+.logistica-send-results__customer {
+  color: #94a3b8;
+}
+
+.logistica-send-results__tracking {
+  color: #4ade80;
+  font-family: ui-monospace, monospace;
+}
+
+.logistica-send-results__detail {
+  color: #fca5a5;
+  text-align: right;
+}
+
+.logistica-job-history__list {
+  list-style: none;
+  margin: 0.65rem 0 0;
+  padding: 0;
+}
+
+.logistica-job-history__item {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.logistica-job-history__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.65rem 0;
+  border: none;
+  background: none;
+  color: #cbd5e1;
+  font-size: 0.82rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.logistica-job-history__status {
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+}
+
+.logistica-job-history__status--completed {
+  color: #4ade80;
+}
+
+.logistica-job-history__status--failed {
+  color: #f87171;
+}
+
+.logistica-job-history__status--pending,
+.logistica-job-history__status--running {
+  color: #38bdf8;
+}
+
+.logistica-job-history__meta {
+  margin: 0 0 0.65rem;
+  font-size: 0.78rem;
+  color: #64748b;
 }
 
 .logistica-alert--error {
@@ -5726,6 +5856,12 @@ body:has(.nm-hub-app--logistica-andreani) {
 }
 
 .logistica-workspace {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.85rem;
+}
+
+.logistica-workspace__steps {
   display: grid;
   grid-template-columns: 1fr;
   gap: 0.85rem;
@@ -5867,6 +6003,37 @@ body:has(.nm-hub-app--logistica-andreani) {
   font-size: 0.84rem;
   color: #cbd5e1;
   cursor: pointer;
+}
+
+.logistica-panel-progress {
+  margin-top: 0.85rem;
+}
+
+.logistica-panel-progress .logistica-progress__bar {
+  margin: 0;
+}
+
+.logistica-logs-toggle {
+  margin-top: 0.85rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 0.75rem;
+}
+
+.logistica-logs-toggle summary {
+  cursor: pointer;
+  font-size: 0.82rem;
+  color: #94a3b8;
+  user-select: none;
+}
+
+.logistica-logs-toggle .logistica-console__body {
+  margin-top: 0.65rem;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  background: #0c0e11;
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .logistica-progress__head {
@@ -6026,11 +6193,15 @@ body:has(.nm-hub-app--logistica-andreani) {
   }
 
   .logistica-metrics {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .logistica-workspace {
-    grid-template-columns: minmax(0, 22rem) minmax(0, 1fr);
+    grid-template-columns: 1fr;
+  }
+
+  .logistica-workspace__steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: start;
   }
 
