@@ -3,6 +3,7 @@ import { HubBrandBar } from './HubBrandBar'
 import {
   checkLogisticsApiHealth,
   fetchLogisticsStatus,
+  getLogisticsApiHint,
   streamExport,
   streamImport,
   triggerDownload,
@@ -13,8 +14,6 @@ import {
 } from '../lib/logisticaAndreaniApi'
 
 interface HubLogisticaAndreaniAppProps {
-  configured: boolean
-  isAdmin: boolean
   adminSignOut?: boolean
 }
 
@@ -33,41 +32,25 @@ const EMPTY_METRICS: LogisticsMetrics = {
   errors: 0,
 }
 
-const LOG_COLORS: Record<LogisticsLogLevel, string> = {
-  info: 'text-slate-300',
-  success: 'text-emerald-400',
-  warning: 'text-amber-400',
-  error: 'text-rose-400',
+const LOG_CLASS: Record<LogisticsLogLevel, string> = {
+  info: 'logistica-console__msg--info',
+  success: 'logistica-console__msg--success',
+  warning: 'logistica-console__msg--warning',
+  error: 'logistica-console__msg--error',
 }
 
 function formatTime(): string {
-  return new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-}
-
-function MetricCard({
-  label,
-  value,
-  accent,
-  description,
-}: {
-  label: string
-  value: number
-  accent: string
-  description: string
-}) {
-  return (
-    <div className="rounded-xl border border-slate-700/80 bg-slate-900/60 p-4 shadow-lg backdrop-blur-sm">
-      <p className="text-xs font-medium uppercase tracking-wider text-slate-500">{label}</p>
-      <p className={`mt-1 font-mono text-3xl font-semibold tabular-nums ${accent}`}>{value}</p>
-      <p className="mt-2 text-xs leading-relaxed text-slate-500">{description}</p>
-    </div>
-  )
+  return new Date().toLocaleTimeString('es-AR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  })
 }
 
 export function HubLogisticaAndreaniApp({
-  configured,
   adminSignOut = false,
 }: HubLogisticaAndreaniAppProps) {
+  const configHint = getLogisticsApiHint()
   const [apiOnline, setApiOnline] = useState<boolean | null>(null)
   const [metrics, setMetrics] = useState<LogisticsMetrics>(EMPTY_METRICS)
   const [heldOrders, setHeldOrders] = useState<HeldOrder[]>([])
@@ -97,21 +80,29 @@ export function HubLogisticaAndreaniApp({
     setLoadingStatus(true)
     setStatusError(null)
     try {
+      if (configHint) {
+        setApiOnline(false)
+        setStatusError(configHint)
+        return
+      }
       const online = await checkLogisticsApiHealth()
       setApiOnline(online)
       if (!online) {
-        setStatusError('API de logística no disponible. Ejecutá scripts/run_api.bat en NOT-ANDREANI.')
+        setStatusError(
+          'No se pudo conectar con Railway. Revisá que el servicio esté activo y la URL en Vercel.',
+        )
         return
       }
       const data = await fetchLogisticsStatus()
       setMetrics(data.metrics)
       setHeldOrders(data.held_orders)
     } catch (err: unknown) {
+      setApiOnline(false)
       setStatusError(err instanceof Error ? err.message : 'Error al consultar estado')
     } finally {
       setLoadingStatus(false)
     }
-  }, [])
+  }, [configHint])
 
   const handleEvent = useCallback(
     (event: LogisticsEvent) => {
@@ -189,8 +180,8 @@ export function HubLogisticaAndreaniApp({
   }
 
   return (
-    <div className="nm-hub-app min-h-screen bg-slate-950 text-slate-100">
-      <header className="dashboard-navbar border-b border-slate-800">
+    <div className="nm-hub-app nm-hub-app--logistica-andreani">
+      <header className="dashboard-navbar dashboard-navbar-clean nm-hub-header">
         <HubBrandBar
           integratedDashboard
           integratedSubtitle="Logística Andreani"
@@ -198,107 +189,104 @@ export function HubLogisticaAndreaniApp({
         />
       </header>
 
-      <main className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6">
-        <section>
-          <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-semibold tracking-tight text-white">
-                Centro de despacho Andreani
-              </h1>
-              <p className="mt-1 text-sm text-slate-400">
-                Exportá pedidos Shopify, subí resultados del portal y sincronizá trackings.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => void refreshStatus()}
-              disabled={loadingStatus}
-              className="rounded-lg border border-slate-600 bg-slate-800 px-4 py-2 text-sm text-slate-200 transition hover:bg-slate-700 disabled:opacity-50"
-            >
-              {loadingStatus ? 'Actualizando…' : 'Actualizar panel'}
-            </button>
+      <div className="logistica-page">
+        <section className="logistica-page__head">
+          <div>
+            <h1 className="logistica-page__title">Centro de despacho Andreani</h1>
+            <p className="logistica-page__subtitle">
+              Exportá pedidos de Shopify, subí resultados del portal y sincronizá trackings.
+            </p>
           </div>
-
-          {apiOnline === false && (
-            <div className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-              Servidor API offline. En la carpeta NOT-ANDREANI ejecutá:{' '}
-              <code className="font-mono text-amber-100">python -m uvicorn api.main:app --port 8765</code>
-            </div>
-          )}
-          {statusError && (
-            <div className="mb-4 rounded-lg border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
-              {statusError}
-            </div>
-          )}
-
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            <MetricCard
-              label="Pendientes export"
-              value={metrics.pending_export}
-              accent="text-sky-400"
-              description="Pagados, sin enviar, sin etiqueta Andreani"
-            />
-            <MetricCard
-              label="Listos despacho"
-              value={metrics.ready_to_dispatch}
-              accent="text-violet-400"
-              description="Con tag ETIQUETA, pendientes de tracking"
-            />
-            <MetricCard
-              label="En tránsito"
-              value={metrics.in_transit}
-              accent="text-cyan-400"
-              description="Con número de seguimiento activo"
-            />
-            <MetricCard
-              label="Entregados"
-              value={metrics.delivered}
-              accent="text-emerald-400"
-              description="Entrega confirmada (últimos 45 días)"
-            />
-            <MetricCard
-              label="Para revisar"
-              value={metrics.errors}
-              accent="text-rose-400"
-              description="Validación de dirección, CP o sucursal"
-            />
-          </div>
+          <button
+            type="button"
+            className="logistica-page__refresh"
+            onClick={() => void refreshStatus()}
+            disabled={loadingStatus}
+          >
+            {loadingStatus ? 'Actualizando…' : 'Actualizar panel'}
+          </button>
         </section>
 
-        <section className="grid gap-6 lg:grid-cols-5">
-          <div className="space-y-6 lg:col-span-2">
-            <div className="rounded-xl border border-slate-700/80 bg-slate-900/50 p-5">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
-                Paso 1 · Carga masiva
-              </h2>
-              <p className="mt-2 text-sm text-slate-500">
-                Genera el Excel para el portal Andreani PyMEs.
-              </p>
-              <label className="mt-4 block text-xs text-slate-500">
+        {configHint && (
+          <div className="logistica-alert logistica-alert--warn" role="alert">
+            {configHint}
+          </div>
+        )}
+        {apiOnline === false && !configHint && (
+          <div className="logistica-alert logistica-alert--warn" role="alert">
+            Motor Andreani no responde. Revisá Railway y la variable VITE_ANDREANI_API_URL en Vercel.
+          </div>
+        )}
+        {statusError && (
+          <div className="logistica-alert logistica-alert--error" role="alert">
+            {statusError}
+          </div>
+        )}
+
+        <section className="logistica-metrics" aria-label="Resumen de envíos">
+          <article className="logistica-metric">
+            <p className="logistica-metric__label">Pendientes export</p>
+            <p className="logistica-metric__value logistica-metric__value--sky">
+              {metrics.pending_export}
+            </p>
+            <p className="logistica-metric__desc">Pagados, sin enviar, sin etiqueta</p>
+          </article>
+          <article className="logistica-metric">
+            <p className="logistica-metric__label">Listos despacho</p>
+            <p className="logistica-metric__value logistica-metric__value--violet">
+              {metrics.ready_to_dispatch}
+            </p>
+            <p className="logistica-metric__desc">Con tag ETIQUETA, sin tracking</p>
+          </article>
+          <article className="logistica-metric">
+            <p className="logistica-metric__label">En tránsito</p>
+            <p className="logistica-metric__value logistica-metric__value--cyan">
+              {metrics.in_transit}
+            </p>
+            <p className="logistica-metric__desc">Seguimiento activo</p>
+          </article>
+          <article className="logistica-metric">
+            <p className="logistica-metric__label">Entregados</p>
+            <p className="logistica-metric__value logistica-metric__value--green">
+              {metrics.delivered}
+            </p>
+            <p className="logistica-metric__desc">Últimos 45 días</p>
+          </article>
+          <article className="logistica-metric">
+            <p className="logistica-metric__label">Para revisar</p>
+            <p className="logistica-metric__value logistica-metric__value--rose">
+              {metrics.errors}
+            </p>
+            <p className="logistica-metric__desc">Dirección, CP o sucursal</p>
+          </article>
+        </section>
+
+        <section className="logistica-workspace">
+          <div className="logistica-workspace__steps">
+            <article className="logistica-panel">
+              <h2 className="logistica-panel__title">Paso 1 · Carga masiva</h2>
+              <p className="logistica-panel__text">Genera el Excel para el portal Andreani PyMEs.</p>
+              <label className="logistica-field">
                 Solo pedidos desde (opcional)
                 <input
                   type="date"
                   value={sinceDate}
                   onChange={(e) => setSinceDate(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 font-mono text-sm text-slate-200"
+                  className="logistica-field__input"
                 />
               </label>
               <button
                 type="button"
+                className="logistica-btn-primary"
                 onClick={startExport}
-                disabled={busy || apiOnline === false}
-                className="mt-4 w-full rounded-lg bg-sky-600 px-4 py-3 text-sm font-medium text-white transition hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-40"
+                disabled={busy || apiOnline === false || Boolean(configHint)}
               >
                 Generar carga masiva
               </button>
-            </div>
+            </article>
 
-            <div
-              className={`rounded-xl border-2 border-dashed p-6 transition ${
-                dragOver
-                  ? 'border-sky-400 bg-sky-500/10'
-                  : 'border-slate-600 bg-slate-900/50 hover:border-slate-500'
-              }`}
+            <article
+              className={`logistica-dropzone ${dragOver ? 'logistica-dropzone--active' : ''}`}
               onDragOver={(e) => {
                 e.preventDefault()
                 setDragOver(true)
@@ -306,21 +294,16 @@ export function HubLogisticaAndreaniApp({
               onDragLeave={() => setDragOver(false)}
               onDrop={onDrop}
             >
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
-                Paso 2 · Resultados Andreani
-              </h2>
-              <p className="mt-2 text-sm text-slate-500">
-                Arrastrá el Excel de resultados del portal. Se importan trackings a Shopify
-                automáticamente.
+              <h2 className="logistica-panel__title">Paso 2 · Resultados Andreani</h2>
+              <p className="logistica-panel__text">
+                Arrastrá el Excel de resultados del portal. Se importan los trackings a Shopify.
               </p>
-              <p className="mt-4 text-center font-mono text-xs text-slate-600">
-                .xlsx · arrastrar y soltar
-              </p>
-              <label className="mt-4 block">
+              <p className="logistica-dropzone__hint">.xlsx · arrastrar y soltar</p>
+              <label className="logistica-file-btn">
                 <input
                   type="file"
                   accept=".xlsx,.xls"
-                  className="hidden"
+                  hidden
                   disabled={busy}
                   onChange={(e) => {
                     const f = e.target.files?.[0]
@@ -328,86 +311,90 @@ export function HubLogisticaAndreaniApp({
                     e.target.value = ''
                   }}
                 />
-                <span className="flex cursor-pointer justify-center rounded-lg border border-slate-600 py-2 text-sm text-slate-300 hover:bg-slate-800">
-                  O elegir archivo
-                </span>
+                O elegir archivo
               </label>
-            </div>
+            </article>
           </div>
 
-          <div className="lg:col-span-3">
-            <div className="rounded-xl border border-slate-700/80 bg-slate-900/50 p-5">
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
-                  Progreso
-                </h2>
-                <span className="font-mono text-sm tabular-nums text-slate-400">{progress}%</span>
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-slate-800">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-sky-500 to-cyan-400 transition-all duration-300"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-              <p className="mt-2 min-h-[1.25rem] font-mono text-xs text-slate-500">{progressLabel}</p>
+          <article className="logistica-panel">
+            <div className="logistica-progress__head">
+              <h2 className="logistica-panel__title">Progreso</h2>
+              <span className="logistica-progress__pct">{progress}%</span>
+            </div>
+            <div className="logistica-progress__bar">
+              <div className="logistica-progress__fill" style={{ width: `${progress}%` }} />
+            </div>
+            <p className="logistica-progress__label">{progressLabel}</p>
 
-              <div className="mt-4 overflow-hidden rounded-lg border border-slate-800 bg-black/40">
-                <div className="border-b border-slate-800 px-3 py-2 font-mono text-xs text-slate-500">
-                  consola · live
-                </div>
-                <div className="h-72 overflow-y-auto p-3 font-mono text-xs leading-relaxed">
-                  {logs.length === 0 && (
-                    <p className="text-slate-600">Esperando tarea…</p>
-                  )}
-                  {logs.map((line) => (
-                    <div key={line.id} className="flex gap-2">
-                      <span className="shrink-0 text-slate-600">[{line.ts}]</span>
-                      <span className={LOG_COLORS[line.level]}>{line.message}</span>
-                    </div>
-                  ))}
-                  <div ref={logsEndRef} />
-                </div>
+            <div className="logistica-console">
+              <div className="logistica-console__head">consola · live</div>
+              <div className="logistica-console__body">
+                {logs.length === 0 && (
+                  <p className="logistica-console__msg--info">Esperando tarea…</p>
+                )}
+                {logs.map((line) => (
+                  <div key={line.id} className="logistica-console__line">
+                    <span className="logistica-console__ts">[{line.ts}]</span>
+                    <span className={LOG_CLASS[line.level]}>{line.message}</span>
+                  </div>
+                ))}
+                <div ref={logsEndRef} />
               </div>
             </div>
-          </div>
+          </article>
         </section>
 
-        <section className="rounded-xl border border-slate-700/80 bg-slate-900/50 overflow-hidden">
-          <div className="border-b border-slate-800 px-5 py-4">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
-              Pedidos retenidos
-            </h2>
-            <p className="mt-1 text-sm text-slate-500">
-              No se incluyeron en el Excel. Corregí en Shopify y volvé a exportar.
+        <section className="logistica-panel logistica-held">
+          <div className="logistica-held__head">
+            <h2 className="logistica-panel__title">Pedidos retenidos</h2>
+            <p className="logistica-panel__text">
+              No entraron al Excel. Corregí en Shopify y volvé a exportar.
             </p>
           </div>
+
           {heldOrders.length === 0 ? (
-            <p className="px-5 py-8 text-center text-sm text-slate-600">
-              No hay pedidos con errores de validación.
-            </p>
+            <p className="logistica-held__empty">No hay pedidos con errores de validación.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-slate-800/50 text-xs uppercase tracking-wider text-slate-500">
+            <>
+              <div className="logistica-held-cards">
+                {heldOrders.map((row) => (
+                  <article key={row.order_id} className="logistica-held-card">
+                    <div className="logistica-held-card__order">{row.order_name}</div>
+                    <div className="logistica-held-card__customer">{row.customer || '—'}</div>
+                    <div className="logistica-held-card__error">{row.error}</div>
+                    <a
+                      href={row.shopify_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="logistica-held-card__link"
+                    >
+                      Editar en Shopify
+                    </a>
+                  </article>
+                ))}
+              </div>
+
+              <table className="logistica-held-table">
+                <thead>
                   <tr>
-                    <th className="px-5 py-3">Pedido</th>
-                    <th className="px-5 py-3">Cliente</th>
-                    <th className="px-5 py-3">Error</th>
-                    <th className="px-5 py-3 text-right">Acción</th>
+                    <th>Pedido</th>
+                    <th>Cliente</th>
+                    <th>Error</th>
+                    <th>Acción</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800">
+                <tbody>
                   {heldOrders.map((row) => (
-                    <tr key={row.order_id} className="hover:bg-slate-800/30">
-                      <td className="px-5 py-3 font-mono text-sky-300">{row.order_name}</td>
-                      <td className="px-5 py-3 text-slate-300">{row.customer || '—'}</td>
-                      <td className="px-5 py-3 text-rose-300/90">{row.error}</td>
-                      <td className="px-5 py-3 text-right">
+                    <tr key={row.order_id}>
+                      <td className="logistica-held-table__order">{row.order_name}</td>
+                      <td>{row.customer || '—'}</td>
+                      <td className="logistica-held-table__error">{row.error}</td>
+                      <td>
                         <a
                           href={row.shopify_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex rounded-lg border border-slate-600 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-700"
+                          className="logistica-held-table__link"
                         >
                           Editar en Shopify
                         </a>
@@ -416,16 +403,10 @@ export function HubLogisticaAndreaniApp({
                   ))}
                 </tbody>
               </table>
-            </div>
+            </>
           )}
         </section>
-
-        {!configured && (
-          <p className="text-center text-xs text-slate-600">
-            Hub sin Supabase — la logística Andreani usa el servidor API local.
-          </p>
-        )}
-      </main>
+      </div>
     </div>
   )
 }

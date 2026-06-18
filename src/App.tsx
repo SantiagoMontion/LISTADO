@@ -1087,11 +1087,7 @@ export default function App() {
     getHubPermissions(profile.role)?.viewLogisticaAndreani
   ) {
     return (
-      <HubLogisticaAndreaniApp
-        configured={configured}
-        isAdmin={profile.role === 'admin'}
-        adminSignOut={profile.role === 'admin'}
-      />
+      <HubLogisticaAndreaniApp adminSignOut={profile.role === 'admin'} />
     )
   }
 

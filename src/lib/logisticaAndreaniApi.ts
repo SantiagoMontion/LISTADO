@@ -32,13 +32,35 @@ export interface LogisticsStatusResponse {
   store_domain: string
 }
 
+export interface LogisticsHealthResponse {
+  status: string
+  shopify_configured?: boolean
+  store?: string
+}
+
+export class LogisticsApiError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'LogisticsApiError'
+  }
+}
+
 function apiBase(): string {
-  const base = (import.meta.env.VITE_ANDREANI_API_URL as string | undefined)?.replace(/\/$/, '')
-  return base || ''
+  const configured = (import.meta.env.VITE_ANDREANI_API_URL as string | undefined)?.trim()
+  if (configured) return configured.replace(/\/$/, '')
+  if (import.meta.env.DEV) return ''
+  return ''
 }
 
 function apiKey(): string {
-  return (import.meta.env.VITE_ANDREANI_API_KEY as string | undefined) || ''
+  return (import.meta.env.VITE_ANDREANI_API_KEY as string | undefined)?.trim() || ''
+}
+
+function assertApiConfigured(): void {
+  if (apiBase() || import.meta.env.DEV) return
+  throw new LogisticsApiError(
+    'Falta la URL del motor Andreani en Vercel. Agregá VITE_ANDREANI_API_URL (Railway), guardá y hacé Redeploy.',
+  )
 }
 
 function authQuery(): string {
@@ -57,24 +79,68 @@ function headers(): HeadersInit {
   return key ? { 'X-Api-Key': key } : {}
 }
 
-export async function fetchLogisticsStatus(): Promise<LogisticsStatusResponse> {
-  const res = await fetch(withAuth(`${apiBase()}/api/logistics/status`), {
-    headers: headers(),
-  })
-  if (!res.ok) {
-    const body = await res.text()
-    throw new Error(body || `Error ${res.status}`)
+function friendlyParseError(body: string, status: number): string {
+  const trimmed = body.trim()
+  if (trimmed.startsWith('<!') || trimmed.startsWith('<html')) {
+    if (!apiBase() && !import.meta.env.DEV) {
+      return 'NOT-BRAIN no está conectado a Railway. Configurá VITE_ANDREANI_API_URL en Vercel y redeploy.'
+    }
+    return `El servidor respondió con una página web (HTTP ${status}), no con datos JSON. Revisá la URL de Railway en Vercel.`
   }
-  return res.json() as Promise<LogisticsStatusResponse>
+  if (status === 401) {
+    return 'Clave API incorrecta. VITE_ANDREANI_API_KEY en Vercel debe coincidir con ANDREANI_API_KEY en Railway.'
+  }
+  if (status === 503) {
+    return 'Motor Andreani sin token de Shopify. Revisá SHOPIFY_ADMIN_TOKEN en Railway.'
+  }
+  try {
+    const json = JSON.parse(trimmed) as { detail?: string; message?: string }
+    if (json.detail) return json.detail
+    if (json.message) return json.message
+  } catch {
+    /* not json */
+  }
+  if (trimmed) return trimmed.slice(0, 240)
+  return `Error del servidor (HTTP ${status})`
+}
+
+async function fetchApiJson<T>(path: string, init?: RequestInit): Promise<T> {
+  assertApiConfigured()
+  const res = await fetch(withAuth(`${apiBase()}${path}`), {
+    ...init,
+    headers: { ...headers(), ...(init?.headers ?? {}) },
+  })
+  const body = await res.text()
+  let data: T
+  try {
+    data = JSON.parse(body) as T
+  } catch {
+    throw new LogisticsApiError(friendlyParseError(body, res.status))
+  }
+  if (!res.ok) {
+    const err = data as { detail?: string; message?: string }
+    throw new LogisticsApiError(err.detail || err.message || friendlyParseError(body, res.status))
+  }
+  return data
+}
+
+export async function fetchLogisticsStatus(): Promise<LogisticsStatusResponse> {
+  return fetchApiJson<LogisticsStatusResponse>('/api/logistics/status')
 }
 
 export async function checkLogisticsApiHealth(): Promise<boolean> {
   try {
-    const res = await fetch(`${apiBase()}/api/health`)
-    return res.ok
+    assertApiConfigured()
+    const data = await fetchApiJson<LogisticsHealthResponse>('/api/health')
+    return data.status === 'ok'
   } catch {
     return false
   }
+}
+
+export function getLogisticsApiHint(): string | null {
+  if (apiBase() || import.meta.env.DEV) return null
+  return 'Configurá VITE_ANDREANI_API_URL en Vercel con la URL de Railway.'
 }
 
 function parseSseChunk(buffer: string, onEvent: (event: LogisticsEvent) => void): string {
@@ -98,6 +164,7 @@ export function streamExport(
   options: { since?: string },
   onEvent: (event: LogisticsEvent) => void,
 ): { close: () => void } {
+  assertApiConfigured()
   const params = new URLSearchParams()
   if (options.since) params.set('since', options.since)
   const key = apiKey()
@@ -110,12 +177,20 @@ export function streamExport(
     try {
       onEvent(JSON.parse(msg.data) as LogisticsEvent)
     } catch {
-      /* ignore */
+      onEvent({
+        type: 'error',
+        message: 'Respuesta inválida del servidor durante la exportación.',
+        level: 'error',
+      })
     }
   }
 
   es.onerror = () => {
-    onEvent({ type: 'error', message: 'Conexión SSE interrumpida', level: 'error' })
+    onEvent({
+      type: 'error',
+      message: 'Conexión interrumpida con Railway. Revisá que el servicio esté activo.',
+      level: 'error',
+    })
     es.close()
   }
 
@@ -126,6 +201,7 @@ export async function streamImport(
   file: File,
   onEvent: (event: LogisticsEvent) => void,
 ): Promise<void> {
+  assertApiConfigured()
   const form = new FormData()
   form.append('file', file)
   const url = withAuth(`${apiBase()}/api/logistics/import/stream`)
@@ -135,7 +211,8 @@ export async function streamImport(
     body: form,
   })
   if (!res.ok || !res.body) {
-    throw new Error(await res.text())
+    const body = await res.text()
+    throw new LogisticsApiError(friendlyParseError(body, res.status))
   }
 
   const reader = res.body.getReader()
