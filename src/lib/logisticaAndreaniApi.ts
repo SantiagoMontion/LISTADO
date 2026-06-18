@@ -90,6 +90,9 @@ function friendlyParseError(body: string, status: number): string {
   if (status === 401) {
     return 'Clave API incorrecta. VITE_ANDREANI_API_KEY en Vercel debe coincidir con ANDREANI_API_KEY en Railway.'
   }
+  if (status === 502 && trimmed.includes('Shopify')) {
+    return trimmed
+  }
   if (status === 503) {
     return 'Motor Andreani sin token de Shopify. Revisá SHOPIFY_ADMIN_TOKEN en Railway.'
   }
@@ -213,6 +216,41 @@ export function streamExport(
       onEvent({
         type: 'error',
         message: 'Respuesta inválida del servidor durante la exportación.',
+        level: 'error',
+      })
+    }
+  }
+
+  es.onerror = () => {
+    onEvent({
+      type: 'error',
+      message: 'Conexión interrumpida con Railway. Revisá que el servicio esté activo.',
+      level: 'error',
+    })
+    es.close()
+  }
+
+  return { close: () => es.close() }
+}
+
+export function streamSyncTrackings(
+  onEvent: (event: LogisticsEvent) => void,
+): { close: () => void } {
+  assertApiConfigured()
+  const params = new URLSearchParams()
+  const key = apiKey()
+  if (key) params.set('api_key', key)
+  const qs = params.toString()
+  const url = `${apiBase()}/api/logistics/sync/stream${qs ? `?${qs}` : ''}`
+  const es = new EventSource(url)
+
+  es.onmessage = (msg) => {
+    try {
+      onEvent(JSON.parse(msg.data) as LogisticsEvent)
+    } catch {
+      onEvent({
+        type: 'error',
+        message: 'Respuesta inválida del servidor durante la sincronización.',
         level: 'error',
       })
     }

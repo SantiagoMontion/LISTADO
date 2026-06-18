@@ -7,6 +7,7 @@ import {
   probeLogisticsApiHealth,
   streamExport,
   streamImport,
+  streamSyncTrackings,
   triggerDownload,
   type HeldOrder,
   type LogisticsEvent,
@@ -67,6 +68,7 @@ export function HubLogisticaAndreaniApp({
   const [logs, setLogs] = useState<LogLine[]>([])
   const [dragOver, setDragOver] = useState(false)
   const [sinceDate, setSinceDate] = useState('')
+  const [showSinceDate, setShowSinceDate] = useState(false)
 
   const logIdRef = useRef(0)
   const logsEndRef = useRef<HTMLDivElement>(null)
@@ -163,6 +165,18 @@ export function HubLogisticaAndreaniApp({
     streamCloserRef.current = close
   }
 
+  const startSync = () => {
+    if (busy) return
+    streamCloserRef.current?.()
+    setBusy(true)
+    setProgress(0)
+    setProgressLabel('Buscando seguimientos en Shopify…')
+    setLogs([])
+    pushLog('info', 'Sincronizando números de envío desde pedidos…')
+    const { close } = streamSyncTrackings(handleEvent)
+    streamCloserRef.current = close
+  }
+
   const runImport = async (file: File) => {
     if (busy) return
     setBusy(true)
@@ -200,9 +214,6 @@ export function HubLogisticaAndreaniApp({
         <section className="logistica-page__head">
           <div>
             <h1 className="logistica-page__title">Centro de despacho Andreani</h1>
-            <p className="logistica-page__subtitle">
-              Exportá pedidos de Shopify, subí resultados del portal y sincronizá trackings.
-            </p>
           </div>
           <button
             type="button"
@@ -210,7 +221,7 @@ export function HubLogisticaAndreaniApp({
             onClick={() => void refreshStatus()}
             disabled={loadingStatus}
           >
-            {loadingStatus ? 'Actualizando…' : 'Actualizar panel'}
+            {loadingStatus ? 'Actualizando…' : 'Actualizar'}
           </button>
         </section>
 
@@ -232,21 +243,21 @@ export function HubLogisticaAndreaniApp({
 
         <section className="logistica-metrics" aria-label="Resumen de envíos">
           <article className="logistica-metric">
-            <p className="logistica-metric__label">Pendientes export</p>
+            <p className="logistica-metric__label">Listos para crear etiqueta</p>
             <p className="logistica-metric__value logistica-metric__value--sky">
               {metrics.pending_export}
             </p>
             <p className="logistica-metric__desc">Pagados, sin enviar, sin etiqueta</p>
           </article>
           <article className="logistica-metric">
-            <p className="logistica-metric__label">Listos despacho</p>
+            <p className="logistica-metric__label">Despachados sin seguimiento</p>
             <p className="logistica-metric__value logistica-metric__value--violet">
               {metrics.ready_to_dispatch}
             </p>
             <p className="logistica-metric__desc">Con tag ETIQUETA, sin tracking</p>
           </article>
           <article className="logistica-metric">
-            <p className="logistica-metric__label">En tránsito</p>
+            <p className="logistica-metric__label">Enviados</p>
             <p className="logistica-metric__value logistica-metric__value--cyan">
               {metrics.in_transit}
             </p>
@@ -260,7 +271,7 @@ export function HubLogisticaAndreaniApp({
             <p className="logistica-metric__desc">Últimos 45 días</p>
           </article>
           <article className="logistica-metric">
-            <p className="logistica-metric__label">Para revisar</p>
+            <p className="logistica-metric__label">Con error</p>
             <p className="logistica-metric__value logistica-metric__value--rose">
               {metrics.errors}
             </p>
@@ -271,17 +282,31 @@ export function HubLogisticaAndreaniApp({
         <section className="logistica-workspace">
           <div className="logistica-workspace__steps">
             <article className="logistica-panel">
-              <h2 className="logistica-panel__title">Paso 1 · Carga masiva</h2>
-              <p className="logistica-panel__text">Genera el Excel para el portal Andreani PyMEs.</p>
-              <label className="logistica-field">
-                Solo pedidos desde (opcional)
+              <h2 className="logistica-panel__title">Exportar etiquetas</h2>
+              <p className="logistica-panel__text">Generá el excel para subir a Andreani</p>
+              <label className="logistica-optional-toggle">
                 <input
-                  type="date"
-                  value={sinceDate}
-                  onChange={(e) => setSinceDate(e.target.value)}
-                  className="logistica-field__input"
+                  type="checkbox"
+                  checked={showSinceDate}
+                  onChange={(e) => {
+                    const on = e.target.checked
+                    setShowSinceDate(on)
+                    if (!on) setSinceDate('')
+                  }}
                 />
+                <span>Elegir fecha específica (OPCIONAL)</span>
               </label>
+              {showSinceDate ? (
+                <label className="logistica-field">
+                  Solo pedidos desde
+                  <input
+                    type="date"
+                    value={sinceDate}
+                    onChange={(e) => setSinceDate(e.target.value)}
+                    className="logistica-field__input"
+                  />
+                </label>
+              ) : null}
               <button
                 type="button"
                 className="logistica-btn-primary"
@@ -292,34 +317,51 @@ export function HubLogisticaAndreaniApp({
               </button>
             </article>
 
-            <article
-              className={`logistica-dropzone ${dragOver ? 'logistica-dropzone--active' : ''}`}
-              onDragOver={(e) => {
-                e.preventDefault()
-                setDragOver(true)
-              }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={onDrop}
-            >
-              <h2 className="logistica-panel__title">Paso 2 · Resultados Andreani</h2>
+            <article className="logistica-panel">
+              <h2 className="logistica-panel__title">Sincronizar seguimientos</h2>
               <p className="logistica-panel__text">
-                Arrastrá el Excel de resultados del portal. Se importan los trackings a Shopify.
+                Lee el número de envío guardado en cada pedido (atributo Andreani_Numero_Envio) y
+                crea el fulfillment en Shopify automáticamente.
               </p>
-              <p className="logistica-dropzone__hint">.xlsx · arrastrar y soltar</p>
-              <label className="logistica-file-btn">
-                <input
-                  type="file"
-                  accept=".xlsx,.xls"
-                  hidden
-                  disabled={busy}
-                  onChange={(e) => {
-                    const f = e.target.files?.[0]
-                    if (f) void runImport(f)
-                    e.target.value = ''
+              <button
+                type="button"
+                className="logistica-btn-primary"
+                onClick={startSync}
+                disabled={busy || apiOnline === false || Boolean(configHint)}
+              >
+                Sincronizar desde Shopify
+              </button>
+              <details className="logistica-optional-upload">
+                <summary>Subir Excel manual (opcional)</summary>
+                <p className="logistica-panel__text">
+                  Si tenés el Excel de resultados del portal Andreani, podés importarlo acá.
+                </p>
+                <div
+                  className={`logistica-dropzone logistica-dropzone--compact ${dragOver ? 'logistica-dropzone--active' : ''}`}
+                  onDragOver={(e) => {
+                    e.preventDefault()
+                    setDragOver(true)
                   }}
-                />
-                O elegir archivo
-              </label>
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={onDrop}
+                >
+                  <p className="logistica-dropzone__hint">.xlsx · arrastrar y soltar</p>
+                  <label className="logistica-file-btn">
+                    <input
+                      type="file"
+                      accept=".xlsx,.xls"
+                      hidden
+                      disabled={busy}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0]
+                        if (f) void runImport(f)
+                        e.target.value = ''
+                      }}
+                    />
+                    Elegir archivo
+                  </label>
+                </div>
+              </details>
             </article>
           </div>
 
@@ -353,7 +395,7 @@ export function HubLogisticaAndreaniApp({
 
         <section className="logistica-panel logistica-held">
           <div className="logistica-held__head">
-            <h2 className="logistica-panel__title">Pedidos retenidos</h2>
+            <h2 className="logistica-panel__title">Etiquetas con error</h2>
             <p className="logistica-panel__text">
               No entraron al Excel. Corregí en Shopify y volvé a exportar.
             </p>
