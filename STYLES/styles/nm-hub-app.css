@@ -5868,10 +5868,20 @@ body:has(.nm-hub-app--logistica-andreani) {
 }
 
 .logistica-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
   background: #121417;
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 14px;
   padding: 1rem;
+}
+
+.logistica-panel__soon {
+  margin: 0.5rem 0 0;
+  text-align: center;
+  font-size: 0.78rem;
+  color: #64748b;
 }
 
 .logistica-panel__title {
@@ -5952,6 +5962,10 @@ body:has(.nm-hub-app--logistica-andreani) {
 .logistica-btn-primary:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+.logistica-btn-primary.logistica-panel__cta {
+  margin-top: auto;
 }
 
 .logistica-dropzone {
@@ -6202,7 +6216,7 @@ body:has(.nm-hub-app--logistica-andreani) {
 
   .logistica-workspace__steps {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: start;
+    align-items: stretch;
   }
 
   .logistica-console__body {

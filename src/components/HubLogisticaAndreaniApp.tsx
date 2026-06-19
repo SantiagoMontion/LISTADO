@@ -37,6 +37,9 @@ const EMPTY_METRICS: LogisticsMetrics = {
   errors: 0,
 }
 
+/** Paso 2 deshabilitado en UI hasta activar el flujo en producción. */
+const SEND_TRACKINGS_UI_ENABLED = false
+
 const LOG_CLASS: Record<LogisticsLogLevel, string> = {
   info: 'logistica-console__msg--info',
   success: 'logistica-console__msg--success',
@@ -307,7 +310,7 @@ export function HubLogisticaAndreaniApp({
             <p className="logistica-metric__value logistica-metric__value--violet">
               {metrics.missing_tracking}
             </p>
-            <p className="logistica-metric__desc">Pendientes de cargar en Shopify</p>
+            <p className="logistica-metric__desc">Preparados en Shopify, sin número de envío</p>
           </article>
           <article className="logistica-metric">
             <p className="logistica-metric__label">Con error</p>
@@ -348,7 +351,7 @@ export function HubLogisticaAndreaniApp({
               ) : null}
               <button
                 type="button"
-                className="logistica-btn-primary"
+                className="logistica-btn-primary logistica-panel__cta"
                 onClick={startExport}
                 disabled={anyBusy || apiOnline === false || Boolean(configHint)}
               >
@@ -385,12 +388,20 @@ export function HubLogisticaAndreaniApp({
               </ol>
               <button
                 type="button"
-                className="logistica-btn-primary"
+                className="logistica-btn-primary logistica-panel__cta"
                 onClick={() => void startSendTrackings()}
-                disabled={anyBusy || apiOnline === false || Boolean(configHint)}
+                disabled={
+                  !SEND_TRACKINGS_UI_ENABLED ||
+                  anyBusy ||
+                  apiOnline === false ||
+                  Boolean(configHint)
+                }
               >
                 {sendRunning ? 'Enviando seguimientos…' : 'Mandar seguimientos'}
               </button>
+              {!SEND_TRACKINGS_UI_ENABLED ? (
+                <p className="logistica-panel__soon">Próximamente</p>
+              ) : null}
 
               {sendSummary ? (
                 <div className="logistica-send-summary">
