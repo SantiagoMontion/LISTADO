@@ -145,7 +145,9 @@ function wrapFetchError(err: unknown): LogisticsApiError {
   if (err instanceof LogisticsApiError) return err
   if (isNetworkFailure(err)) {
     return new LogisticsApiError(
-      'No se pudo conectar con Railway (bloqueo CORS o URL incorrecta). En Railway: NOTBRAIN_PUBLIC_URL = tu URL de Vercel. En Vercel: VITE_ANDREANI_API_URL = URL de Railway (sin barra final). VITE_ANDREANI_API_KEY = clave secreta (no la URL). Redeploy en ambos.',
+      'No se pudo conectar con Railway. Suele ser CORS, URL incorrecta o el servidor ocupado tras un export largo. ' +
+        'Railway: NOTBRAIN_PUBLIC_URL = URL exacta de Vercel. Vercel: VITE_ANDREANI_API_URL (sin barra final) y VITE_ANDREANI_API_KEY. ' +
+        'Si el export terminó bien, probá Actualizar en unos segundos.',
     )
   }
   if (err instanceof Error) return new LogisticsApiError(err.message)
@@ -307,18 +309,42 @@ export function downloadExportUrl(filename: string): string {
   return withAuth(`${apiBase()}/api/logistics/download/${encodeURIComponent(filename)}`)
 }
 
-export function triggerDownload(filename: string): void {
+export async function downloadExportFile(filename: string): Promise<void> {
+  assertApiConfigured()
+  let res: Response
+  try {
+    res = await fetch(downloadExportUrl(filename), { headers: headers() })
+  } catch (err: unknown) {
+    throw wrapFetchError(err)
+  }
+  if (!res.ok) {
+    const body = await res.text()
+    throw new LogisticsApiError(friendlyParseError(body, res.status))
+  }
+  const blob = await res.blob()
+  const objectUrl = URL.createObjectURL(blob)
   const a = document.createElement('a')
-  a.href = downloadExportUrl(filename)
+  a.href = objectUrl
   a.download = filename
   a.rel = 'noopener'
   document.body.appendChild(a)
   a.click()
   a.remove()
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000)
 }
 
-export function triggerDownloads(filenames: string[], delayMs = 450): void {
-  filenames.forEach((filename, index) => {
-    window.setTimeout(() => triggerDownload(filename), index * delayMs)
-  })
+export function triggerDownload(filename: string): void {
+  void downloadExportFile(filename)
+}
+
+export async function triggerDownloads(
+  filenames: string[],
+  onProgress?: (filename: string, index: number, total: number) => void,
+): Promise<void> {
+  const total = filenames.length
+  for (let index = 0; index < total; index += 1) {
+    const filename = filenames[index]
+    onProgress?.(filename, index, total)
+    await downloadExportFile(filename)
+  }
 }

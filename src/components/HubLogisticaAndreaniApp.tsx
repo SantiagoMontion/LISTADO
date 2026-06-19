@@ -113,22 +113,27 @@ export function HubLogisticaAndreaniApp({
     ])
   }, [])
 
-  const refreshStatus = useCallback(async () => {
+  const refreshStatus = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = options?.silent ?? false
     setLoadingStatus(true)
-    setStatusError(null)
+    if (!silent) {
+      setStatusError(null)
+    }
     try {
       if (configHint) {
         setApiOnline(false)
-        setStatusError(configHint)
+        if (!silent) setStatusError(configHint)
         return
       }
       const probe = await probeLogisticsApiHealth()
       setApiOnline(probe.ok)
       if (!probe.ok) {
-        setStatusError(
-          probe.error ||
-            'No se pudo conectar con Railway. Revisá VITE_ANDREANI_API_URL y CORS en Railway.',
-        )
+        if (!silent) {
+          setStatusError(
+            probe.error ||
+              'No se pudo conectar con Railway. Revisá VITE_ANDREANI_API_URL y CORS en Railway.',
+          )
+        }
         return
       }
       const [data, jobsData] = await Promise.all([
@@ -138,9 +143,14 @@ export function HubLogisticaAndreaniApp({
       setMetrics(data.metrics)
       setHeldOrders(data.held_orders)
       setJobHistory(jobsData.jobs)
+      if (!silent) {
+        setStatusError(null)
+      }
     } catch (err: unknown) {
       setApiOnline(false)
-      setStatusError(err instanceof Error ? err.message : 'Error al consultar estado')
+      if (!silent) {
+        setStatusError(err instanceof Error ? err.message : 'Error al consultar estado')
+      }
     } finally {
       setLoadingStatus(false)
     }
@@ -166,20 +176,33 @@ export function HubLogisticaAndreaniApp({
           (event.data?.download_name as string | undefined) || summary?.filename
         const files = downloadNames.length > 0 ? downloadNames : fallbackName ? [fallbackName] : []
         if (files.length > 0) {
-          triggerDownloads(files)
           if (files.length === 1) {
-            pushExportLog('success', `Descarga iniciada: ${files[0]}`)
+            pushExportLog('success', `Descargando ${files[0]}…`)
           } else {
             pushExportLog(
               'success',
               `Descargando ${files.length} archivos (máx. 10 pedidos c/u para cupón Andreani)…`,
             )
-            files.forEach((name) => pushExportLog('info', `· ${name}`))
           }
+          void (async () => {
+            try {
+              await triggerDownloads(files, (name, index, total) => {
+                pushExportLog('info', `Descargando ${index + 1}/${total}: ${name}`)
+              })
+              pushExportLog('success', 'Descarga(s) completada(s).')
+            } catch (err: unknown) {
+              pushExportLog(
+                'error',
+                err instanceof Error ? err.message : 'Error al descargar el Excel',
+              )
+            }
+          })()
         }
         setExportRunning(false)
         setExportFinished(true)
-        void refreshStatus()
+        window.setTimeout(() => {
+          void refreshStatus({ silent: true })
+        }, 3000)
       } else if (event.type === 'error') {
         pushExportLog('error', event.message)
         setExportRunning(false)
