@@ -9,7 +9,7 @@ import {
   probeLogisticsApiHealth,
   streamExport,
   streamSendTrackingJob,
-  triggerDownload,
+  triggerDownloads,
   type HeldOrder,
   type LogisticsEvent,
   type LogisticsLogLevel,
@@ -155,12 +155,27 @@ export function HubLogisticaAndreaniApp({
       } else if (event.type === 'complete') {
         setExportProgress(100)
         pushExportLog('success', event.message)
-        const summary = event.data?.summary as { filename?: string } | undefined
-        const downloadName =
+        const summary = event.data?.summary as
+          | { filename?: string; filenames?: string[] }
+          | undefined
+        const downloadNames =
+          (event.data?.download_names as string[] | undefined)?.filter(Boolean) ??
+          summary?.filenames?.filter(Boolean) ??
+          []
+        const fallbackName =
           (event.data?.download_name as string | undefined) || summary?.filename
-        if (downloadName) {
-          triggerDownload(downloadName)
-          pushExportLog('success', `Descarga iniciada: ${downloadName}`)
+        const files = downloadNames.length > 0 ? downloadNames : fallbackName ? [fallbackName] : []
+        if (files.length > 0) {
+          triggerDownloads(files)
+          if (files.length === 1) {
+            pushExportLog('success', `Descarga iniciada: ${files[0]}`)
+          } else {
+            pushExportLog(
+              'success',
+              `Descargando ${files.length} archivos (máx. 10 pedidos c/u para cupón Andreani)…`,
+            )
+            files.forEach((name) => pushExportLog('info', `· ${name}`))
+          }
         }
         setExportRunning(false)
         setExportFinished(true)

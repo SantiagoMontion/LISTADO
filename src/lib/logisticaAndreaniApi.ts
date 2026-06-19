@@ -210,6 +210,46 @@ export function getLogisticsApiHint(): string | null {
   return 'Configurá VITE_ANDREANI_API_URL en Vercel con la URL de Railway.'
 }
 
+function attachEventSourceStream(
+  es: EventSource,
+  onEvent: (event: LogisticsEvent) => void,
+  interruptedMessage: string,
+): void {
+  let finished = false
+
+  const finish = () => {
+    finished = true
+    es.close()
+  }
+
+  es.onmessage = (msg) => {
+    try {
+      const payload = JSON.parse(msg.data) as LogisticsEvent
+      onEvent(payload)
+      if (payload.type === 'complete' || payload.type === 'error') {
+        finish()
+      }
+    } catch {
+      onEvent({
+        type: 'error',
+        message: 'Respuesta inválida del servidor.',
+        level: 'error',
+      })
+      finish()
+    }
+  }
+
+  es.onerror = () => {
+    if (finished) return
+    onEvent({
+      type: 'error',
+      message: interruptedMessage,
+      level: 'error',
+    })
+    finish()
+  }
+}
+
 export function streamExport(
   options: { since?: string },
   onEvent: (event: LogisticsEvent) => void,
@@ -223,26 +263,11 @@ export function streamExport(
   const url = `${apiBase()}/api/logistics/export/stream${qs ? `?${qs}` : ''}`
   const es = new EventSource(url)
 
-  es.onmessage = (msg) => {
-    try {
-      onEvent(JSON.parse(msg.data) as LogisticsEvent)
-    } catch {
-      onEvent({
-        type: 'error',
-        message: 'Respuesta inválida del servidor durante la exportación.',
-        level: 'error',
-      })
-    }
-  }
-
-  es.onerror = () => {
-    onEvent({
-      type: 'error',
-      message: 'Conexión interrumpida con Railway. Revisá que el servicio esté activo.',
-      level: 'error',
-    })
-    es.close()
-  }
+  attachEventSourceStream(
+    es,
+    onEvent,
+    'Conexión interrumpida con Railway. Revisá que el servicio esté activo.',
+  )
 
   return { close: () => es.close() }
 }
@@ -273,26 +298,7 @@ export function streamSendTrackingJob(
   const url = `${apiBase()}/api/logistics/send-trackings/jobs/${encodeURIComponent(jobId)}/stream${qs ? `?${qs}` : ''}`
   const es = new EventSource(url)
 
-  es.onmessage = (msg) => {
-    try {
-      onEvent(JSON.parse(msg.data) as LogisticsEvent)
-    } catch {
-      onEvent({
-        type: 'error',
-        message: 'Respuesta inválida del servidor.',
-        level: 'error',
-      })
-    }
-  }
-
-  es.onerror = () => {
-    onEvent({
-      type: 'error',
-      message: 'Conexión interrumpida con Railway.',
-      level: 'error',
-    })
-    es.close()
-  }
+  attachEventSourceStream(es, onEvent, 'Conexión interrumpida con Railway.')
 
   return { close: () => es.close() }
 }
@@ -309,4 +315,10 @@ export function triggerDownload(filename: string): void {
   document.body.appendChild(a)
   a.click()
   a.remove()
+}
+
+export function triggerDownloads(filenames: string[], delayMs = 450): void {
+  filenames.forEach((filename, index) => {
+    window.setTimeout(() => triggerDownload(filename), index * delayMs)
+  })
 }
