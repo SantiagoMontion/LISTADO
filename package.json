@@ -11,7 +11,10 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "auth:set-name": "node scripts/set-user-full-name.mjs"
+    "auth:set-name": "node scripts/set-user-full-name.mjs",
+    "hub:users": "node scripts/hub-users-admin.mjs list",
+    "hub:set-role": "node scripts/hub-users-admin.mjs set-role",
+    "hub:promote-spesia-dani": "node scripts/hub-users-admin.mjs promote-spesia-dani"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
