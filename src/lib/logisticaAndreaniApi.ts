@@ -14,6 +14,7 @@ export interface LogisticsMetrics {
   pending_export: number
   missing_tracking: number
   errors: number
+  warnings: number
 }
 
 export interface HeldOrder {
@@ -24,9 +25,19 @@ export interface HeldOrder {
   shopify_url: string
 }
 
+export interface WarningOrder {
+  order_name: string
+  order_id: number
+  customer: string
+  warnings: string[]
+  warning: string
+  shopify_url: string
+}
+
 export interface LogisticsStatusResponse {
   metrics: LogisticsMetrics
   held_orders: HeldOrder[]
+  warning_orders: WarningOrder[]
   store_domain: string
 }
 
@@ -154,16 +165,28 @@ function wrapFetchError(err: unknown): LogisticsApiError {
   return new LogisticsApiError('Error de red al contactar el motor Andreani.')
 }
 
+const FETCH_TIMEOUT_MS = 90_000
+
 async function fetchApiJson<T>(path: string, init?: RequestInit): Promise<T> {
   assertApiConfigured()
+  const controller = new AbortController()
+  const timeoutId = window.setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
   let res: Response
   try {
     res = await fetch(withAuth(`${apiBase()}${path}`), {
       ...init,
+      signal: controller.signal,
       headers: { ...headers(), ...(init?.headers ?? {}) },
     })
   } catch (err: unknown) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new LogisticsApiError(
+        'Railway tardó demasiado en responder (más de 90 s). Suele pasar tras un export largo o si el servidor está reiniciando. Probá Actualizar en unos segundos.',
+      )
+    }
     throw wrapFetchError(err)
+  } finally {
+    window.clearTimeout(timeoutId)
   }
   const body = await res.text()
   let data: T

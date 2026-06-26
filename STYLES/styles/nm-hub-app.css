@@ -6188,6 +6188,48 @@ body:has(.nm-hub-app--logistica-andreani) {
   text-decoration: none;
 }
 
+.logistica-warnings-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.logistica-warnings-panel .logistica-held-cards,
+.logistica-warnings-panel .logistica-held-table {
+  flex: 1;
+  min-height: 0;
+}
+
+.logistica-warnings-panel .logistica-held-cards {
+  max-height: 24rem;
+  overflow: auto;
+}
+
+.logistica-warn-card {
+  border-color: rgba(251, 191, 36, 0.22);
+}
+
+.logistica-warn-card__list {
+  margin: 0.45rem 0 0;
+  padding-left: 1rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.logistica-warn-card__reason,
+.logistica-warn-table__reason {
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: #fbbf24;
+}
+
+.logistica-warn-table__list {
+  margin: 0;
+  padding-left: 1rem;
+  display: grid;
+  gap: 0.25rem;
+}
+
 @media (min-width: 540px) {
   .logistica-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));

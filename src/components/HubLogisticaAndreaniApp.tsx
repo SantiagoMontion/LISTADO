@@ -2,20 +2,16 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { HubBrandBar } from './HubBrandBar'
 import { HubDesktopNav } from './HubDesktopNav'
 import {
-  createSendTrackingJob,
   fetchLogisticsStatus,
-  fetchSendTrackingJobs,
   getLogisticsApiHint,
   probeLogisticsApiHealth,
   streamExport,
-  streamSendTrackingJob,
   triggerDownloads,
   type HeldOrder,
   type LogisticsEvent,
   type LogisticsLogLevel,
   type LogisticsMetrics,
-  type SendTrackingJobSummary,
-  type SendTrackingResult,
+  type WarningOrder,
 } from '../lib/logisticaAndreaniApi'
 import type { HubUserRole } from '../lib/types'
 
@@ -35,10 +31,8 @@ const EMPTY_METRICS: LogisticsMetrics = {
   pending_export: 0,
   missing_tracking: 0,
   errors: 0,
+  warnings: 0,
 }
-
-/** Paso 2 deshabilitado en UI hasta activar el flujo en producción. */
-const SEND_TRACKINGS_UI_ENABLED = false
 
 const LOG_CLASS: Record<LogisticsLogLevel, string> = {
   info: 'logistica-console__msg--info',
@@ -72,6 +66,7 @@ export function HubLogisticaAndreaniApp({
   const [apiOnline, setApiOnline] = useState<boolean | null>(null)
   const [metrics, setMetrics] = useState<LogisticsMetrics>(EMPTY_METRICS)
   const [heldOrders, setHeldOrders] = useState<HeldOrder[]>([])
+  const [warningOrders, setWarningOrders] = useState<WarningOrder[]>([])
   const [loadingStatus, setLoadingStatus] = useState(false)
   const [statusError, setStatusError] = useState<string | null>(null)
 
@@ -80,36 +75,17 @@ export function HubLogisticaAndreaniApp({
   const [exportProgress, setExportProgress] = useState(0)
   const [exportLogs, setExportLogs] = useState<LogLine[]>([])
 
-  const [sendRunning, setSendRunning] = useState(false)
-  const [sendFinished, setSendFinished] = useState(false)
-  const [sendLogs, setSendLogs] = useState<LogLine[]>([])
-  const [sendResults, setSendResults] = useState<SendTrackingResult[]>([])
-  const [sendSummary, setSendSummary] = useState<{ ok: number; fail: number } | null>(null)
-  const [jobHistory, setJobHistory] = useState<SendTrackingJobSummary[]>([])
-  const [expandedJobId, setExpandedJobId] = useState<string | null>(null)
-
   const [sinceDate, setSinceDate] = useState('')
   const [showSinceDate, setShowSinceDate] = useState(false)
 
   const exportLogIdRef = useRef(0)
-  const sendLogIdRef = useRef(0)
   const streamCloserRef = useRef<(() => void) | null>(null)
-
-  const anyBusy = exportRunning || sendRunning
 
   const pushExportLog = useCallback((level: LogisticsLogLevel, message: string) => {
     exportLogIdRef.current += 1
     setExportLogs((prev) => [
       ...prev.slice(-400),
       { id: exportLogIdRef.current, level, message, ts: formatTime() },
-    ])
-  }, [])
-
-  const pushSendLog = useCallback((level: LogisticsLogLevel, message: string) => {
-    sendLogIdRef.current += 1
-    setSendLogs((prev) => [
-      ...prev.slice(-400),
-      { id: sendLogIdRef.current, level, message, ts: formatTime() },
     ])
   }, [])
 
@@ -136,13 +112,14 @@ export function HubLogisticaAndreaniApp({
         }
         return
       }
-      const [data, jobsData] = await Promise.all([
-        fetchLogisticsStatus(),
-        fetchSendTrackingJobs().catch(() => ({ jobs: [] })),
-      ])
-      setMetrics(data.metrics)
+      const data = await fetchLogisticsStatus()
+      setMetrics({
+        ...EMPTY_METRICS,
+        ...data.metrics,
+        warnings: data.metrics.warnings ?? data.warning_orders?.length ?? 0,
+      })
       setHeldOrders(data.held_orders)
-      setJobHistory(jobsData.jobs)
+      setWarningOrders(data.warning_orders ?? [])
       if (!silent) {
         setStatusError(null)
       }
@@ -212,32 +189,6 @@ export function HubLogisticaAndreaniApp({
     [pushExportLog, refreshStatus],
   )
 
-  const handleSendEvent = useCallback(
-    (event: LogisticsEvent) => {
-      if (event.type === 'log') {
-        pushSendLog(event.level ?? 'info', event.message)
-      } else if (event.type === 'complete') {
-        pushSendLog(event.level ?? 'success', event.message)
-        const job = event.data?.job as SendTrackingJobSummary | undefined
-        if (job?.results) {
-          setSendResults(job.results)
-          setSendSummary({
-            ok: job.ok_count ?? 0,
-            fail: job.fail_count ?? 0,
-          })
-        }
-        setSendRunning(false)
-        setSendFinished(true)
-        void refreshStatus()
-      } else if (event.type === 'error') {
-        pushSendLog('error', event.message)
-        setSendRunning(false)
-        setSendFinished(true)
-      }
-    },
-    [pushSendLog, refreshStatus],
-  )
-
   useEffect(() => {
     void refreshStatus()
     const interval = window.setInterval(() => void refreshStatus(), 60_000)
@@ -248,7 +199,7 @@ export function HubLogisticaAndreaniApp({
   }, [refreshStatus])
 
   const startExport = () => {
-    if (anyBusy) return
+    if (exportRunning) return
     streamCloserRef.current?.()
     setExportRunning(true)
     setExportFinished(false)
@@ -258,31 +209,6 @@ export function HubLogisticaAndreaniApp({
     pushExportLog('info', 'Generando carga masiva Andreani…')
     const { close } = streamExport({ since: sinceDate || undefined }, handleExportEvent)
     streamCloserRef.current = close
-  }
-
-  const startSendTrackings = async () => {
-    if (anyBusy) return
-    streamCloserRef.current?.()
-    setSendRunning(true)
-    setSendFinished(false)
-    setSendLogs([])
-    setSendResults([])
-    setSendSummary(null)
-    sendLogIdRef.current = 0
-    pushSendLog('info', 'Creando job en Railway…')
-    try {
-      const { job_id } = await createSendTrackingJob()
-      pushSendLog(
-        'info',
-        'Job creado. Ejecutá send_trackings_worker.bat en la PC del taller o en tu casa.',
-      )
-      const { close } = streamSendTrackingJob(job_id, handleSendEvent)
-      streamCloserRef.current = close
-    } catch (err: unknown) {
-      pushSendLog('error', err instanceof Error ? err.message : 'No se pudo crear el job')
-      setSendRunning(false)
-      setSendFinished(true)
-    }
   }
 
   return (
@@ -325,13 +251,6 @@ export function HubLogisticaAndreaniApp({
         {statusError && (
           <div className="logistica-alert logistica-alert--error" role="alert">
             {statusError}
-          </div>
-        )}
-
-        {sendRunning && (
-          <div className="logistica-alert logistica-alert--info" role="status">
-            Esperando worker en PC… Abrí <strong>scripts/send_trackings_worker.bat</strong> en el
-            taller o en tu casa (solo mientras dure este envío).
           </div>
         )}
 
@@ -391,7 +310,7 @@ export function HubLogisticaAndreaniApp({
                 type="button"
                 className="logistica-btn-primary logistica-panel__cta"
                 onClick={startExport}
-                disabled={anyBusy || apiOnline === false || Boolean(configHint)}
+                disabled={exportRunning || apiOnline === false || Boolean(configHint)}
               >
                 {exportRunning ? 'Generando…' : 'Generar carga masiva'}
               </button>
@@ -415,103 +334,82 @@ export function HubLogisticaAndreaniApp({
               ) : null}
             </article>
 
-            <article className="logistica-panel">
-              <h2 className="logistica-panel__title">Enviar seguimientos</h2>
-              <p className="logistica-panel__text">
-                Fase 2: Shopify por API + Andreani headless. Mismo flujo en taller y en casa.
-              </p>
-              <ol className="logistica-steps-hint">
-                <li>Ejecutá <code>send_trackings_worker.bat</code> en la PC donde estés</li>
-                <li>Apretá el botón de abajo</li>
-              </ol>
-              <button
-                type="button"
-                className="logistica-btn-primary logistica-panel__cta"
-                onClick={() => void startSendTrackings()}
-                disabled={
-                  !SEND_TRACKINGS_UI_ENABLED ||
-                  anyBusy ||
-                  apiOnline === false ||
-                  Boolean(configHint)
-                }
-              >
-                {sendRunning ? 'Enviando seguimientos…' : 'Mandar seguimientos'}
-              </button>
-              {!SEND_TRACKINGS_UI_ENABLED ? (
-                <p className="logistica-panel__soon">Próximamente</p>
-              ) : null}
+            <article className="logistica-panel logistica-warnings-panel">
+              <div className="logistica-held__head">
+                <h2 className="logistica-panel__title">Etiquetas con warning</h2>
+                <p className="logistica-panel__text">
+                  Entran al Excel pero conviene revisar: dirección parseada, observaciones largas, etc.
+                </p>
+              </div>
 
-              {sendSummary ? (
-                <div className="logistica-send-summary">
-                  <span className="logistica-send-summary__ok">{sendSummary.ok} OK</span>
-                  <span className="logistica-send-summary__fail">{sendSummary.fail} fallidos</span>
-                </div>
-              ) : null}
+              {warningOrders.length === 0 ? (
+                <p className="logistica-held__empty">No hay pedidos con advertencias.</p>
+              ) : (
+                <>
+                  <div className="logistica-held-cards">
+                    {warningOrders.map((row) => (
+                      <article key={row.order_id} className="logistica-held-card logistica-warn-card">
+                        <div className="logistica-held-card__order">{row.order_name}</div>
+                        <div className="logistica-held-card__customer">{row.customer || '—'}</div>
+                        <ul className="logistica-warn-card__list">
+                          {(row.warnings?.length ? row.warnings : [row.warning]).map((item) => (
+                            <li key={item} className="logistica-warn-card__reason">
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                        <a
+                          href={row.shopify_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="logistica-held-card__link"
+                        >
+                          Ver en Shopify
+                        </a>
+                      </article>
+                    ))}
+                  </div>
 
-              {sendResults.length > 0 ? (
-                <ul className="logistica-send-results">
-                  {sendResults.map((row) => (
-                    <li
-                      key={`${row.order_name}-${row.customer}-${row.status}`}
-                      className={
-                        row.status === 'ok'
-                          ? 'logistica-send-results__item logistica-send-results__item--ok'
-                          : 'logistica-send-results__item logistica-send-results__item--fail'
-                      }
-                    >
-                      <span className="logistica-send-results__order">{row.order_name}</span>
-                      <span className="logistica-send-results__customer">{row.customer}</span>
-                      {row.status === 'ok' ? (
-                        <span className="logistica-send-results__tracking">{row.tracking}</span>
-                      ) : (
-                        <span className="logistica-send-results__detail">{row.detail}</span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-
-              {sendFinished && sendLogs.length > 0 ? (
-                <details className="logistica-logs-toggle">
-                  <summary>Ver logs</summary>
-                  <div className="logistica-console__body">{renderLogLines(sendLogs)}</div>
-                </details>
-              ) : null}
+                  <table className="logistica-held-table logistica-warn-table">
+                    <thead>
+                      <tr>
+                        <th>Pedido</th>
+                        <th>Cliente</th>
+                        <th>Warning</th>
+                        <th>Acción</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {warningOrders.map((row) => (
+                        <tr key={row.order_id}>
+                          <td className="logistica-held-table__order">{row.order_name}</td>
+                          <td>{row.customer || '—'}</td>
+                          <td className="logistica-warn-table__reason">
+                            <ul className="logistica-warn-table__list">
+                              {(row.warnings?.length ? row.warnings : [row.warning]).map((item) => (
+                                <li key={item}>{item}</li>
+                              ))}
+                            </ul>
+                          </td>
+                          <td>
+                            <a
+                              href={row.shopify_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="logistica-held-table__link"
+                            >
+                              Ver en Shopify
+                            </a>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              )}
             </article>
           </div>
         </section>
-
-        {jobHistory.length > 0 ? (
-          <section className="logistica-panel logistica-job-history">
-            <h2 className="logistica-panel__title">Historial de envíos</h2>
-            <ul className="logistica-job-history__list">
-              {jobHistory.map((job) => (
-                <li key={job.id} className="logistica-job-history__item">
-                  <button
-                    type="button"
-                    className="logistica-job-history__head"
-                    onClick={() =>
-                      setExpandedJobId((prev) => (prev === job.id ? null : job.id))
-                    }
-                  >
-                    <span>{new Date(job.created_at).toLocaleString('es-AR')}</span>
-                    <span className={`logistica-job-history__status logistica-job-history__status--${job.status}`}>
-                      {job.status}
-                    </span>
-                    <span>
-                      {job.ok_count ?? 0} OK · {job.fail_count ?? 0} fallidos
-                    </span>
-                  </button>
-                  {expandedJobId === job.id ? (
-                    <p className="logistica-job-history__meta">
-                      Worker: {job.worker_id || '—'}
-                    </p>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
 
         <section className="logistica-panel logistica-held">
           <div className="logistica-held__head">
