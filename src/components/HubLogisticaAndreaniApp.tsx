@@ -11,6 +11,7 @@ import {
   type LogisticsEvent,
   type LogisticsLogLevel,
   type LogisticsMetrics,
+  type PendingExportOrder,
   type WarningOrder,
 } from '../lib/logisticaAndreaniApi'
 import type { HubUserRole } from '../lib/types'
@@ -33,6 +34,8 @@ const EMPTY_METRICS: LogisticsMetrics = {
   errors: 0,
   warnings: 0,
 }
+
+const EXPORT_PREVIEW_PAGE = 10
 
 const LOG_CLASS: Record<LogisticsLogLevel, string> = {
   info: 'logistica-console__msg--info',
@@ -67,6 +70,8 @@ export function HubLogisticaAndreaniApp({
   const [metrics, setMetrics] = useState<LogisticsMetrics>(EMPTY_METRICS)
   const [heldOrders, setHeldOrders] = useState<HeldOrder[]>([])
   const [warningOrders, setWarningOrders] = useState<WarningOrder[]>([])
+  const [pendingOrders, setPendingOrders] = useState<PendingExportOrder[]>([])
+  const [pendingPage, setPendingPage] = useState(1)
   const [loadingStatus, setLoadingStatus] = useState(false)
   const [statusError, setStatusError] = useState<string | null>(null)
 
@@ -74,9 +79,6 @@ export function HubLogisticaAndreaniApp({
   const [exportFinished, setExportFinished] = useState(false)
   const [exportProgress, setExportProgress] = useState(0)
   const [exportLogs, setExportLogs] = useState<LogLine[]>([])
-
-  const [sinceDate, setSinceDate] = useState('')
-  const [showSinceDate, setShowSinceDate] = useState(false)
 
   const exportLogIdRef = useRef(0)
   const streamCloserRef = useRef<(() => void) | null>(null)
@@ -120,6 +122,8 @@ export function HubLogisticaAndreaniApp({
       })
       setHeldOrders(data.held_orders)
       setWarningOrders(data.warning_orders ?? [])
+      setPendingOrders(data.pending_orders ?? [])
+      setPendingPage(1)
       if (!silent) {
         setStatusError(null)
       }
@@ -207,9 +211,15 @@ export function HubLogisticaAndreaniApp({
     setExportLogs([])
     exportLogIdRef.current = 0
     pushExportLog('info', 'Generando carga masiva Andreani…')
-    const { close } = streamExport({ since: sinceDate || undefined }, handleExportEvent)
+    const { close } = streamExport({}, handleExportEvent)
     streamCloserRef.current = close
   }
+
+  const pendingTotalPages = Math.max(1, Math.ceil(pendingOrders.length / EXPORT_PREVIEW_PAGE))
+  const pendingPageOrders = pendingOrders.slice(
+    (pendingPage - 1) * EXPORT_PREVIEW_PAGE,
+    pendingPage * EXPORT_PREVIEW_PAGE,
+  )
 
   return (
     <div className="nm-hub-app nm-hub-app--logistica-andreani">
@@ -260,21 +270,23 @@ export function HubLogisticaAndreaniApp({
             <p className="logistica-metric__value logistica-metric__value--sky">
               {metrics.pending_export}
             </p>
-            <p className="logistica-metric__desc">Pagados, sin enviar, sin etiqueta</p>
+            <p className="logistica-metric__desc">Pagados, sin tag ETIQUETA, listos para Excel</p>
           </article>
           <article className="logistica-metric">
             <p className="logistica-metric__label">Sin seguimiento</p>
             <p className="logistica-metric__value logistica-metric__value--violet">
               {metrics.missing_tracking}
             </p>
-            <p className="logistica-metric__desc">Preparados en Shopify, sin número de envío</p>
+            <p className="logistica-metric__desc">
+              Preparados en Shopify pero sin número de envío Andreani cargado
+            </p>
           </article>
           <article className="logistica-metric">
             <p className="logistica-metric__label">Con error</p>
             <p className="logistica-metric__value logistica-metric__value--rose">
               {metrics.errors}
             </p>
-            <p className="logistica-metric__desc">Dirección, CP o sucursal</p>
+            <p className="logistica-metric__desc">Dirección o CP inválidos — no entran al Excel</p>
           </article>
         </section>
 
@@ -283,29 +295,57 @@ export function HubLogisticaAndreaniApp({
             <article className="logistica-panel">
               <h2 className="logistica-panel__title">Exportar etiquetas</h2>
               <p className="logistica-panel__text">Generá el excel para subir a Andreani</p>
-              <label className="logistica-optional-toggle">
-                <input
-                  type="checkbox"
-                  checked={showSinceDate}
-                  onChange={(e) => {
-                    const on = e.target.checked
-                    setShowSinceDate(on)
-                    if (!on) setSinceDate('')
-                  }}
-                />
-                <span>Elegir fecha específica (OPCIONAL)</span>
-              </label>
-              {showSinceDate ? (
-                <label className="logistica-field">
-                  Solo pedidos desde
-                  <input
-                    type="date"
-                    value={sinceDate}
-                    onChange={(e) => setSinceDate(e.target.value)}
-                    className="logistica-field__input"
-                  />
-                </label>
-              ) : null}
+
+              {pendingOrders.length > 0 ? (
+                <div className="logistica-export-preview">
+                  <p className="logistica-export-preview__title">
+                    Listos para crear etiqueta ({pendingOrders.length})
+                  </p>
+                  <ul className="logistica-export-preview__list">
+                    {pendingPageOrders.map((row) => (
+                      <li key={row.order_id} className="logistica-export-preview__item">
+                        <span className="logistica-export-preview__order">{row.order_name}</span>
+                        <a
+                          href={row.shopify_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="logistica-export-preview__link"
+                        >
+                          Ver en Shopify
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                  {pendingTotalPages > 1 ? (
+                    <div className="logistica-export-preview__pagination">
+                      <button
+                        type="button"
+                        className="logistica-export-preview__page-btn"
+                        onClick={() => setPendingPage((page) => Math.max(1, page - 1))}
+                        disabled={pendingPage <= 1}
+                      >
+                        Anterior
+                      </button>
+                      <span className="logistica-export-preview__page-info">
+                        Página {pendingPage} de {pendingTotalPages}
+                      </span>
+                      <button
+                        type="button"
+                        className="logistica-export-preview__page-btn"
+                        onClick={() =>
+                          setPendingPage((page) => Math.min(pendingTotalPages, page + 1))
+                        }
+                        disabled={pendingPage >= pendingTotalPages}
+                      >
+                        Siguiente
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              ) : (
+                <p className="logistica-export-preview__empty">No hay pedidos listos para exportar.</p>
+              )}
+
               <button
                 type="button"
                 className="logistica-btn-primary logistica-panel__cta"

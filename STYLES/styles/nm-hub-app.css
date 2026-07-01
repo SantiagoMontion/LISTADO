@@ -6023,6 +6023,119 @@ body:has(.nm-hub-app--logistica-andreani) {
   margin-top: 0.85rem;
 }
 
+.logistica-export-preview {
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.logistica-export-preview__title {
+  margin: 0 0 0.45rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.logistica-export-preview__empty {
+  margin: 0.85rem 0 0;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.logistica-export-preview__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.28rem;
+}
+
+.logistica-export-preview__item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.65rem;
+  font-size: 0.76rem;
+  line-height: 1.25;
+  color: #cbd5e1;
+}
+
+.logistica-export-preview__order {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #7dd3fc;
+  flex-shrink: 0;
+}
+
+.logistica-export-preview__link {
+  color: #94a3b8;
+  font-size: 0.74rem;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.logistica-export-preview__link:hover {
+  color: #e2e8f0;
+  text-decoration: underline;
+}
+
+.logistica-export-preview__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.55rem;
+}
+
+.logistica-export-preview__page-info {
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+.logistica-export-preview__page-btn {
+  padding: 0.35rem 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: transparent;
+  color: #cbd5e1;
+  font-size: 0.74rem;
+  cursor: pointer;
+}
+
+.logistica-export-preview__page-btn:hover:not(:disabled) {
+  border-color: rgba(125, 211, 252, 0.35);
+  color: #e2e8f0;
+}
+
+.logistica-export-preview__page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.logistica-export-preview__customer {
+  color: #94a3b8;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logistica-export-preview__more {
+  margin-top: 0.55rem;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: transparent;
+  color: #cbd5e1;
+  font-size: 0.74rem;
+  cursor: pointer;
+}
+
+.logistica-export-preview__more:hover {
+  border-color: rgba(125, 211, 252, 0.35);
+  color: #e2e8f0;
+}
+
 .logistica-panel-progress .logistica-progress__bar {
   margin: 0;
 }
