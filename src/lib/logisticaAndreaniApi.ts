@@ -34,10 +34,18 @@ export interface WarningOrder {
   shopify_url: string
 }
 
+export interface PendingExportOrder {
+  order_name: string
+  order_id: number
+  customer: string
+  shopify_url: string
+}
+
 export interface LogisticsStatusResponse {
   metrics: LogisticsMetrics
   held_orders: HeldOrder[]
   warning_orders: WarningOrder[]
+  pending_orders: PendingExportOrder[]
   store_domain: string
 }
 
