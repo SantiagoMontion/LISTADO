@@ -37,6 +37,19 @@ const EMPTY_METRICS: LogisticsMetrics = {
 
 const EXPORT_PREVIEW_PAGE = 10
 
+const OBSOLETE_WARNING_PATTERNS = [/Metodo_Envio/i, /selector del carrito/i]
+
+function filterObsoleteWarnings(orders: WarningOrder[]): WarningOrder[] {
+  return orders
+    .map((row) => {
+      const items = (row.warnings?.length ? row.warnings : row.warning ? [row.warning] : []).filter(
+        (item) => !OBSOLETE_WARNING_PATTERNS.some((pattern) => pattern.test(item)),
+      )
+      return { ...row, warnings: items, warning: items.join('; ') }
+    })
+    .filter((row) => (row.warnings?.length ?? 0) > 0)
+}
+
 const LOG_CLASS: Record<LogisticsLogLevel, string> = {
   info: 'logistica-console__msg--info',
   success: 'logistica-console__msg--success',
@@ -115,13 +128,14 @@ export function HubLogisticaAndreaniApp({
         return
       }
       const data = await fetchLogisticsStatus()
+      const visibleWarnings = filterObsoleteWarnings(data.warning_orders ?? [])
       setMetrics({
         ...EMPTY_METRICS,
         ...data.metrics,
-        warnings: data.metrics.warnings ?? data.warning_orders?.length ?? 0,
+        warnings: visibleWarnings.length,
       })
       setHeldOrders(data.held_orders)
-      setWarningOrders(data.warning_orders ?? [])
+      setWarningOrders(visibleWarnings)
       setPendingOrders(data.pending_orders ?? [])
       setPendingPage(1)
       if (!silent) {
