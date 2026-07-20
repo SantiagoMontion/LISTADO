@@ -92,24 +92,33 @@ export class LogisticsApiError extends Error {
   }
 }
 
-/** En prod: proxy Vercel same-origin (/api → Railway). En dev: proxy Vite. */
+/**
+ * URL del motor Andreani:
+ * 1. VITE_ANDREANI_API_URL (build Vercel) → Railway directo — como funcionaba antes.
+ * 2. Sin esa var en prod → proxy same-origin /api (Vercel serverless).
+ * 3. Dev → proxy Vite → localhost:8765
+ */
 function apiBase(): string {
-  if (import.meta.env.PROD) return ''
   const configured = (import.meta.env.VITE_ANDREANI_API_URL as string | undefined)?.trim()
   if (configured) return configured.replace(/\/$/, '')
+  if (import.meta.env.DEV || import.meta.env.PROD) return ''
   return ''
 }
 
 function apiKey(): string {
-  // En prod el proxy Vercel inyecta la clave server-side.
+  const directUrl = (import.meta.env.VITE_ANDREANI_API_URL as string | undefined)?.trim()
+  if (directUrl) {
+    return (import.meta.env.VITE_ANDREANI_API_KEY as string | undefined)?.trim() || ''
+  }
+  // Proxy Vercel inyecta la clave server-side
   if (import.meta.env.PROD) return ''
   return (import.meta.env.VITE_ANDREANI_API_KEY as string | undefined)?.trim() || ''
 }
 
 function assertApiConfigured(): void {
-  if (import.meta.env.PROD || apiBase() || import.meta.env.DEV) return
+  if (apiBase() || import.meta.env.DEV) return
   throw new LogisticsApiError(
-    'Falta la URL del motor Andreani. En Vercel configurá ANDREANI_API_URL (server-side) y redeploy.',
+    'Falta VITE_ANDREANI_API_URL en Vercel (URL de Railway) o ANDREANI_API_URL para el proxy. Redeploy.',
   )
 }
 
@@ -167,9 +176,10 @@ function wrapFetchError(err: unknown): LogisticsApiError {
   if (err instanceof LogisticsApiError) return err
   if (isNetworkFailure(err)) {
     return new LogisticsApiError(
-      import.meta.env.PROD
-        ? 'No se pudo conectar con el motor Andreani. Verificá ANDREANI_API_URL en Vercel (URL de Railway) y que el servicio en Railway esté activo. Si el export terminó bien, probá Actualizar en unos segundos.'
-        : 'No se pudo conectar con Railway. ¿Está corriendo NOT-ANDREANI en el puerto 8765? (INICIAR-LOGISTICA.bat). Si el export terminó bien, probá Actualizar en unos segundos.',
+      'No se pudo conectar con Railway. Suele ser CORS, URL incorrecta o el servidor ocupado tras un export largo. ' +
+        'Railway: NOTBRAIN_PUBLIC_URL = https://listado-seven.vercel.app . ' +
+        'Vercel: VITE_ANDREANI_API_URL (sin barra final) y VITE_ANDREANI_API_KEY. ' +
+        'Si el export terminó bien, probá Actualizar en unos segundos.',
     )
   }
   if (err instanceof Error) return new LogisticsApiError(err.message)
@@ -242,8 +252,8 @@ export async function probeLogisticsApiHealth(): Promise<{
 }
 
 export function getLogisticsApiHint(): string | null {
-  if (import.meta.env.PROD || apiBase() || import.meta.env.DEV) return null
-  return 'Configurá ANDREANI_API_URL en Vercel (server-side) con la URL de Railway.'
+  if (apiBase() || import.meta.env.DEV) return null
+  return 'Configurá VITE_ANDREANI_API_URL en Vercel con la URL de Railway.'
 }
 
 function attachEventSourceStream(
