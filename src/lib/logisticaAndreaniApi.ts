@@ -92,21 +92,24 @@ export class LogisticsApiError extends Error {
   }
 }
 
+/** En prod: proxy Vercel same-origin (/api → Railway). En dev: proxy Vite. */
 function apiBase(): string {
+  if (import.meta.env.PROD) return ''
   const configured = (import.meta.env.VITE_ANDREANI_API_URL as string | undefined)?.trim()
   if (configured) return configured.replace(/\/$/, '')
-  if (import.meta.env.DEV) return ''
   return ''
 }
 
 function apiKey(): string {
+  // En prod el proxy Vercel inyecta la clave server-side.
+  if (import.meta.env.PROD) return ''
   return (import.meta.env.VITE_ANDREANI_API_KEY as string | undefined)?.trim() || ''
 }
 
 function assertApiConfigured(): void {
-  if (apiBase() || import.meta.env.DEV) return
+  if (import.meta.env.PROD || apiBase() || import.meta.env.DEV) return
   throw new LogisticsApiError(
-    'Falta la URL del motor Andreani en Vercel. Agregá VITE_ANDREANI_API_URL (Railway), guardá y hacé Redeploy.',
+    'Falta la URL del motor Andreani. En Vercel configurá ANDREANI_API_URL (server-side) y redeploy.',
   )
 }
 
@@ -164,9 +167,9 @@ function wrapFetchError(err: unknown): LogisticsApiError {
   if (err instanceof LogisticsApiError) return err
   if (isNetworkFailure(err)) {
     return new LogisticsApiError(
-      'No se pudo conectar con Railway. Suele ser CORS, URL incorrecta o el servidor ocupado tras un export largo. ' +
-        'Railway: NOTBRAIN_PUBLIC_URL = URL exacta de Vercel. Vercel: VITE_ANDREANI_API_URL (sin barra final) y VITE_ANDREANI_API_KEY. ' +
-        'Si el export terminó bien, probá Actualizar en unos segundos.',
+      import.meta.env.PROD
+        ? 'No se pudo conectar con el motor Andreani. Verificá ANDREANI_API_URL en Vercel (URL de Railway) y que el servicio en Railway esté activo. Si el export terminó bien, probá Actualizar en unos segundos.'
+        : 'No se pudo conectar con Railway. ¿Está corriendo NOT-ANDREANI en el puerto 8765? (INICIAR-LOGISTICA.bat). Si el export terminó bien, probá Actualizar en unos segundos.',
     )
   }
   if (err instanceof Error) return new LogisticsApiError(err.message)
@@ -239,8 +242,8 @@ export async function probeLogisticsApiHealth(): Promise<{
 }
 
 export function getLogisticsApiHint(): string | null {
-  if (apiBase() || import.meta.env.DEV) return null
-  return 'Configurá VITE_ANDREANI_API_URL en Vercel con la URL de Railway.'
+  if (import.meta.env.PROD || apiBase() || import.meta.env.DEV) return null
+  return 'Configurá ANDREANI_API_URL en Vercel (server-side) con la URL de Railway.'
 }
 
 function attachEventSourceStream(
@@ -342,26 +345,37 @@ export function downloadExportUrl(filename: string): string {
 
 export async function downloadExportFile(filename: string): Promise<void> {
   assertApiConfigured()
-  let res: Response
+  const url = downloadExportUrl(filename)
+
+  // Preferir fetch+blob (nombre de archivo correcto). Si falla, navegación directa.
   try {
-    res = await fetch(downloadExportUrl(filename), { headers: headers() })
+    const res = await fetch(url, { headers: headers() })
+    if (!res.ok) {
+      const body = await res.text()
+      throw new LogisticsApiError(friendlyParseError(body, res.status))
+    }
+    const blob = await res.blob()
+    const objectUrl = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = objectUrl
+    a.download = filename
+    a.rel = 'noopener'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000)
+    return
   } catch (err: unknown) {
-    throw wrapFetchError(err)
+    if (err instanceof LogisticsApiError) throw err
+    // Fallback sin CORS (misma ventana)
+    const a = document.createElement('a')
+    a.href = url
+    a.rel = 'noopener'
+    a.target = '_blank'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
   }
-  if (!res.ok) {
-    const body = await res.text()
-    throw new LogisticsApiError(friendlyParseError(body, res.status))
-  }
-  const blob = await res.blob()
-  const objectUrl = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = objectUrl
-  a.download = filename
-  a.rel = 'noopener'
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000)
 }
 
 export function triggerDownload(filename: string): void {

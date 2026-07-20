@@ -1,7 +1,15 @@
 {
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/api/logistics/:path*",
+      "destination": "/api/andreani/logistics/:path*"
+    },
+    {
+      "source": "/api/health",
+      "destination": "/api/andreani/health"
+    },
+    {
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ]
