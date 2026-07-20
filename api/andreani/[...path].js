@@ -2,9 +2,9 @@
  * Proxy Vercel → Railway (NOT-ANDREANI).
  * Evita CORS: el browser llama a /api/* en el mismo dominio de NOT-BRAIN.
  *
- * Variables en Vercel (server-side, NO VITE_):
- *   ANDREANI_API_URL  = https://tu-servicio.up.railway.app
- *   ANDREANI_API_KEY  = misma clave que ANDREANI_API_KEY en Railway
+ * Variables en Vercel (cualquiera de estas parejas):
+ *   ANDREANI_API_URL  + ANDREANI_API_KEY   (recomendado, solo servidor)
+ *   VITE_ANDREANI_API_URL + VITE_ANDREANI_API_KEY  (compatibilidad)
  */
 
 export const config = {
@@ -23,10 +23,22 @@ function readBody(req) {
   });
 }
 
+function railwayBaseUrl() {
+  return (
+    process.env.ANDREANI_API_URL?.trim() ||
+    process.env.VITE_ANDREANI_API_URL?.trim() ||
+    ''
+  ).replace(/\/$/, '');
+}
+
 function buildUpstreamUrl(req) {
-  const railway = process.env.ANDREANI_API_URL?.trim().replace(/\/$/, '');
+  const railway = railwayBaseUrl();
   if (!railway) {
-    return { error: 'ANDREANI_API_URL no configurada en Vercel (Variables del proyecto).' };
+    return {
+      error:
+        'Falta la URL de Railway en Vercel. Agregá ANDREANI_API_URL (recomendado) ' +
+        'o VITE_ANDREANI_API_URL con https://tu-servicio.up.railway.app (sin barra final) y redeploy.',
+    };
   }
 
   const pathParts = req.query.path;
