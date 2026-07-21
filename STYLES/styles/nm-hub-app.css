@@ -3070,6 +3070,108 @@ body:has(.nm-hub-app--cut-list) {
   letter-spacing: normal;
 }
 
+.nm-hub-app--tasks .hub-tasks-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.nm-hub-app--tasks .hub-tasks-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.nm-hub-app--tasks .hub-tasks-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.45px;
+  text-transform: uppercase;
+  color: #94a3b8;
+  background: rgba(30, 41, 59, 0.95);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+  white-space: nowrap;
+}
+
+.nm-hub-app--tasks .hub-tasks-table__row td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  vertical-align: middle;
+  color: #e2e8f0;
+}
+
+.nm-hub-app--tasks .hub-tasks-table__row:nth-child(even) td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.nm-hub-app--tasks .hub-tasks-table__title {
+  font-weight: 600;
+  min-width: 140px;
+}
+
+.nm-hub-app--tasks .hub-tasks-table__detail-toggle {
+  width: 120px;
+}
+
+.nm-hub-app--tasks .hub-tasks-table__detail-btn {
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(70, 207, 248, 0.35);
+  background: rgba(70, 207, 248, 0.1);
+  color: #7dd3fc;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.nm-hub-app--tasks .hub-tasks-table__detail-btn:hover {
+  background: rgba(70, 207, 248, 0.18);
+}
+
+.nm-hub-app--tasks .hub-tasks-table__detail-row td {
+  padding: 0 12px 12px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.nm-hub-app--tasks .hub-tasks-table__detail-body {
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  background: rgba(2, 6, 23, 0.45);
+  color: #cbd5e1;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.nm-hub-app--tasks .hub-tasks-table__meta {
+  margin: 8px 0 0;
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.nm-hub-app--tasks .hub-tasks-table__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 180px;
+}
+
+.nm-hub-app--tasks .hub-tasks-table__action-btn {
+  flex: 0 0 auto;
+}
+
 /* Labels — separados del fondo de la tarjeta */
 .nm-hub-app--tasks form#nm-hub-tareas-nueva .field-label {
   font-size: 0.8rem;

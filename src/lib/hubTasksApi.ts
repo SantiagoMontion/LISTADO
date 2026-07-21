@@ -101,6 +101,32 @@ export async function fetchHubTasksCompleted(forDate: string): Promise<NmHubTask
   return mapTaskRows(data)
 }
 
+/** Todas las tareas pendientes (sin filtrar por for_date). */
+export async function fetchAllHubTasksPending(): Promise<NmHubTask[]> {
+  const sb = requireClient()
+  const { data, error } = await sb
+    .from('nm_hub_tasks')
+    .select('*')
+    .is('executed_at', null)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return mapTaskRows(data)
+}
+
+/** Todas las tareas completadas (sin filtrar por for_date). */
+export async function fetchAllHubTasksCompleted(): Promise<NmHubTask[]> {
+  const sb = requireClient()
+  const { data, error } = await sb
+    .from('nm_hub_tasks')
+    .select('*')
+    .not('executed_at', 'is', null)
+    .order('executed_at', { ascending: false })
+
+  if (error) throw error
+  return mapTaskRows(data)
+}
+
 /** Hay al menos una tarea pendiente (sin ejecutar) con for_date anterior al día mostrado. */
 export async function fetchHasPendingHubTasksBefore(forDate: string): Promise<boolean> {
   const sb = requireClient()

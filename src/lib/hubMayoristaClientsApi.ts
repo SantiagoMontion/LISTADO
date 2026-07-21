@@ -95,6 +95,48 @@ export async function findMayoristaClientByName(
   return exact ?? null
 }
 
+export async function fetchMayoristaClientById(id: string): Promise<NmHubMayoristaClient | null> {
+  const sb = requireClient()
+  const { data, error } = await sb
+    .from('nm_hub_mayorista_clients')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (error) throw error
+  if (!data) return null
+  return coerceClient(data as Record<string, unknown>)
+}
+
+export async function saveMayoristaClient(
+  input: MayoristaClientInput,
+  existingId?: string | null,
+): Promise<NmHubMayoristaClient> {
+  const payload = prepareClientPayload(input)
+  if (!payload.full_name) throw new Error('El nombre del cliente es obligatorio.')
+
+  const sb = requireClient()
+
+  if (existingId) {
+    const { data, error } = await sb
+      .from('nm_hub_mayorista_clients')
+      .update(payload)
+      .eq('id', existingId)
+      .select('*')
+      .single()
+
+    if (error) {
+      if (error.code === '23505') {
+        throw new Error('Ya existe otro cliente con ese nombre.')
+      }
+      throw error
+    }
+    return coerceClient(data as Record<string, unknown>)
+  }
+
+  return upsertMayoristaClient(input)
+}
+
 export async function upsertMayoristaClient(input: MayoristaClientInput): Promise<NmHubMayoristaClient> {
   const payload = prepareClientPayload(input)
   if (!payload.full_name) throw new Error('El nombre del cliente es obligatorio.')

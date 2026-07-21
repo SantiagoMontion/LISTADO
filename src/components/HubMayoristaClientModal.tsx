@@ -1,9 +1,11 @@
 import { type FormEvent, useEffect, useId, useState } from 'react'
 import {
+  fetchMayoristaClients,
   normalizeMayoristaPhone,
-  upsertMayoristaClient,
+  saveMayoristaClient,
   type MayoristaClientInput,
 } from '../lib/hubMayoristaClientsApi'
+import type { NmHubMayoristaClient } from '../lib/types'
 
 export interface HubMayoristaClientModalProps {
   open: boolean
@@ -21,6 +23,9 @@ export function HubMayoristaClientModal({
   onSaved,
 }: HubMayoristaClientModalProps) {
   const titleId = useId()
+  const [clients, setClients] = useState<NmHubMayoristaClient[]>([])
+  const [loadingClients, setLoadingClients] = useState(false)
+  const [selectedClientId, setSelectedClientId] = useState<string>('')
   const [fullName, setFullName] = useState('')
   const [dni, setDni] = useState('')
   const [phone, setPhone] = useState('')
@@ -31,6 +36,7 @@ export function HubMayoristaClientModal({
 
   useEffect(() => {
     if (!open) return
+    setSelectedClientId('')
     setFullName('')
     setDni('')
     setPhone('')
@@ -38,6 +44,11 @@ export function HubMayoristaClientModal({
     setAddress('')
     setLocalError(null)
     setSaving(false)
+    setLoadingClients(true)
+    void fetchMayoristaClients()
+      .then((rows) => setClients(rows))
+      .catch(() => setClients([]))
+      .finally(() => setLoadingClients(false))
   }, [open])
 
   useEffect(() => {
@@ -48,6 +59,31 @@ export function HubMayoristaClientModal({
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [open, onClose])
+
+  const applyClientToForm = (client: NmHubMayoristaClient) => {
+    setSelectedClientId(client.id)
+    setFullName(client.full_name)
+    setDni(client.dni)
+    setPhone(client.phone)
+    setEmail(client.email)
+    setAddress(client.address)
+    setLocalError(null)
+  }
+
+  const onSelectClient = (id: string) => {
+    setSelectedClientId(id)
+    if (!id) {
+      setFullName('')
+      setDni('')
+      setPhone('')
+      setEmail('')
+      setAddress('')
+      setLocalError(null)
+      return
+    }
+    const hit = clients.find((c) => c.id === id)
+    if (hit) applyClientToForm(hit)
+  }
 
   if (!open) return null
 
@@ -71,7 +107,7 @@ export function HubMayoristaClientModal({
     }
     setSaving(true)
     try {
-      await upsertMayoristaClient(payload)
+      await saveMayoristaClient(payload, selectedClientId || null)
       onSaved()
       onClose()
     } catch (err: unknown) {
@@ -83,6 +119,7 @@ export function HubMayoristaClientModal({
 
   const displayError = localError ?? error
   const disabled = busy || saving
+  const isEditing = Boolean(selectedClientId)
 
   return (
     <div
@@ -101,8 +138,28 @@ export function HubMayoristaClientModal({
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="modal-rebel-title" id={titleId}>
-          Crear cliente mayorista
+          {isEditing ? 'Modificar cliente mayorista' : 'Nuevo cliente mayorista'}
         </h3>
+
+        <div className="modal-input-section">
+          <label className="modal-section-label" htmlFor={`${titleId}-pick`}>
+            Cliente
+          </label>
+          <select
+            id={`${titleId}-pick`}
+            className="modal-numeric-input"
+            value={selectedClientId}
+            onChange={(e) => onSelectClient(e.target.value)}
+            disabled={disabled || loadingClients}
+          >
+            <option value="">— Nuevo cliente —</option>
+            {clients.map((client) => (
+              <option key={client.id} value={client.id}>
+                {client.full_name}
+              </option>
+            ))}
+          </select>
+        </div>
 
         <div className="modal-input-section">
           <label className="modal-section-label" htmlFor={`${titleId}-name`}>
@@ -192,7 +249,7 @@ export function HubMayoristaClientModal({
             Cancelar
           </button>
           <button type="submit" className="btn-modal-add" disabled={disabled}>
-            {saving ? 'Guardando…' : 'Guardar cliente'}
+            {saving ? 'Guardando…' : isEditing ? 'Guardar cambios' : 'Crear cliente'}
           </button>
         </div>
       </form>

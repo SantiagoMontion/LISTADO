@@ -1,22 +1,20 @@
-import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties } from 'react'
+import { Fragment, type FormEvent, useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import {
   appendTaskImages,
   createHubTask,
   resolveAssignedToUserId,
   deleteHubTask,
   notifyTaskAssignedPush,
-  fetchHasPendingHubTasksAfter,
-  fetchHasPendingHubTasksBefore,
+  fetchHubTaskNoteCounts,
+  fetchAllHubTasksCompleted,
+  fetchAllHubTasksPending,
   fetchHubProfileDisplayNames,
   hubProfileDisplayLabel,
-  fetchHubTaskNoteCounts,
-  fetchHubTasksCompleted,
-  fetchHubTasksPending,
   signedImageUrl,
   updateHubTaskExecuted,
 } from '../lib/hubTasksApi'
 import { formatSupabaseOrError } from '../lib/errors'
-import { addDaysToIsoDate, formatDayMonthShort, normalizeCalendarDate, todayIsoLocal } from '../lib/date'
+import { todayIsoLocal } from '../lib/date'
 import { supabase } from '../lib/supabase'
 import type { HubImportance, HubUserRole, NmHubTask } from '../lib/types'
 import { HubBrandBar } from './HubBrandBar'
@@ -41,21 +39,6 @@ import {
 import { HubMayoristaClientModal } from './HubMayoristaClientModal'
 import type { HubTaskCreateType, NmHubMayoristaClient } from '../lib/types'
 
-const IMPORTANCE_LABEL: Record<HubImportance, string> = {
-  low: 'Baja',
-  normal: 'Normal',
-  high: 'Alta',
-  urgent: 'Urgente',
-}
-
-/** Borde izquierdo de tarjeta (prioridad). */
-const PRIORITY_ACCENT: Record<HubImportance, string> = {
-  low: '#a1a9b6',
-  normal: '#46cff8',
-  high: '#ffab40',
-  urgent: '#fb7185',
-}
-
 const TASK_TYPE_LABEL: Record<HubTaskCreateType, string> = {
   falta: 'Falta',
   mayorista: 'Mayorista',
@@ -65,7 +48,6 @@ const TASK_TYPE_LABEL: Record<HubTaskCreateType, string> = {
 }
 
 const TASK_CREATE_TYPES: HubTaskCreateType[] = [
-  'falta',
   'mayorista',
   'rehacer',
   'canje',
@@ -188,8 +170,6 @@ function AssigneeRoleSelect({
 
 type TasksPanel = 'list' | 'create'
 type HubListScope = 'inbox' | 'sent' | 'completadas'
-/** Subfiltro dentro de Completadas. */
-type HubCompletedFilter = 'todas' | 'inbox' | 'sent'
 
 function readHubListScope(): HubListScope {
   if (typeof window === 'undefined') return 'inbox'
@@ -209,23 +189,6 @@ function isDelegatedByMe(t: NmHubTask, myRole: HubUserRole, myId: string): boole
 }
 
 /** Chip «De … para …» (mismo formato admin y resto de roles). */
-function showDelegationChip(
-  t: NmHubTask,
-  isAdmin: boolean,
-  listScope: HubListScope,
-  profileRole: HubUserRole,
-  profileId: string,
-): boolean {
-  if (isAdmin && listScope === 'sent') return taskInAdminAssignedOverview(t)
-  if (listScope === 'sent' && !isAdmin) return true
-  if (listScope === 'completadas') {
-    if (isAdmin) return taskInAdminAssignedOverview(t)
-    return isDelegatedByMe(t, profileRole, profileId)
-  }
-  return false
-}
-
-/** Admin — pestaña Asignadas: todas las tareas del equipo (no las de su propia bandeja). */
 function taskInAdminAssignedOverview(t: NmHubTask): boolean {
   return t.assigned_role !== 'admin'
 }
@@ -236,10 +199,6 @@ function taskInMyInbox(t: NmHubTask, myRole: HubUserRole, myId: string): boolean
   return t.assigned_role === myRole
 }
 
-/** Chip de destinatario: no mostrar si la tarea ya es para mí. */
-function showAssigneeRoleChip(t: NmHubTask, myRole: HubUserRole, myId: string): boolean {
-  return !taskInMyInbox(t, myRole, myId)
-}
 /** Hash explícito gana; si no hay hash útil, `?hub=crear` (desde inicio) abre el formulario aunque el fragmento se pierda. */
 function hubTasksPanelFromLocation(readOnly: boolean): TasksPanel {
   if (readOnly) return 'list'
@@ -257,12 +216,6 @@ function normalizeTasksPathname(): string {
   let p = (window.location.pathname || '/').toLowerCase()
   if (p.length > 1 && p.endsWith('/')) p = p.slice(0, -1)
   return p
-}
-
-function readDayFromUrl(): string {
-  if (typeof window === 'undefined') return ''
-  const d = normalizeCalendarDate(new URLSearchParams(window.location.search).get('d'))
-  return /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : ''
 }
 
 function replaceUrlPreservingQuery(hash: string) {
@@ -446,9 +399,7 @@ export function HubTasksApp({
   const [listScope, setListScope] = useState<HubListScope>(() =>
     typeof window !== 'undefined' ? readHubListScope() : 'inbox',
   )
-  const [completedFilter, setCompletedFilter] = useState<HubCompletedFilter>('todas')
-  const [hasPendingBefore, setHasPendingBefore] = useState(false)
-  const [hasPendingAfter, setHasPendingAfter] = useState(false)
+  const [expandedCompletedIds, setExpandedCompletedIds] = useState<Set<string>>(() => new Set())
   const [executorNames, setExecutorNames] = useState<Record<string, string>>({})
   const [executorNamesReady, setExecutorNamesReady] = useState(false)
   const [taskQuery, setTaskQuery] = useState('')
@@ -470,19 +421,6 @@ export function HubTasksApp({
   const [panel, setPanel] = useState<TasksPanel>(() =>
     typeof window !== 'undefined' ? hubTasksPanelFromLocation(readOnly) : 'list',
   )
-
-  const [taskDay, setTaskDay] = useState(() =>
-    typeof window !== 'undefined' ? readDayFromUrl() || todayIsoLocal() : todayIsoLocal(),
-  )
-
-  const applyTaskDay = useCallback((next: string) => {
-    const d = normalizeCalendarDate(next)
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return
-    setTaskDay(d)
-    const u = new URL(window.location.href)
-    u.searchParams.set('d', d)
-    window.history.replaceState(null, '', `${u.pathname}${u.search}${u.hash}`)
-  }, [])
 
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
@@ -517,26 +455,15 @@ export function HubTasksApp({
   }, [])
 
   const refreshAdjacentPending = useCallback(async () => {
-    try {
-      const [before, after] = await Promise.all([
-        fetchHasPendingHubTasksBefore(taskDay),
-        fetchHasPendingHubTasksAfter(taskDay),
-      ])
-      setHasPendingBefore(before)
-      setHasPendingAfter(after)
-    } catch {
-      setHasPendingBefore(false)
-      setHasPendingAfter(false)
-    }
-  }, [taskDay])
+    /* sin filtro por fecha: no hay días adyacentes */
+  }, [])
 
   const loadSilent = useCallback(async () => {
-    const day = taskDay
     const seq = ++tasksLoadSeqRef.current
     const scope = readHubListScope()
     const [pendingRows, completedRows] = await Promise.all([
-      fetchHubTasksPending(day),
-      fetchHubTasksCompleted(day),
+      fetchAllHubTasksPending(),
+      fetchAllHubTasksCompleted(),
     ])
     if (seq !== tasksLoadSeqRef.current) return
     setListScope(scope)
@@ -551,14 +478,14 @@ export function HubTasksApp({
         if (seq !== tasksLoadSeqRef.current) return
         setNoteCounts({})
       })
-  }, [taskDay, hubDataGen, profileRole, profileId])
+  }, [hubDataGen, profileRole, profileId])
 
   useEffect(() => {
     let cancelled = false
     const ids = new Set<string>()
     for (const t of [...rawPending, ...rawCompleted]) {
       if (t.executed_by) ids.add(t.executed_by)
-      if (isAdmin && t.created_by) ids.add(t.created_by)
+      if (t.created_by) ids.add(t.created_by)
     }
     if (ids.size === 0) {
       setExecutorNames({})
@@ -576,7 +503,7 @@ export function HubTasksApp({
     return () => {
       cancelled = true
     }
-  }, [rawPending, rawCompleted, hubDataGen, isAdmin])
+  }, [rawPending, rawCompleted, hubDataGen])
 
   const profileDisplaySelf = useMemo(
     () => ({ id: profileId, displayName: profileDisplayName, role: profileRole }),
@@ -609,18 +536,6 @@ export function HubTasksApp({
   useEffect(() => {
     const sb = supabase
     if (!sb) return
-    const day = normalizeCalendarDate(taskDay)
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return
-
-    const hubChangeAffectsDay = (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
-      const fromRow = (row: Record<string, unknown> | undefined) => {
-        const fd = normalizeCalendarDate(row?.for_date as string | undefined)
-        return /^\d{4}-\d{2}-\d{2}$/.test(fd) ? fd : ''
-      }
-      const n = fromRow(payload.new)
-      const o = fromRow(payload.old)
-      return n === day || o === day
-    }
 
     const scheduleSyncFromServer = () => {
       if (Date.now() < suppressHubRealtimeUntilRef.current) return
@@ -630,17 +545,15 @@ export function HubTasksApp({
       hubTasksRealtimeDebounceRef.current = window.setTimeout(() => {
         hubTasksRealtimeDebounceRef.current = null
         void loadSilent().catch(() => {})
-        if (panel !== 'create') void refreshAdjacentPending()
       }, 150)
     }
 
     const channel = sb
-      .channel(`nm_hub_tasks:${day}`)
+      .channel('nm_hub_tasks:all')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'nm_hub_tasks' },
-        (payload) => {
-          if (!hubChangeAffectsDay(payload)) return
+        () => {
           scheduleSyncFromServer()
         },
       )
@@ -653,35 +566,7 @@ export function HubTasksApp({
       }
       void sb.removeChannel(channel)
     }
-  }, [taskDay, loadSilent, panel, refreshAdjacentPending])
-
-  useEffect(() => {
-    if (panel === 'create') {
-      setHasPendingBefore(false)
-      setHasPendingAfter(false)
-      return
-    }
-    void refreshAdjacentPending()
-  }, [taskDay, rawPending, panel, refreshAdjacentPending])
-
-  useEffect(() => {
-    const u = new URL(window.location.href)
-    const raw = u.searchParams.get('d')
-    const d = normalizeCalendarDate(raw)
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) {
-      u.searchParams.set('d', taskDay)
-      window.history.replaceState(null, '', `${u.pathname}${u.search}${u.hash}`)
-    }
-  }, [taskDay])
-
-  useEffect(() => {
-    const onPop = () => {
-      const d = readDayFromUrl() || todayIsoLocal()
-      setTaskDay(d)
-    }
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
-  }, [])
+  }, [loadSilent])
 
   const syncUrlToState = useCallback(() => {
     if (normalizeTasksPathname() !== '/tareas') return
@@ -737,54 +622,11 @@ export function HubTasksApp({
     [rawCompleted],
   )
 
-  /** Completadas — Mis tareas: mi bandeja; admin solo bandeja Admin. */
-  const completedInboxTasks = useMemo(() => {
-    if (isAdmin) {
-      return completedExecuted.filter((t) => taskInMyInbox(t, profileRole, profileId))
-    }
-    return completedExecuted.filter(
-      (t) =>
-        taskInMyInbox(t, profileRole, profileId) &&
-        !isDelegatedByMe(t, profileRole, profileId),
-    )
-  }, [completedExecuted, profileRole, profileId, isAdmin])
-
-  /** Completadas — Asignadas: delegadas por mí; admin = todo el equipo (fuera bandeja Admin). */
-  const completedDelegatedTasks = useMemo(() => {
-    if (isAdmin) {
-      return completedExecuted.filter(taskInAdminAssignedOverview)
-    }
-    return completedExecuted.filter((t) => isDelegatedByMe(t, profileRole, profileId))
-  }, [completedExecuted, profileRole, profileId, isAdmin])
-
-  const mergedCompletedTasks = useMemo(() => {
-    if (isAdmin) return completedExecuted
-    const seen = new Set<string>()
-    const out: NmHubTask[] = []
-    for (const t of [...completedInboxTasks, ...completedDelegatedTasks]) {
-      if (seen.has(t.id)) continue
-      seen.add(t.id)
-      out.push(t)
-    }
-    return out
-  }, [isAdmin, completedExecuted, completedInboxTasks, completedDelegatedTasks])
-
-  const completedFilteredTasks = useMemo(() => {
-    if (completedFilter === 'inbox') return completedInboxTasks
-    if (completedFilter === 'sent') return completedDelegatedTasks
-    return mergedCompletedTasks
-  }, [
-    completedFilter,
-    mergedCompletedTasks,
-    completedInboxTasks,
-    completedDelegatedTasks,
-  ])
-
   const scopedForSorting = useMemo(() => {
-    if (listScope === 'completadas') return completedFilteredTasks
+    if (listScope === 'completadas') return completedExecuted
     if (listScope === 'sent') return assignedByMeTasks
     return inboxPendingTasks
-  }, [listScope, completedFilteredTasks, assignedByMeTasks, inboxPendingTasks])
+  }, [listScope, completedExecuted, assignedByMeTasks, inboxPendingTasks])
 
   const sorted = useMemo(() => {
     if (listScope === 'completadas') return sortCompletedTasks(scopedForSorting)
@@ -821,28 +663,9 @@ export function HubTasksApp({
     [readOnly, listScope, isAdmin, canToggleExecuted],
   )
 
-  const canUndoComplete = useCallback(
-    (t: NmHubTask) => {
-      if (readOnly || !t.executed_at) return false
-      if (listScope === 'sent') {
-        return !isAdmin && isDelegatedByMe(t, profileRole, profileId)
-      }
-      if (listScope === 'completadas') {
-        if (isAdmin) return canToggleExecuted(t)
-        return (
-          taskInMyInbox(t, profileRole, profileId) ||
-          isDelegatedByMe(t, profileRole, profileId)
-        )
-      }
-      return false
-    },
-    [readOnly, listScope, isAdmin, profileRole, profileId, canToggleExecuted],
-  )
-
   useEffect(() => {
     setTaskQuery('')
-    if (listScope !== 'completadas') setCompletedFilter('todas')
-  }, [taskDay, listScope])
+  }, [listScope])
 
   const goCreatePanel = useCallback(() => {
     if (readOnly) return
@@ -873,6 +696,15 @@ export function HubTasksApp({
     setClientSuggestOpen(false)
   }, [])
 
+  const toggleCompletedDetail = useCallback((taskId: string) => {
+    setExpandedCompletedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(taskId)) next.delete(taskId)
+      else next.add(taskId)
+      return next
+    })
+  }, [])
+
   const applyTaskType = useCallback((type: HubTaskCreateType) => {
     setTaskCreateType(type)
     setClientDni('')
@@ -882,14 +714,7 @@ export function HubTasksApp({
     setClientSuggestions([])
     setClientSuggestOpen(false)
     setError(null)
-
-    if (type === 'falta') {
-      setTitle('Falla')
-      setAssignedRoleCreate('lista_creator')
-      return
-    }
-
-    setTitle((prev) => (prev.trim() === 'Falla' ? '' : prev))
+    setTitle('')
   }, [])
 
   useEffect(() => {
@@ -952,7 +777,7 @@ export function HubTasksApp({
     }
 
     let finalBody = body.trim() || null
-    let finalImportance: HubImportance = taskCreateType === 'falta' ? 'high' : 'normal'
+    const finalImportance: HubImportance = 'normal'
 
     try {
       if (taskTypeUsesClientFields(taskCreateType)) {
@@ -975,7 +800,6 @@ export function HubTasksApp({
         }
         await upsertMayoristaClient(clientPayload)
         finalBody = appendClientToTaskBody(body, clientPayload)
-        finalImportance = 'normal'
       }
 
       const assignedTo = await resolveAssignedToUserId(assignedRoleCreate)
@@ -983,7 +807,7 @@ export function HubTasksApp({
         title: titleDraft,
         body: finalBody,
         importance: finalImportance,
-        for_date: taskDay,
+        for_date: todayIsoLocal(),
         assigned_role: assignedRoleCreate,
         assigned_to: assignedTo,
         task_type: taskCreateType,
@@ -1102,57 +926,6 @@ export function HubTasksApp({
         </p>
       ) : null}
 
-      <section className="nm-hub-date-strip date-pager-fullwidth" aria-label="Día de las tareas">
-        <div className="date-pager-side date-pager-side--start">
-          <div className="date-pager-arrow-wrap">
-            <button
-              type="button"
-              className="pager-arrow-btn"
-              onClick={() => applyTaskDay(addDaysToIsoDate(taskDay, -1))}
-              aria-label="Día anterior"
-            >
-              ←
-            </button>
-            {panel === 'list' && hasPendingBefore ? (
-              <span className="nm-hub-nav-pending-dot" title="Hay tareas pendientes en días anteriores" aria-hidden="true">
-                !
-              </span>
-            ) : null}
-          </div>
-        </div>
-        <div className="date-pager-center nm-hub-date-picker">
-          <span className="date-text-accent nm-hub-date-display date-pager-display">{formatDayMonthShort(taskDay)}</span>
-          <input
-            type="date"
-            className="nm-hub-input field-input nm-hub-date-native date-pager-native"
-            value={taskDay}
-            onChange={(e) => applyTaskDay(normalizeCalendarDate(e.target.value))}
-            aria-label="Elegir día"
-          />
-        </div>
-        <div className="date-pager-side date-pager-side--end">
-          <div className="date-pager-arrow-wrap">
-            <button
-              type="button"
-              className="pager-arrow-btn"
-              onClick={() => applyTaskDay(addDaysToIsoDate(taskDay, 1))}
-              aria-label="Día siguiente"
-            >
-              →
-            </button>
-            {panel === 'list' && hasPendingAfter ? (
-              <span
-                className="nm-hub-nav-pending-dot"
-                title="Hay tareas pendientes en días posteriores"
-                aria-hidden="true"
-              >
-                !
-              </span>
-            ) : null}
-          </div>
-        </div>
-      </section>
-
       {!readOnly && panel === 'create' ? (
         <form id="nm-hub-tareas-nueva" className="nm-hub-card nm-hub-card--task-create" onSubmit={(e) => void onCreate(e)}>
           <div className="form-container-clean">
@@ -1179,7 +952,7 @@ export function HubTasksApp({
                 onClick={() => setClientModalOpen(true)}
                 disabled={busy}
               >
-                Crear cliente
+                Cliente
               </button>
             </div>
           </div>
@@ -1454,49 +1227,11 @@ export function HubTasksApp({
                 role="tab"
                 aria-selected={listScope === 'completadas'}
                 className={`filter-tab-item${listScope === 'completadas' ? ' active-completed' : ''}`}
-                onClick={() => {
-                  setCompletedFilter('todas')
-                  setListScopeInUrl('completadas')
-                }}
+                onClick={() => setListScopeInUrl('completadas')}
               >
                 Completadas
               </button>
             </div>
-            {listScope === 'completadas' ? (
-              <div
-                role="tablist"
-                className="filter-track-rebel filter-track-rebel--completed-sub"
-                aria-label="Filtro de tareas completadas"
-              >
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={completedFilter === 'todas'}
-                  className={`filter-tab-item${completedFilter === 'todas' ? ' active-completed' : ''}`}
-                  onClick={() => setCompletedFilter('todas')}
-                >
-                  Todas
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={completedFilter === 'inbox'}
-                  className={`filter-tab-item${completedFilter === 'inbox' ? ' active-completed' : ''}`}
-                  onClick={() => setCompletedFilter('inbox')}
-                >
-                  Mis tareas
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={completedFilter === 'sent'}
-                  className={`filter-tab-item${completedFilter === 'sent' ? ' active-completed' : ''}`}
-                  onClick={() => setCompletedFilter('sent')}
-                >
-                  Asignadas
-                </button>
-              </div>
-            ) : null}
             <div className="nm-hub-task-search-wrap tasks-hub-search-wrap">
               <label className="nm-hub-sr-only" htmlFor="nm-hub-task-q">
                 Buscar en tareas
@@ -1519,170 +1254,155 @@ export function HubTasksApp({
           {!loading && sorted.length === 0 ? (
             <p className="nm-hub-muted">
               {listScope === 'completadas'
-                ? completedFilter === 'inbox'
-                  ? isAdmin
-                    ? 'No hay tareas completadas en tu bandeja Admin este día.'
-                    : 'No hay tareas completadas en tu bandeja este día.'
-                  : completedFilter === 'sent'
-                    ? isAdmin
-                      ? 'No hay tareas completadas del equipo este día (fuera de tu bandeja Admin).'
-                      : 'No hay tareas completadas que asignaste a otros este día.'
-                    : 'No hay tareas completadas este día.'
+                ? 'No hay tareas completadas.'
                 : listScope === 'sent'
                   ? isAdmin
-                    ? 'No hay tareas del equipo este día (fuera de tu bandeja Admin).'
-                    : 'No hay tareas asignadas a otros este día.'
-                  : 'No hay tareas pendientes para vos este día.'}
+                    ? 'No hay tareas del equipo asignadas.'
+                    : 'No hay tareas asignadas a otros.'
+                  : 'No hay tareas pendientes para vos.'}
             </p>
           ) : null}
           {!loading && sorted.length > 0 && filteredSorted.length === 0 ? (
             <p className="nm-hub-muted">Ninguna tarea coincide con la búsqueda.</p>
           ) : null}
-          <ul className="nm-hub-task-list tasks-list-rebel" aria-busy={loading}>
-            {filteredSorted.map((t) => {
-              const assignedDone = listScope === 'sent' && Boolean(t.executed_at)
-              const isMutedCard = listScope === 'completadas' || assignedDone
-              return (
-              <li
-                key={t.id}
-                className={`task-card-rebel nm-hub-task-item${isMutedCard ? ' task-card-rebel--done' : ''}`}
-                style={
-                  {
-                    '--accent-color': isMutedCard ? '#434a52' : PRIORITY_ACCENT[t.importance],
-                  } as CSSProperties
-                }
-              >
-                <header className="task-card-header">
-                  <div className="task-title-block">
-                    <h3 className="task-card-title">{t.title}</h3>
-                    <div className="task-badge-row">
-                      {t.task_type ? (
-                        <span className={`task-type-badge task-type-badge--${t.task_type}`}>
-                          {TASK_TYPE_LABEL[t.task_type]}
-                        </span>
-                      ) : null}
-                      <span
-                        className={`badge-priority-rebel badge-priority-rebel--${t.importance}`}
-                      >
-                        {IMPORTANCE_LABEL[t.importance]}
-                      </span>
-                      {showDelegationChip(t, isAdmin, listScope, profileRole, profileId) ? (
-                        <span className="task-delegation-chip" title="Asignación">
-                          De{' '}
-                          {hubProfileDisplayLabel(
-                            t.created_by,
-                            executorNames,
-                            executorNamesReady,
-                            profileDisplaySelf,
-                          )}{' '}
-                          para {HUB_TASK_ASSIGNEE_CREATE_LABEL[t.assigned_role]}
-                        </span>
-                      ) : showAssigneeRoleChip(t, profileRole, profileId) ? (
-                        <span className="task-assignee-chip" title="Destinatario asignado">
-                          {HUB_TASK_ASSIGNEE_LABEL[t.assigned_role]}
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-                  <div className="task-card-header-actions">
-                    <button
-                      type="button"
-                      className="btn-task-notes"
-                      onClick={() => setNotesTask(t)}
-                      aria-label={
-                        noteCounts[t.id]
-                          ? `Notas (${noteCounts[t.id]})`
-                          : 'Notas de la tarea'
-                      }
-                    >
-                      Notas
-                      {noteCounts[t.id] ? (
-                        <span className="btn-task-notes__count" aria-hidden="true">
-                          {noteCounts[t.id]}
-                        </span>
-                      ) : null}
-                    </button>
-                    {!readOnly && canMarkComplete(t) ? (
-                      <button
-                        type="button"
-                        className="btn-complete-compact"
-                        disabled={busy}
-                        onClick={() => void onSetExecuted(t, true)}
-                      >
-                        Completar
-                      </button>
-                    ) : null}
-                    {!readOnly && canUndoComplete(t) ? (
-                      <button
-                        type="button"
-                        className="btn-undo-icon"
-                        disabled={busy}
-                        onClick={() => void onSetExecuted(t, false)}
-                        aria-label="Devolver a pendiente"
-                        title="Devolver a pendiente"
-                      >
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                          <path
-                            d="M9 14 4 9l5-5"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                          <path
-                            d="M4 9h11a5 5 0 0 1 5 5v1"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      </button>
-                    ) : null}
-                    {canDeleteTasks && !readOnly ? (
-                      <button
-                        type="button"
-                        className="btn-delete-task"
-                        disabled={busy}
-                        onClick={() => setPendingDeleteTask(t)}
-                        aria-label="Eliminar tarea"
-                        title="Eliminar tarea"
-                      >
-                        ×
-                      </button>
-                    ) : null}
-                  </div>
-                </header>
-                {assignedDone || (listScope === 'completadas' && t.executed_at) || t.body ? (
-                  <div className="task-card-body">
-                    {assignedDone || (listScope === 'completadas' && t.executed_at) ? (
-                      <div className="task-meta-log task-meta-log--completed">
-                        <p className="task-meta-log__who">
-                          Completada por{' '}
-                          <strong>
-                            {hubProfileDisplayLabel(
-                              t.executed_by,
-                              executorNames,
-                              executorNamesReady,
-                              profileDisplaySelf,
+          {listScope === 'completadas' ? (
+            <div className="hub-tasks-table-wrap" aria-busy={loading}>
+              <table className="hub-tasks-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Tipo</th>
+                    <th scope="col">Título</th>
+                    <th scope="col">Detalle</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredSorted.map((t) => {
+                    const expanded = expandedCompletedIds.has(t.id)
+                    return (
+                      <Fragment key={t.id}>
+                        <tr className="hub-tasks-table__row">
+                          <td>
+                            {t.task_type ? (
+                              <span className={`task-type-badge task-type-badge--${t.task_type}`}>
+                                {TASK_TYPE_LABEL[t.task_type]}
+                              </span>
+                            ) : (
+                              '—'
                             )}
-                          </strong>
-                        </p>
-                        {t.executed_at ? (
-                          <time className="task-meta-log__when" dateTime={t.executed_at}>
-                            {formatExecutedLabel(t.executed_at)}
-                          </time>
+                          </td>
+                          <td className="hub-tasks-table__title">{t.title}</td>
+                          <td className="hub-tasks-table__detail-toggle">
+                            {t.body ? (
+                              <button
+                                type="button"
+                                className="hub-tasks-table__detail-btn"
+                                onClick={() => toggleCompletedDetail(t.id)}
+                                aria-expanded={expanded}
+                              >
+                                {expanded ? 'Ocultar' : 'Ver detalle'}
+                              </button>
+                            ) : (
+                              '—'
+                            )}
+                          </td>
+                        </tr>
+                        {expanded && t.body ? (
+                          <tr className="hub-tasks-table__detail-row">
+                            <td colSpan={3}>
+                              <div className="hub-tasks-table__detail-body">{t.body}</div>
+                              {t.executed_at ? (
+                                <p className="hub-tasks-table__meta">
+                                  Completada por{' '}
+                                  <strong>
+                                    {hubProfileDisplayLabel(
+                                      t.executed_by,
+                                      executorNames,
+                                      executorNamesReady,
+                                      profileDisplaySelf,
+                                    )}
+                                  </strong>
+                                  {` · ${formatExecutedLabel(t.executed_at)}`}
+                                </p>
+                              ) : null}
+                              {(t.image_paths?.length ?? 0) > 0 ? (
+                                <TaskThumbnails paths={t.image_paths ?? []} rebel />
+                              ) : null}
+                            </td>
+                          </tr>
                         ) : null}
-                      </div>
-                    ) : null}
-                    {t.body ? <p className="task-description-text">{t.body}</p> : null}
-                  </div>
-                ) : null}
-                <TaskThumbnails paths={t.image_paths ?? []} rebel />
-              </li>
-              )
-            })}
-          </ul>
+                      </Fragment>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="hub-tasks-table-wrap" aria-busy={loading}>
+              <table className="hub-tasks-table hub-tasks-table--pending">
+                <thead>
+                  <tr>
+                    <th scope="col">Tipo</th>
+                    <th scope="col">Título</th>
+                    <th scope="col">Asignado</th>
+                    <th scope="col">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredSorted.map((t) => (
+                    <tr key={t.id} className="hub-tasks-table__row">
+                      <td>
+                        {t.task_type ? (
+                          <span className={`task-type-badge task-type-badge--${t.task_type}`}>
+                            {TASK_TYPE_LABEL[t.task_type]}
+                          </span>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
+                      <td className="hub-tasks-table__title">{t.title}</td>
+                      <td>{HUB_TASK_ASSIGNEE_LABEL[t.assigned_role]}</td>
+                      <td className="hub-tasks-table__actions">
+                        <button
+                          type="button"
+                          className="btn-task-notes hub-tasks-table__action-btn"
+                          onClick={() => setNotesTask(t)}
+                        >
+                          Notas
+                          {noteCounts[t.id] ? (
+                            <span className="btn-task-notes__count" aria-hidden="true">
+                              {noteCounts[t.id]}
+                            </span>
+                          ) : null}
+                        </button>
+                        {!readOnly && canMarkComplete(t) ? (
+                          <button
+                            type="button"
+                            className="btn-complete-compact hub-tasks-table__action-btn"
+                            disabled={busy}
+                            onClick={() => void onSetExecuted(t, true)}
+                          >
+                            Completar
+                          </button>
+                        ) : null}
+                        {canDeleteTasks && !readOnly ? (
+                          <button
+                            type="button"
+                            className="btn-delete-task hub-tasks-table__action-btn"
+                            disabled={busy}
+                            onClick={() => setPendingDeleteTask(t)}
+                            aria-label="Eliminar tarea"
+                            title="Eliminar tarea"
+                          >
+                            ×
+                          </button>
+                        ) : null}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
       ) : null}
 
