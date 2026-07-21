@@ -403,6 +403,8 @@ export function HubTasksApp({
   const [executorNamesReady, setExecutorNamesReady] = useState(false)
   const [taskQuery, setTaskQuery] = useState('')
   const [pendingDeleteTask, setPendingDeleteTask] = useState<NmHubTask | null>(null)
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const [bulkDeleteSelectedIds, setBulkDeleteSelectedIds] = useState<Set<string>>(() => new Set())
   const [notesTask, setNotesTask] = useState<NmHubTask | null>(null)
   const [noteCounts, setNoteCounts] = useState<Record<string, number>>({})
 
@@ -848,6 +850,60 @@ export function HubTasksApp({
       await deleteHubTask(t.id)
       markLocalHubMutation()
       setPendingDeleteTask(null)
+      await loadSilent()
+    } catch (err: unknown) {
+      setError(formatSupabaseOrError(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const openBulkDeleteCompleted = useCallback(
+    (preselectId?: string) => {
+      if (!canDeleteTasks || readOnly) return
+      const initial = new Set<string>()
+      if (preselectId) initial.add(preselectId)
+      setBulkDeleteSelectedIds(initial)
+      setBulkDeleteOpen(true)
+      setError(null)
+    },
+    [canDeleteTasks, readOnly],
+  )
+
+  const toggleBulkDeleteId = useCallback((taskId: string) => {
+    setBulkDeleteSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(taskId)) next.delete(taskId)
+      else next.add(taskId)
+      return next
+    })
+  }, [])
+
+  const selectAllBulkDelete = useCallback(() => {
+    setBulkDeleteSelectedIds(new Set(completedExecuted.map((t) => t.id)))
+  }, [completedExecuted])
+
+  const clearBulkDeleteSelection = useCallback(() => {
+    setBulkDeleteSelectedIds(new Set())
+  }, [])
+
+  const completedForBulkDelete = useMemo(
+    () => sortCompletedTasks(completedExecuted),
+    [completedExecuted],
+  )
+
+  const onBulkDeleteCompleted = async () => {
+    if (!canDeleteTasks || readOnly || bulkDeleteSelectedIds.size === 0) return
+    setBusy(true)
+    setError(null)
+    try {
+      const ids = [...bulkDeleteSelectedIds]
+      for (const id of ids) {
+        await deleteHubTask(id)
+      }
+      markLocalHubMutation()
+      setBulkDeleteOpen(false)
+      setBulkDeleteSelectedIds(new Set())
       await loadSilent()
     } catch (err: unknown) {
       setError(formatSupabaseOrError(err))
@@ -1313,9 +1369,9 @@ export function HubTasksApp({
                                 type="button"
                                 className="btn-delete-task btn-delete-task--trash hub-tasks-table__action-btn"
                                 disabled={busy}
-                                onClick={() => setPendingDeleteTask(t)}
-                                aria-label="Eliminar tarea"
-                                title="Eliminar tarea"
+                                onClick={() => openBulkDeleteCompleted(t.id)}
+                                aria-label="Seleccionar tareas a eliminar"
+                                title="Eliminar tareas"
                               >
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                                   <path
@@ -1472,6 +1528,101 @@ export function HubTasksApp({
             })
           }}
         />
+      ) : null}
+
+      {bulkDeleteOpen ? (
+        <div
+          className="nm-prod-modal-backdrop"
+          role="presentation"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !busy) {
+              setBulkDeleteOpen(false)
+              setBulkDeleteSelectedIds(new Set())
+            }
+          }}
+        >
+          <section
+            className="nm-prod-modal hub-tasks-bulk-delete-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="hub-bulk-delete-title"
+          >
+            <h3 className="nm-prod-modal-title" id="hub-bulk-delete-title">
+              Eliminar tareas completadas
+            </h3>
+            <p className="nm-prod-modal-text">
+              Seleccioná las tareas que querés eliminar. Esta acción no se puede deshacer.
+            </p>
+            <div className="hub-tasks-bulk-delete-toolbar">
+              <button
+                type="button"
+                className="nm-prod-btn"
+                disabled={busy || completedForBulkDelete.length === 0}
+                onClick={selectAllBulkDelete}
+              >
+                Seleccionar todas
+              </button>
+              <button
+                type="button"
+                className="nm-prod-btn"
+                disabled={busy || bulkDeleteSelectedIds.size === 0}
+                onClick={clearBulkDeleteSelection}
+              >
+                Limpiar
+              </button>
+            </div>
+            <ul className="hub-tasks-bulk-delete-list" role="listbox" aria-multiselectable="true">
+              {completedForBulkDelete.length === 0 ? (
+                <li className="hub-tasks-bulk-delete-empty">No hay tareas completadas.</li>
+              ) : (
+                completedForBulkDelete.map((t) => {
+                  const checked = bulkDeleteSelectedIds.has(t.id)
+                  return (
+                    <li key={t.id}>
+                      <label className={`hub-tasks-bulk-delete-item${checked ? ' is-selected' : ''}`}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          disabled={busy}
+                          onChange={() => toggleBulkDeleteId(t.id)}
+                        />
+                        <span className="hub-tasks-bulk-delete-item__type">
+                          {t.task_type ? TASK_TYPE_LABEL[t.task_type] : '—'}
+                        </span>
+                        <span className="hub-tasks-bulk-delete-item__title">{t.title}</span>
+                      </label>
+                    </li>
+                  )
+                })
+              )}
+            </ul>
+            <div className="nm-prod-row">
+              <button
+                type="button"
+                className="nm-prod-btn"
+                disabled={busy}
+                onClick={() => {
+                  setBulkDeleteOpen(false)
+                  setBulkDeleteSelectedIds(new Set())
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="nm-prod-btn nm-prod-btn-primary hub-tasks-bulk-delete-confirm"
+                disabled={busy || bulkDeleteSelectedIds.size === 0}
+                onClick={() => void onBulkDeleteCompleted()}
+              >
+                {busy
+                  ? 'Eliminando…'
+                  : bulkDeleteSelectedIds.size === 0
+                    ? 'Eliminar'
+                    : `Eliminar (${bulkDeleteSelectedIds.size})`}
+              </button>
+            </div>
+          </section>
+        </div>
       ) : null}
 
       {pendingDeleteTask ? (

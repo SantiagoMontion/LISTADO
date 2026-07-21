@@ -3192,6 +3192,85 @@ body:has(.nm-hub-app--cut-list) {
   border-color: rgba(248, 113, 113, 0.85);
 }
 
+.nm-hub-app--tasks .hub-tasks-bulk-delete-modal {
+  width: min(520px, calc(100vw - 32px));
+  max-height: min(80vh, 640px);
+  display: flex;
+  flex-direction: column;
+}
+
+.nm-hub-app--tasks .hub-tasks-bulk-delete-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+
+.nm-hub-app--tasks .hub-tasks-bulk-delete-list {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  overflow-y: auto;
+  max-height: min(42vh, 360px);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 10px;
+  background: rgba(2, 6, 23, 0.35);
+}
+
+.nm-hub-app--tasks .hub-tasks-bulk-delete-empty {
+  padding: 16px;
+  color: #94a3b8;
+  font-size: 0.88rem;
+}
+
+.nm-hub-app--tasks .hub-tasks-bulk-delete-item {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 10px;
+  align-items: center;
+  margin: 0;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  cursor: pointer;
+  color: #e2e8f0;
+  font-size: 0.88rem;
+}
+
+.nm-hub-app--tasks .hub-tasks-bulk-delete-item:last-child {
+  border-bottom: 0;
+}
+
+.nm-hub-app--tasks .hub-tasks-bulk-delete-item.is-selected {
+  background: rgba(248, 113, 113, 0.1);
+}
+
+.nm-hub-app--tasks .hub-tasks-bulk-delete-item input {
+  width: 16px;
+  height: 16px;
+  accent-color: #f87171;
+}
+
+.nm-hub-app--tasks .hub-tasks-bulk-delete-item__type {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.35px;
+  text-transform: uppercase;
+  color: #94a3b8;
+  min-width: 72px;
+}
+
+.nm-hub-app--tasks .hub-tasks-bulk-delete-item__title {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nm-hub-app--tasks .hub-tasks-bulk-delete-confirm {
+  background: rgba(239, 68, 68, 0.85) !important;
+  border-color: rgba(248, 113, 113, 0.9) !important;
+}
+
 /* Labels — separados del fondo de la tarjeta */
 .nm-hub-app--tasks form#nm-hub-tareas-nueva .field-label {
   font-size: 0.8rem;
