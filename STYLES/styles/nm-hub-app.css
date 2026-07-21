@@ -3172,6 +3172,26 @@ body:has(.nm-hub-app--cut-list) {
   flex: 0 0 auto;
 }
 
+.nm-hub-app--tasks .hub-tasks-table__col-delete {
+  width: 48px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.nm-hub-app--tasks .btn-delete-task--trash {
+  width: 34px;
+  height: 34px;
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.55);
+  background: rgba(239, 68, 68, 0.14);
+}
+
+.nm-hub-app--tasks .btn-delete-task--trash:hover:not(:disabled) {
+  color: #fff;
+  background: rgba(239, 68, 68, 0.4);
+  border-color: rgba(248, 113, 113, 0.85);
+}
+
 /* Labels — separados del fondo de la tarjeta */
 .nm-hub-app--tasks form#nm-hub-tareas-nueva .field-label {
   font-size: 0.8rem;
