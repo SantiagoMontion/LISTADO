@@ -279,14 +279,13 @@ function sortPendingTasks(list: NmHubTask[]): NmHubTask[] {
   })
 }
 
-/** Urgente primero; a igual importancia, la más recientemente completada arriba. */
+/** Más recientemente completada arriba (sin importar tipo, título ni importancia). */
 function sortCompletedTasks(list: NmHubTask[]): NmHubTask[] {
   return [...list].sort((a, b) => {
-    const ir = importanceRank(b.importance) - importanceRank(a.importance)
-    if (ir !== 0) return ir
     const ea = a.executed_at ? Date.parse(a.executed_at) : 0
     const eb = b.executed_at ? Date.parse(b.executed_at) : 0
-    return eb - ea
+    if (eb !== ea) return eb - ea
+    return Date.parse(b.created_at) - Date.parse(a.created_at)
   })
 }
 
