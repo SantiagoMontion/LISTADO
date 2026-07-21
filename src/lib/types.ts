@@ -79,6 +79,19 @@ export interface NmHubProfile {
 
 export type HubImportance = 'low' | 'normal' | 'high' | 'urgent'
 
+export type HubTaskCreateType = 'falta' | 'mayorista' | 'rehacer' | 'canje' | 'devolucion'
+
+export interface NmHubMayoristaClient {
+  id: string
+  full_name: string
+  dni: string
+  phone: string
+  email: string
+  address: string
+  created_at: string
+  updated_at: string
+}
+
 export interface NmHubTaskNote {
   id: string
   task_id: string
@@ -92,6 +105,8 @@ export interface NmHubTask {
   id: string
   title: string
   body: string | null
+  /** Tipo de tarea hub (falta, mayorista, rehacer, canje, devolucion). */
+  task_type?: HubTaskCreateType | null
   importance: HubImportance
   /** Día calendario (YYYY-MM-DD) al que pertenece la tarea en el taller. */
   for_date?: string

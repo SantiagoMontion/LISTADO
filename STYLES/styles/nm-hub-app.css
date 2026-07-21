@@ -2837,6 +2837,8 @@ body:has(.nm-hub-app--cut-list) {
 
 .nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-row {
   display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
   margin-top: 2px;
 }
 
@@ -2848,9 +2850,9 @@ body:has(.nm-hub-app--cut-list) {
   margin: 0;
   padding: 7px 14px;
   border-radius: 10px;
-  border: 1px solid rgba(251, 191, 36, 0.35);
-  background-color: rgba(251, 191, 36, 0.14);
-  color: #fbbf24;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background-color: rgba(148, 163, 184, 0.1);
+  color: #cbd5e1;
   font: inherit;
   font-size: 0.68rem;
   font-weight: 700;
@@ -2862,10 +2864,76 @@ body:has(.nm-hub-app--cut-list) {
   -webkit-tap-highlight-color: transparent;
 }
 
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-btn--falta {
+  border-color: rgba(251, 191, 36, 0.35);
+  background-color: rgba(251, 191, 36, 0.14);
+  color: #fbbf24;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-btn--mayorista {
+  border-color: rgba(248, 113, 113, 0.4);
+  background-color: rgba(248, 113, 113, 0.14);
+  color: #f87171;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-btn--crear-cliente {
+  border-color: rgba(255, 255, 255, 0.45);
+  background-color: rgba(255, 255, 255, 0.12);
+  color: #f8fafc;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-btn--rehacer {
+  border-color: rgba(251, 146, 60, 0.4);
+  background-color: rgba(251, 146, 60, 0.14);
+  color: #fb923c;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-btn--canje {
+  border-color: rgba(192, 132, 252, 0.4);
+  background-color: rgba(192, 132, 252, 0.14);
+  color: #c084fc;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-btn--devolucion {
+  border-color: rgba(250, 204, 21, 0.45);
+  background-color: rgba(250, 204, 21, 0.12);
+  color: #facc15;
+}
+
 .nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-btn--falta:hover:not(:disabled) {
   background-color: rgba(251, 191, 36, 0.22);
   border-color: rgba(251, 191, 36, 0.55);
   color: #fcd34d;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-btn--mayorista:hover:not(:disabled) {
+  background-color: rgba(248, 113, 113, 0.24);
+  border-color: rgba(248, 113, 113, 0.6);
+  color: #fca5a5;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-btn--crear-cliente:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.65);
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-btn--rehacer:hover:not(:disabled) {
+  background-color: rgba(251, 146, 60, 0.24);
+  border-color: rgba(251, 146, 60, 0.6);
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-btn--canje:hover:not(:disabled) {
+  background-color: rgba(192, 132, 252, 0.24);
+  border-color: rgba(192, 132, 252, 0.6);
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-btn--devolucion:hover:not(:disabled) {
+  background-color: rgba(250, 204, 21, 0.2);
+  border-color: rgba(250, 204, 21, 0.6);
 }
 
 .nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-btn:focus-visible {
@@ -2879,10 +2947,127 @@ body:has(.nm-hub-app--cut-list) {
 }
 
 .nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-btn--active {
+  box-shadow: 0 0 10px rgba(70, 207, 248, 0.12);
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-btn--falta.task-create-preset-btn--active {
   background-color: rgba(251, 191, 36, 0.28);
   border-color: rgba(251, 191, 36, 0.65);
   color: #fde68a;
   box-shadow: 0 0 10px rgba(251, 191, 36, 0.15);
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-btn--mayorista.task-create-preset-btn--active {
+  background-color: rgba(248, 113, 113, 0.3);
+  border-color: rgba(248, 113, 113, 0.7);
+  box-shadow: 0 0 10px rgba(248, 113, 113, 0.18);
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-btn--rehacer.task-create-preset-btn--active {
+  background-color: rgba(251, 146, 60, 0.3);
+  border-color: rgba(251, 146, 60, 0.7);
+  box-shadow: 0 0 10px rgba(251, 146, 60, 0.18);
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-btn--canje.task-create-preset-btn--active {
+  background-color: rgba(192, 132, 252, 0.3);
+  border-color: rgba(192, 132, 252, 0.7);
+  box-shadow: 0 0 10px rgba(192, 132, 252, 0.18);
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-btn--devolucion.task-create-preset-btn--active {
+  background-color: rgba(250, 204, 21, 0.24);
+  border-color: rgba(250, 204, 21, 0.7);
+  box-shadow: 0 0 10px rgba(250, 204, 21, 0.15);
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-title-wrap {
+  position: relative;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-client-suggest {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  border-radius: 12px;
+  border: 1px solid var(--border-input-base);
+  background: var(--bg-input-field);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-client-suggest__item {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 12px 14px;
+  border: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: transparent;
+  color: #f8fafc;
+  font: inherit;
+  font-size: 0.92rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-client-suggest__item:last-child {
+  border-bottom: 0;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-client-suggest__item:hover,
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-client-suggest__item:focus-visible {
+  background: rgba(70, 207, 248, 0.12);
+  outline: none;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-client-fields {
+  display: grid;
+  gap: 10px;
+}
+
+.nm-hub-app--tasks .task-type-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.35px;
+  text-transform: uppercase;
+  line-height: 1.3;
+}
+
+.nm-hub-app--tasks .task-type-badge--falta {
+  background: rgba(251, 191, 36, 0.18);
+  color: #fbbf24;
+}
+
+.nm-hub-app--tasks .task-type-badge--mayorista {
+  background: rgba(248, 113, 113, 0.18);
+  color: #f87171;
+}
+
+.nm-hub-app--tasks .task-type-badge--rehacer {
+  background: rgba(251, 146, 60, 0.18);
+  color: #fb923c;
+}
+
+.nm-hub-app--tasks .task-type-badge--canje {
+  background: rgba(192, 132, 252, 0.18);
+  color: #c084fc;
+}
+
+.nm-hub-app--tasks .task-type-badge--devolucion {
+  background: rgba(250, 204, 21, 0.16);
+  color: #facc15;
+}
+
+.hub-mayorista-client-modal .modal-numeric-input {
+  letter-spacing: normal;
 }
 
 /* Labels — separados del fondo de la tarjeta */

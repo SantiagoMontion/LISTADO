@@ -32,6 +32,14 @@ import {
   type HubTaskAssignableRole,
 } from '../lib/hubTaskAssignable'
 import { canDeleteHubTasks } from '../lib/hubRoles'
+import {
+  appendClientToTaskBody,
+  normalizeMayoristaPhone,
+  searchMayoristaClientsByName,
+  upsertMayoristaClient,
+} from '../lib/hubMayoristaClientsApi'
+import { HubMayoristaClientModal } from './HubMayoristaClientModal'
+import type { HubTaskCreateType, NmHubMayoristaClient } from '../lib/types'
 
 const IMPORTANCE_LABEL: Record<HubImportance, string> = {
   low: 'Baja',
@@ -48,100 +56,34 @@ const PRIORITY_ACCENT: Record<HubImportance, string> = {
   urgent: '#fb7185',
 }
 
-const IMPORTANCE_ORDER: HubImportance[] = ['low', 'normal', 'high', 'urgent']
+const TASK_TYPE_LABEL: Record<HubTaskCreateType, string> = {
+  falta: 'Falta',
+  mayorista: 'Mayorista',
+  rehacer: 'Rehacer',
+  canje: 'Canje',
+  devolucion: 'Devolución',
+}
 
-/** Importancia con menú HTML (select nativo en Windows muestra lista clara del SO). */
-function ImportanceSelect({
-  id,
-  value,
-  onChange,
-  disabled = false,
-}: {
-  id: string
-  value: HubImportance
-  onChange: (v: HubImportance) => void
-  disabled?: boolean
-}) {
-  const [open, setOpen] = useState(false)
-  const rootRef = useRef<HTMLDivElement>(null)
+const TASK_CREATE_TYPES: HubTaskCreateType[] = [
+  'falta',
+  'mayorista',
+  'rehacer',
+  'canje',
+  'devolucion',
+]
 
-  useEffect(() => {
-    if (!open) return
-    const onDocDown = (e: MouseEvent) => {
-      if (rootRef.current?.contains(e.target as Node)) return
-      setOpen(false)
-    }
-    document.addEventListener('mousedown', onDocDown)
-    return () => document.removeEventListener('mousedown', onDocDown)
-  }, [open])
+function taskTypeUsesClientFields(type: HubTaskCreateType | null): boolean {
+  return type === 'mayorista' || type === 'canje'
+}
 
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [open])
+function taskTypeUsesOrderNumber(type: HubTaskCreateType | null): boolean {
+  return type === 'rehacer' || type === 'devolucion'
+}
 
-  const select = (k: HubImportance) => {
-    onChange(k)
-    setOpen(false)
-  }
-
-  return (
-    <div ref={rootRef} className="importance-dropdown">
-      <button
-        type="button"
-        id={id}
-        className="importance-dropdown__trigger nm-hub-input field-select"
-        disabled={disabled}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-controls={`${id}-listbox`}
-        onClick={() => !disabled && setOpen((o) => !o)}
-      >
-        <span className="importance-dropdown__value">{IMPORTANCE_LABEL[value]}</span>
-        <svg
-          className="importance-dropdown__chevron"
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          aria-hidden="true"
-        >
-          <path
-            d="M6 9l6 6 6-6"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </button>
-      {open ? (
-        <div
-          id={`${id}-listbox`}
-          className="importance-dropdown__panel"
-          role="listbox"
-          aria-labelledby={id}
-        >
-          {IMPORTANCE_ORDER.map((k) => (
-            <button
-              key={k}
-              type="button"
-              role="option"
-              aria-selected={value === k}
-              className={`importance-dropdown__option importance-dropdown__option--${k}`}
-              onClick={() => select(k)}
-            >
-              {IMPORTANCE_LABEL[k]}
-            </button>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  )
+function createFormTitleLabel(type: HubTaskCreateType | null): string {
+  if (taskTypeUsesClientFields(type)) return 'Nombre del cliente'
+  if (taskTypeUsesOrderNumber(type)) return 'Nº de orden'
+  return 'Título'
 }
 
 function AssigneeRoleSelect({
@@ -544,11 +486,20 @@ export function HubTasksApp({
 
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
-  const [importance, setImportance] = useState<HubImportance>('normal')
+  const [taskCreateType, setTaskCreateType] = useState<HubTaskCreateType | null>(null)
+  const [clientDni, setClientDni] = useState('')
+  const [clientPhone, setClientPhone] = useState('')
+  const [clientEmail, setClientEmail] = useState('')
+  const [clientAddress, setClientAddress] = useState('')
+  const [clientSuggestions, setClientSuggestions] = useState<NmHubMayoristaClient[]>([])
+  const [clientSuggestOpen, setClientSuggestOpen] = useState(false)
+  const [clientModalOpen, setClientModalOpen] = useState(false)
   const [assignedRoleCreate, setAssignedRoleCreate] = useState<HubTaskAssignableRole | null>(null)
   const [files, setFiles] = useState<File[]>([])
   const taskGalleryInputRef = useRef<HTMLInputElement>(null)
   const taskCameraInputRef = useRef<HTMLInputElement>(null)
+  const titleInputRef = useRef<HTMLInputElement>(null)
+  const clientSuggestRef = useRef<HTMLDivElement>(null)
   /** Evita que un fetch viejo pise tareas nuevas (realtime + mutación simultánea). */
   const tasksLoadSeqRef = useRef(0)
   const hubTasksRealtimeDebounceRef = useRef<number | null>(null)
@@ -899,35 +850,143 @@ export function HubTasksApp({
     setPanel('create')
   }, [readOnly])
 
-  const applyFallaPreset = useCallback(() => {
-    setTitle('Falla')
-    setImportance('high')
-    setAssignedRoleCreate('lista_creator')
+  const resetCreateForm = useCallback(() => {
+    setTitle('')
+    setBody('')
+    setTaskCreateType(null)
+    setClientDni('')
+    setClientPhone('')
+    setClientEmail('')
+    setClientAddress('')
+    setClientSuggestions([])
+    setClientSuggestOpen(false)
+    setAssignedRoleCreate(null)
+    setFiles([])
   }, [])
 
-  const fallaPresetActive = useMemo(
-    () =>
-      title.trim() === 'Falla' &&
-      importance === 'high' &&
-      assignedRoleCreate === 'lista_creator',
-    [title, importance, assignedRoleCreate],
-  )
+  const applyClientSelection = useCallback((client: NmHubMayoristaClient) => {
+    setTitle(client.full_name)
+    setClientDni(client.dni)
+    setClientPhone(client.phone)
+    setClientEmail(client.email)
+    setClientAddress(client.address)
+    setClientSuggestOpen(false)
+  }, [])
+
+  const applyTaskType = useCallback((type: HubTaskCreateType) => {
+    setTaskCreateType(type)
+    setClientDni('')
+    setClientPhone('')
+    setClientEmail('')
+    setClientAddress('')
+    setClientSuggestions([])
+    setClientSuggestOpen(false)
+    setError(null)
+
+    if (type === 'falta') {
+      setTitle('Falla')
+      setAssignedRoleCreate('lista_creator')
+      return
+    }
+
+    setTitle((prev) => (prev.trim() === 'Falla' ? '' : prev))
+  }, [])
+
+  useEffect(() => {
+    if (!taskTypeUsesClientFields(taskCreateType)) {
+      setClientSuggestions([])
+      setClientSuggestOpen(false)
+      return
+    }
+    const q = title.trim()
+    if (q.length < 1) {
+      setClientSuggestions([])
+      return
+    }
+    let cancelled = false
+    const timer = window.setTimeout(() => {
+      void searchMayoristaClientsByName(q)
+        .then((rows) => {
+          if (!cancelled) {
+            setClientSuggestions(rows)
+            setClientSuggestOpen(rows.length > 0)
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setClientSuggestions([])
+        })
+    }, 200)
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [title, taskCreateType])
+
+  useEffect(() => {
+    if (!clientSuggestOpen) return
+    const onDocDown = (e: MouseEvent) => {
+      const root = clientSuggestRef.current
+      const input = titleInputRef.current
+      if (root?.contains(e.target as Node) || input?.contains(e.target as Node)) return
+      setClientSuggestOpen(false)
+    }
+    document.addEventListener('mousedown', onDocDown)
+    return () => document.removeEventListener('mousedown', onDocDown)
+  }, [clientSuggestOpen])
 
   const onCreate = async (e: FormEvent) => {
     e.preventDefault()
-    if (readOnly || !title.trim() || assignedRoleCreate === null) return
+    if (readOnly || !title.trim() || assignedRoleCreate === null || !taskCreateType) return
     setBusy(true)
     setError(null)
     const titleDraft = title.trim()
+
+    if (taskTypeUsesOrderNumber(taskCreateType) && !body.trim()) {
+      setError(
+        taskCreateType === 'devolucion'
+          ? 'Indicá el motivo de la devolución.'
+          : 'Indicá el motivo del rehacer.',
+      )
+      setBusy(false)
+      return
+    }
+
+    let finalBody = body.trim() || null
+    let finalImportance: HubImportance = taskCreateType === 'falta' ? 'high' : 'normal'
+
     try {
+      if (taskTypeUsesClientFields(taskCreateType)) {
+        const clientPayload = {
+          full_name: titleDraft,
+          dni: clientDni.trim(),
+          phone: normalizeMayoristaPhone(clientPhone),
+          email: clientEmail.trim(),
+          address: clientAddress.trim(),
+        }
+        if (
+          !clientPayload.dni ||
+          !clientPayload.phone ||
+          !clientPayload.email ||
+          !clientPayload.address
+        ) {
+          setError('Completá todos los datos del cliente.')
+          setBusy(false)
+          return
+        }
+        await upsertMayoristaClient(clientPayload)
+        finalBody = appendClientToTaskBody(body, clientPayload)
+        finalImportance = 'normal'
+      }
+
       const assignedTo = await resolveAssignedToUserId(assignedRoleCreate)
       const created = await createHubTask({
         title: titleDraft,
-        body: body.trim() || null,
-        importance,
+        body: finalBody,
+        importance: finalImportance,
         for_date: taskDay,
         assigned_role: assignedRoleCreate,
         assigned_to: assignedTo,
+        task_type: taskCreateType,
       })
       if (files.length > 0) {
         await appendTaskImages(created.id, files, created.image_paths ?? [])
@@ -936,11 +995,7 @@ export function HubTasksApp({
       if (!pushResult.ok && pushResult.reason === 'no-subscriptions') {
         console.warn('[nm-hub] Sin suscripción push del destinatario:', pushResult)
       }
-      setTitle('')
-      setBody('')
-      setImportance('normal')
-      setAssignedRoleCreate(null)
-      setFiles([])
+      resetCreateForm()
       markLocalHubMutation()
       await loadSilent()
       replaceListPanelUrl()
@@ -951,11 +1006,7 @@ export function HubTasksApp({
         markLocalHubMutation()
         await loadSilent()
         setError(null)
-        setTitle('')
-        setBody('')
-        setImportance('normal')
-        setAssignedRoleCreate(null)
-        setFiles([])
+        resetCreateForm()
         replaceListPanelUrl()
         setPanel('list')
       } else {
@@ -1106,28 +1157,130 @@ export function HubTasksApp({
         <form id="nm-hub-tareas-nueva" className="nm-hub-card nm-hub-card--task-create" onSubmit={(e) => void onCreate(e)}>
           <div className="form-container-clean">
           <div className="field-group">
-            <label className="field-label" htmlFor="nm-hub-t-title">
-              Título
-            </label>
-            <input
-              id="nm-hub-t-title"
-              className="nm-hub-input field-input"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-            />
-            <div className="task-create-preset-row">
+            <span className="field-label" id="nm-hub-t-type-label">
+              Tipo de tarea
+            </span>
+            <div className="task-create-preset-row" role="group" aria-labelledby="nm-hub-t-type-label">
+              {TASK_CREATE_TYPES.map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  className={`task-create-preset-btn task-create-preset-btn--${type}${taskCreateType === type ? ' task-create-preset-btn--active' : ''}`}
+                  onClick={() => applyTaskType(type)}
+                  disabled={busy}
+                  aria-pressed={taskCreateType === type}
+                >
+                  {TASK_TYPE_LABEL[type]}
+                </button>
+              ))}
               <button
                 type="button"
-                className={`task-create-preset-btn${fallaPresetActive ? ' task-create-preset-btn--active' : ''}`}
-                onClick={applyFallaPreset}
+                className="task-create-preset-btn task-create-preset-btn--crear-cliente"
+                onClick={() => setClientModalOpen(true)}
                 disabled={busy}
-                aria-pressed={fallaPresetActive}
               >
-                Falta
+                Crear cliente
               </button>
             </div>
           </div>
+
+          <div className="field-group">
+            <label className="field-label" htmlFor="nm-hub-t-title">
+              {createFormTitleLabel(taskCreateType)}
+            </label>
+            <div className="task-create-title-wrap">
+              <input
+                ref={titleInputRef}
+                id="nm-hub-t-title"
+                className="nm-hub-input field-input"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                onFocus={() => {
+                  if (taskTypeUsesClientFields(taskCreateType) && clientSuggestions.length > 0) {
+                    setClientSuggestOpen(true)
+                  }
+                }}
+                required
+                disabled={!taskCreateType || busy}
+                autoComplete="off"
+              />
+              {taskTypeUsesClientFields(taskCreateType) && clientSuggestOpen && clientSuggestions.length > 0 ? (
+                <div ref={clientSuggestRef} className="task-create-client-suggest" role="listbox">
+                  {clientSuggestions.map((client) => (
+                    <button
+                      key={client.id}
+                      type="button"
+                      role="option"
+                      className="task-create-client-suggest__item"
+                      onClick={() => applyClientSelection(client)}
+                    >
+                      {client.full_name}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          {taskTypeUsesClientFields(taskCreateType) ? (
+            <div className="task-create-client-fields">
+              <div className="field-group">
+                <label className="field-label" htmlFor="nm-hub-t-client-dni">
+                  DNI
+                </label>
+                <input
+                  id="nm-hub-t-client-dni"
+                  className="nm-hub-input field-input"
+                  value={clientDni}
+                  onChange={(e) => setClientDni(e.target.value)}
+                  disabled={busy}
+                  required
+                />
+              </div>
+              <div className="field-group">
+                <label className="field-label" htmlFor="nm-hub-t-client-phone">
+                  Teléfono
+                </label>
+                <input
+                  id="nm-hub-t-client-phone"
+                  className="nm-hub-input field-input"
+                  value={clientPhone}
+                  onChange={(e) => setClientPhone(e.target.value)}
+                  onBlur={() => setClientPhone(normalizeMayoristaPhone(clientPhone))}
+                  inputMode="tel"
+                  disabled={busy}
+                  required
+                />
+              </div>
+              <div className="field-group">
+                <label className="field-label" htmlFor="nm-hub-t-client-email">
+                  Email
+                </label>
+                <input
+                  id="nm-hub-t-client-email"
+                  className="nm-hub-input field-input"
+                  type="email"
+                  value={clientEmail}
+                  onChange={(e) => setClientEmail(e.target.value)}
+                  disabled={busy}
+                  required
+                />
+              </div>
+              <div className="field-group">
+                <label className="field-label" htmlFor="nm-hub-t-client-address">
+                  Dirección de domicilio
+                </label>
+                <input
+                  id="nm-hub-t-client-address"
+                  className="nm-hub-input field-input"
+                  value={clientAddress}
+                  onChange={(e) => setClientAddress(e.target.value)}
+                  disabled={busy}
+                  required
+                />
+              </div>
+            </div>
+          ) : null}
 
           <div className="field-group">
             <label className="field-label" htmlFor="nm-hub-t-body">
@@ -1139,18 +1292,15 @@ export function HubTasksApp({
               value={body}
               onChange={(e) => setBody(e.target.value)}
               rows={2}
-            />
-          </div>
-
-          <div className="field-group">
-            <label className="field-label" htmlFor="nm-hub-t-imp">
-              Importancia
-            </label>
-            <ImportanceSelect
-              id="nm-hub-t-imp"
-              value={importance}
-              onChange={(v) => setImportance(v)}
-              disabled={busy}
+              required={taskTypeUsesOrderNumber(taskCreateType)}
+              disabled={!taskCreateType || busy}
+              placeholder={
+                taskCreateType === 'rehacer'
+                  ? 'Indicá por qué hay que rehacer esta tarea'
+                  : taskCreateType === 'devolucion'
+                    ? 'Indicá el motivo de la devolución'
+                    : undefined
+              }
             />
           </div>
 
@@ -1163,7 +1313,7 @@ export function HubTasksApp({
               roles={assigneeRolesCreate}
               value={assignedRoleCreate}
               onChange={(v) => setAssignedRoleCreate(v)}
-              disabled={busy}
+              disabled={busy || !taskCreateType}
             />
           </div>
 
@@ -1254,12 +1404,26 @@ export function HubTasksApp({
             ) : null}
           </div>
 
-          <button type="submit" className="btn-submit-task" disabled={busy || assignedRoleCreate === null}>
+          <button
+            type="submit"
+            className="btn-submit-task"
+            disabled={busy || assignedRoleCreate === null || !taskCreateType}
+          >
             {busy ? 'Guardando…' : 'Crear tarea'}
           </button>
           </div>
         </form>
       ) : null}
+
+      <HubMayoristaClientModal
+        open={clientModalOpen}
+        busy={busy}
+        error={null}
+        onClose={() => setClientModalOpen(false)}
+        onSaved={() => {
+          setError(null)
+        }}
+      />
 
       {panel === 'list' ? (
         <section id="nm-hub-tareas-lista" className="nm-hub-section nm-hub-section--task-list" aria-label="Tareas del día">
@@ -1392,6 +1556,11 @@ export function HubTasksApp({
                   <div className="task-title-block">
                     <h3 className="task-card-title">{t.title}</h3>
                     <div className="task-badge-row">
+                      {t.task_type ? (
+                        <span className={`task-type-badge task-type-badge--${t.task_type}`}>
+                          {TASK_TYPE_LABEL[t.task_type]}
+                        </span>
+                      ) : null}
                       <span
                         className={`badge-priority-rebel badge-priority-rebel--${t.importance}`}
                       >

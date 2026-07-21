@@ -5,7 +5,7 @@ import {
   HUB_TASK_ASSIGNEE_PROFILE_NAME,
   type HubTaskAssignableRole,
 } from './hubTaskAssignable'
-import type { HubImportance, HubUserRole, NmHubTask, NmHubTaskNote } from './types'
+import type { HubImportance, HubUserRole, HubTaskCreateType, NmHubTask, NmHubTaskNote } from './types'
 
 const BUCKET = 'nm-hub-task-images'
 
@@ -18,10 +18,17 @@ function normalizeAssignedRole(raw: unknown): HubTaskAssignableRole {
   return 'taller_1'
 }
 
+function normalizeTaskType(raw: unknown): HubTaskCreateType | null {
+  const s = typeof raw === 'string' ? raw.trim().toLowerCase() : ''
+  if (s === 'falta' || s === 'mayorista' || s === 'rehacer' || s === 'canje' || s === 'devolucion') return s
+  return null
+}
+
 function coerceHubTask(row: Record<string, unknown>): NmHubTask {
   return {
     ...(row as unknown as NmHubTask),
     assigned_role: normalizeAssignedRole(row.assigned_role),
+    task_type: normalizeTaskType(row.task_type),
   }
 }
 
@@ -219,6 +226,7 @@ export async function createHubTask(input: {
   for_date: string
   assigned_role: HubTaskAssignableRole
   assigned_to?: string | null
+  task_type?: HubTaskCreateType | null
 }): Promise<NmHubTask> {
   const sb = requireClient()
   const day = normalizeCalendarDate(input.for_date)
@@ -230,6 +238,7 @@ export async function createHubTask(input: {
     p_for_date: day,
     p_assigned_role: input.assigned_role,
     p_assigned_to: input.assigned_to ?? null,
+    p_task_type: input.task_type ?? null,
   })
 
   const parsed = parseRpcTaskRow(data)
