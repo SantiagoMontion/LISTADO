@@ -3172,10 +3172,99 @@ body:has(.nm-hub-app--cut-list) {
   flex: 0 0 auto;
 }
 
-.nm-hub-app--tasks .hub-tasks-table__col-delete {
-  width: 48px;
-  text-align: right;
+.nm-hub-app--tasks .hub-tasks-table__shopify {
   white-space: nowrap;
+}
+
+.nm-hub-app--tasks .hub-tasks-table__row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.nm-hub-app--tasks .hub-tasks-shopify-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(149, 191, 71, 0.45);
+  background: rgba(149, 191, 71, 0.14);
+  color: #b5e06a;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-decoration: none;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.nm-hub-app--tasks .hub-tasks-shopify-btn:hover {
+  background: rgba(149, 191, 71, 0.24);
+  color: #d4f59a;
+}
+
+.nm-hub-app--tasks .hub-tasks-shopify-missing {
+  color: #64748b;
+}
+
+.nm-hub-app--tasks .hub-tasks-status-select {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  padding: 7px 28px 7px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background-color: rgba(15, 23, 42, 0.55);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M6 9l6 6 6-6' stroke='%94a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  color: #e2e8f0;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  min-width: 118px;
+  cursor: pointer;
+}
+
+.nm-hub-app--tasks .hub-tasks-status-select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.nm-hub-app--tasks .hub-tasks-status-select--enviado {
+  border-color: rgba(74, 222, 128, 0.5);
+  background-color: rgba(34, 197, 94, 0.16);
+  color: #4ade80;
+}
+
+.nm-hub-app--tasks .hub-tasks-status-select--listo {
+  border-color: rgba(250, 204, 21, 0.5);
+  background-color: rgba(250, 204, 21, 0.14);
+  color: #facc15;
+}
+
+.nm-hub-app--tasks .hub-tasks-status-select--fabricacion {
+  border-color: rgba(216, 180, 254, 0.5);
+  background-color: rgba(192, 132, 252, 0.16);
+  color: #d8b4fe;
+}
+
+.nm-hub-app--tasks .hub-tasks-status-select--sin_ingresar {
+  border-color: rgba(148, 163, 184, 0.4);
+  background-color: rgba(100, 116, 139, 0.18);
+  color: #94a3b8;
+}
+
+.nm-hub-app--tasks .hub-tasks-payment-select--pago {
+  border-color: rgba(74, 222, 128, 0.5);
+  background-color: rgba(34, 197, 94, 0.16);
+  color: #4ade80;
+}
+
+.nm-hub-app--tasks .hub-tasks-payment-select--sin_pagar {
+  border-color: rgba(248, 113, 113, 0.55);
+  background-color: rgba(239, 68, 68, 0.16);
+  color: #f87171;
 }
 
 .nm-hub-app--tasks .btn-delete-task--trash {

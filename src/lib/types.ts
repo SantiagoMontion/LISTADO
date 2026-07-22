@@ -81,6 +81,10 @@ export type HubImportance = 'low' | 'normal' | 'high' | 'urgent'
 
 export type HubTaskCreateType = 'falta' | 'mayorista' | 'rehacer' | 'canje' | 'devolucion'
 
+export type HubTaskWorkflowStatus = 'enviado' | 'listo' | 'fabricacion' | 'sin_ingresar'
+
+export type HubTaskPaymentStatus = 'pago' | 'sin_pagar'
+
 export interface NmHubMayoristaClient {
   id: string
   full_name: string
@@ -107,6 +111,10 @@ export interface NmHubTask {
   body: string | null
   /** Tipo de tarea hub (falta, mayorista, rehacer, canje, devolucion). */
   task_type?: HubTaskCreateType | null
+  /** Estado operativo (enviado / listo / fabricacion / sin_ingresar). */
+  workflow_status?: HubTaskWorkflowStatus
+  /** Estado de pago (pago / sin_pagar). */
+  payment_status?: HubTaskPaymentStatus
   importance: HubImportance
   /** Día calendario (YYYY-MM-DD) al que pertenece la tarea en el taller. */
   for_date?: string

@@ -6,17 +6,21 @@ import {
   deleteHubTask,
   notifyTaskAssignedPush,
   fetchHubTaskNoteCounts,
-  fetchAllHubTasksCompleted,
-  fetchAllHubTasksPending,
-  fetchHubProfileDisplayNames,
-  hubProfileDisplayLabel,
+  fetchAllHubTasks,
   signedImageUrl,
-  updateHubTaskExecuted,
+  updateHubTaskWorkflowStatus,
+  updateHubTaskPaymentStatus,
 } from '../lib/hubTasksApi'
 import { formatSupabaseOrError } from '../lib/errors'
 import { todayIsoLocal } from '../lib/date'
 import { supabase } from '../lib/supabase'
-import type { HubImportance, HubUserRole, NmHubTask } from '../lib/types'
+import type {
+  HubImportance,
+  HubTaskPaymentStatus,
+  HubTaskWorkflowStatus,
+  HubUserRole,
+  NmHubTask,
+} from '../lib/types'
 import { HubBrandBar } from './HubBrandBar'
 import { HubDesktopNav } from './HubDesktopNav'
 import { HubImageLightbox } from './HubImageLightbox'
@@ -26,7 +30,6 @@ import { HUB_NAV_EVENT } from '../lib/hubNavigate'
 import {
   getTaskAssigneeRolesForCreator,
   HUB_TASK_ASSIGNEE_CREATE_LABEL,
-  HUB_TASK_ASSIGNEE_LABEL,
   type HubTaskAssignableRole,
 } from '../lib/hubTaskAssignable'
 import { canDeleteHubTasks } from '../lib/hubRoles'
@@ -37,6 +40,7 @@ import {
   upsertMayoristaClient,
 } from '../lib/hubMayoristaClientsApi'
 import { HubMayoristaClientModal } from './HubMayoristaClientModal'
+import { shopifyOrderAdminUrl, taskHasOrderNumber } from '../lib/shopifyOrderUrl'
 import type { HubTaskCreateType, NmHubMayoristaClient } from '../lib/types'
 
 const TASK_TYPE_LABEL: Record<HubTaskCreateType, string> = {
@@ -46,6 +50,24 @@ const TASK_TYPE_LABEL: Record<HubTaskCreateType, string> = {
   canje: 'Canje',
   devolucion: 'Devolución',
 }
+
+const WORKFLOW_STATUS_OPTIONS: {
+  value: HubTaskWorkflowStatus
+  label: string
+}[] = [
+  { value: 'sin_ingresar', label: 'Sin ingresar' },
+  { value: 'fabricacion', label: 'Fabricación' },
+  { value: 'listo', label: 'Listo' },
+  { value: 'enviado', label: 'Enviado' },
+]
+
+const PAYMENT_STATUS_OPTIONS: {
+  value: HubTaskPaymentStatus
+  label: string
+}[] = [
+  { value: 'sin_pagar', label: 'Sin pagar' },
+  { value: 'pago', label: 'Pago' },
+]
 
 const TASK_CREATE_TYPES: HubTaskCreateType[] = [
   'mayorista',
@@ -169,35 +191,6 @@ function AssigneeRoleSelect({
 }
 
 type TasksPanel = 'list' | 'create'
-type HubListScope = 'inbox' | 'sent' | 'completadas'
-
-function readHubListScope(): HubListScope {
-  if (typeof window === 'undefined') return 'inbox'
-  const hub = new URLSearchParams(window.location.search).get('hub')
-  if (hub === 'completadas') return 'completadas'
-  if (hub === 'asignadas' || hub === 'seguimiento') return 'sent'
-  /** Compatibilidad con enlaces viejos `hub=pendientes`. */
-  if (hub === 'pendientes') return 'inbox'
-  return 'inbox'
-}
-
-/** Tareas que creé y asigné a otro usuario (no a mí mismo). */
-function isDelegatedByMe(t: NmHubTask, myRole: HubUserRole, myId: string): boolean {
-  if (t.created_by !== myId) return false
-  if (t.assigned_to) return t.assigned_to !== myId
-  return t.assigned_role !== myRole
-}
-
-/** Chip «De … para …» (mismo formato admin y resto de roles). */
-function taskInAdminAssignedOverview(t: NmHubTask): boolean {
-  return t.assigned_role !== 'admin'
-}
-
-/** Bandeja «Mis tareas»: asignadas a este usuario (no solo al rol). */
-function taskInMyInbox(t: NmHubTask, myRole: HubUserRole, myId: string): boolean {
-  if (t.assigned_to) return t.assigned_to === myId
-  return t.assigned_role === myRole
-}
 
 /** Hash explícito gana; si no hay hash útil, `?hub=crear` (desde inicio) abre el formulario aunque el fragmento se pierda. */
 function hubTasksPanelFromLocation(readOnly: boolean): TasksPanel {
@@ -243,83 +236,9 @@ function replaceListPanelUrl() {
   window.dispatchEvent(new CustomEvent(HUB_NAV_EVENT))
 }
 
-function setListScopeInUrl(scope: HubListScope) {
-  if (typeof window === 'undefined') return
-  const u = new URL(window.location.href)
-  if (scope === 'completadas') {
-    u.searchParams.set('hub', 'completadas')
-  } else if (scope === 'sent') {
-    u.searchParams.set('hub', 'asignadas')
-  } else {
-    u.searchParams.delete('hub')
-  }
-  if (!u.hash || u.hash === '#') u.hash = '#nm-hub-tareas-lista'
-  window.history.replaceState(null, '', `${u.pathname}${u.search}${u.hash}`)
-  window.dispatchEvent(new CustomEvent(HUB_NAV_EVENT))
-}
-
-function importanceRank(i: HubImportance): number {
-  switch (i) {
-    case 'urgent':
-      return 4
-    case 'high':
-      return 3
-    case 'normal':
-      return 2
-    default:
-      return 1
-  }
-}
-
-function sortPendingTasks(list: NmHubTask[]): NmHubTask[] {
-  return [...list].sort((a, b) => {
-    const ir = importanceRank(b.importance) - importanceRank(a.importance)
-    if (ir !== 0) return ir
-    return Date.parse(b.created_at) - Date.parse(a.created_at)
-  })
-}
-
-/** Más recientemente completada arriba (sin importar tipo, título ni importancia). */
-function sortCompletedTasks(list: NmHubTask[]): NmHubTask[] {
-  return [...list].sort((a, b) => {
-    const ea = a.executed_at ? Date.parse(a.executed_at) : 0
-    const eb = b.executed_at ? Date.parse(b.executed_at) : 0
-    if (eb !== ea) return eb - ea
-    return Date.parse(b.created_at) - Date.parse(a.created_at)
-  })
-}
-
-/** Asignadas: pendientes arriba; completadas por el destinatario abajo. */
-function sortAssignedByMeTasks(list: NmHubTask[]): NmHubTask[] {
-  return [...list].sort((a, b) => {
-    const aDone = Boolean(a.executed_at)
-    const bDone = Boolean(b.executed_at)
-    if (aDone !== bDone) return aDone ? 1 : -1
-    if (aDone && bDone) {
-      const eb = b.executed_at ? Date.parse(b.executed_at) : 0
-      const ea = a.executed_at ? Date.parse(a.executed_at) : 0
-      if (eb !== ea) return eb - ea
-    }
-    const ir = importanceRank(b.importance) - importanceRank(a.importance)
-    if (ir !== 0) return ir
-    return Date.parse(b.created_at) - Date.parse(a.created_at)
-  })
-}
-
-function formatExecutedLabel(iso: string): string {
-  try {
-    const d = new Date(iso)
-    if (Number.isNaN(d.getTime())) return iso
-    return d.toLocaleString('es-AR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  } catch {
-    return iso
-  }
+/** Más nuevas arriba (por creación). */
+function sortTasksNewestFirst(list: NmHubTask[]): NmHubTask[] {
+  return [...list].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
 }
 
 function TaskThumbnails({ paths, rebel = false }: { paths: string[]; rebel?: boolean }) {
@@ -377,30 +296,21 @@ export type HubTasksAppProps = {
   profileId: string
   profileDisplayName: string
   isAdmin: boolean
-  /** Pestaña «Asignadas» (delegadas por mí); útil cuando `createHubTasks`. */
-  showSentTab?: boolean
 }
 
 export function HubTasksApp({
   readOnly = false,
   profileRole,
   profileId,
-  profileDisplayName,
+  profileDisplayName: _profileDisplayName,
   isAdmin,
-  showSentTab = true,
 }: HubTasksAppProps) {
   const canDeleteTasks = canDeleteHubTasks(profileRole)
-  const [rawPending, setRawPending] = useState<NmHubTask[]>([])
-  const [rawCompleted, setRawCompleted] = useState<NmHubTask[]>([])
+  const [rawTasks, setRawTasks] = useState<NmHubTask[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const [listScope, setListScope] = useState<HubListScope>(() =>
-    typeof window !== 'undefined' ? readHubListScope() : 'inbox',
-  )
-  const [expandedCompletedIds, setExpandedCompletedIds] = useState<Set<string>>(() => new Set())
-  const [executorNames, setExecutorNames] = useState<Record<string, string>>({})
-  const [executorNamesReady, setExecutorNamesReady] = useState(false)
+  const [expandedDetailIds, setExpandedDetailIds] = useState<Set<string>>(() => new Set())
   const [taskQuery, setTaskQuery] = useState('')
   const [pendingDeleteTask, setPendingDeleteTask] = useState<NmHubTask | null>(null)
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
@@ -455,22 +365,12 @@ export function HubTasksApp({
     e.target.value = ''
   }, [])
 
-  const refreshAdjacentPending = useCallback(async () => {
-    /* sin filtro por fecha: no hay días adyacentes */
-  }, [])
-
   const loadSilent = useCallback(async () => {
     const seq = ++tasksLoadSeqRef.current
-    const scope = readHubListScope()
-    const [pendingRows, completedRows] = await Promise.all([
-      fetchAllHubTasksPending(),
-      fetchAllHubTasksCompleted(),
-    ])
+    const rows = await fetchAllHubTasks()
     if (seq !== tasksLoadSeqRef.current) return
-    setListScope(scope)
-    setRawPending(pendingRows)
-    setRawCompleted(completedRows)
-    void fetchHubTaskNoteCounts([...pendingRows, ...completedRows].map((t) => t.id))
+    setRawTasks(rows)
+    void fetchHubTaskNoteCounts(rows.map((t) => t.id))
       .then((c) => {
         if (seq !== tasksLoadSeqRef.current) return
         setNoteCounts(c)
@@ -480,36 +380,6 @@ export function HubTasksApp({
         setNoteCounts({})
       })
   }, [hubDataGen, profileRole, profileId])
-
-  useEffect(() => {
-    let cancelled = false
-    const ids = new Set<string>()
-    for (const t of [...rawPending, ...rawCompleted]) {
-      if (t.executed_by) ids.add(t.executed_by)
-      if (t.created_by) ids.add(t.created_by)
-    }
-    if (ids.size === 0) {
-      setExecutorNames({})
-      setExecutorNamesReady(true)
-      return
-    }
-    setExecutorNamesReady(false)
-    void fetchHubProfileDisplayNames([...ids])
-      .then((names) => {
-        if (!cancelled) setExecutorNames(names)
-      })
-      .finally(() => {
-        if (!cancelled) setExecutorNamesReady(true)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [rawPending, rawCompleted, hubDataGen])
-
-  const profileDisplaySelf = useMemo(
-    () => ({ id: profileId, displayName: profileDisplayName, role: profileRole }),
-    [profileId, profileDisplayName, profileRole],
-  )
 
   const load = useCallback(async () => {
     setError(null)
@@ -589,7 +459,6 @@ export function HubTasksApp({
     }
 
     setPanel(hubTasksPanelFromLocation(readOnly))
-    setListScope(readHubListScope())
   }, [readOnly])
 
   useEffect(() => {
@@ -606,34 +475,7 @@ export function HubTasksApp({
 
   const assigneeRolesCreate = useMemo(() => getTaskAssigneeRolesForCreator(isAdmin), [isAdmin])
 
-  const inboxPendingTasks = useMemo(
-    () => rawPending.filter((t) => !t.executed_at && taskInMyInbox(t, profileRole, profileId)),
-    [rawPending, profileRole, profileId],
-  )
-  /** Asignadas: solo pendientes; al completarse pasan a la pestaña Completadas. */
-  const assignedByMeTasks = useMemo(() => {
-    if (isAdmin) {
-      return rawPending.filter(taskInAdminAssignedOverview)
-    }
-    return rawPending.filter((t) => isDelegatedByMe(t, profileRole, profileId))
-  }, [rawPending, profileRole, profileId, isAdmin])
-
-  const completedExecuted = useMemo(
-    () => rawCompleted.filter((t) => Boolean(t.executed_at)),
-    [rawCompleted],
-  )
-
-  const scopedForSorting = useMemo(() => {
-    if (listScope === 'completadas') return completedExecuted
-    if (listScope === 'sent') return assignedByMeTasks
-    return inboxPendingTasks
-  }, [listScope, completedExecuted, assignedByMeTasks, inboxPendingTasks])
-
-  const sorted = useMemo(() => {
-    if (listScope === 'completadas') return sortCompletedTasks(scopedForSorting)
-    if (listScope === 'sent') return sortAssignedByMeTasks(scopedForSorting)
-    return sortPendingTasks(scopedForSorting)
-  }, [scopedForSorting, listScope])
+  const sorted = useMemo(() => sortTasksNewestFirst(rawTasks), [rawTasks])
 
   const filteredSorted = useMemo(() => {
     const q = taskQuery.trim().toLowerCase()
@@ -644,29 +486,6 @@ export function HubTasksApp({
       return title.includes(q) || body.includes(q)
     })
   }, [sorted, taskQuery])
-
-  const canToggleExecuted = useCallback(
-    (t: NmHubTask) => {
-      if (readOnly) return false
-      if (isAdmin) return true
-      if (listScope === 'sent') return false
-      return taskInMyInbox(t, profileRole, profileId)
-    },
-    [readOnly, isAdmin, listScope, profileRole, profileId],
-  )
-
-  const canMarkComplete = useCallback(
-    (t: NmHubTask) => {
-      if (readOnly || t.executed_at) return false
-      if (listScope === 'sent' && !isAdmin) return false
-      return canToggleExecuted(t)
-    },
-    [readOnly, listScope, isAdmin, canToggleExecuted],
-  )
-
-  useEffect(() => {
-    setTaskQuery('')
-  }, [listScope])
 
   const goCreatePanel = useCallback(() => {
     if (readOnly) return
@@ -697,14 +516,50 @@ export function HubTasksApp({
     setClientSuggestOpen(false)
   }, [])
 
-  const toggleCompletedDetail = useCallback((taskId: string) => {
-    setExpandedCompletedIds((prev) => {
+  const toggleDetail = useCallback((taskId: string) => {
+    setExpandedDetailIds((prev) => {
       const next = new Set(prev)
       if (next.has(taskId)) next.delete(taskId)
       else next.add(taskId)
       return next
     })
   }, [])
+
+  const patchTaskLocal = useCallback((updated: NmHubTask) => {
+    setRawTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)))
+  }, [])
+
+  const onWorkflowChange = async (t: NmHubTask, status: HubTaskWorkflowStatus) => {
+    if (readOnly) return
+    setBusy(true)
+    setError(null)
+    markLocalHubMutation()
+    try {
+      const updated = await updateHubTaskWorkflowStatus(t.id, status)
+      patchTaskLocal(updated)
+    } catch (err: unknown) {
+      setError(formatSupabaseOrError(err))
+      await loadSilent()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const onPaymentChange = async (t: NmHubTask, status: HubTaskPaymentStatus) => {
+    if (readOnly) return
+    setBusy(true)
+    setError(null)
+    markLocalHubMutation()
+    try {
+      const updated = await updateHubTaskPaymentStatus(t.id, status)
+      patchTaskLocal(updated)
+    } catch (err: unknown) {
+      setError(formatSupabaseOrError(err))
+      await loadSilent()
+    } finally {
+      setBusy(false)
+    }
+  }
 
   const applyTaskType = useCallback((type: HubTaskCreateType) => {
     setTaskCreateType(type)
@@ -880,17 +735,12 @@ export function HubTasksApp({
   }, [])
 
   const selectAllBulkDelete = useCallback(() => {
-    setBulkDeleteSelectedIds(new Set(completedExecuted.map((t) => t.id)))
-  }, [completedExecuted])
+    setBulkDeleteSelectedIds(new Set(filteredSorted.map((t) => t.id)))
+  }, [filteredSorted])
 
   const clearBulkDeleteSelection = useCallback(() => {
     setBulkDeleteSelectedIds(new Set())
   }, [])
-
-  const completedForBulkDelete = useMemo(
-    () => sortCompletedTasks(completedExecuted),
-    [completedExecuted],
-  )
 
   const onBulkDeleteCompleted = async () => {
     if (!canDeleteTasks || readOnly || bulkDeleteSelectedIds.size === 0) return
@@ -912,40 +762,9 @@ export function HubTasksApp({
     }
   }
 
-  const onSetExecuted = async (t: NmHubTask, executed: boolean) => {
-    if (readOnly) return
-    setBusy(true)
-    setError(null)
-    markLocalHubMutation()
-    try {
-      await updateHubTaskExecuted(t.id, executed)
-      await loadSilent()
-      if (panel !== 'create') void refreshAdjacentPending()
-    } catch (err: unknown) {
-      setError(formatSupabaseOrError(err))
-      await loadSilent()
-    } finally {
-      setBusy(false)
-    }
-  }
+  const integratedSubtitle = panel === 'create' ? 'Nueva tarea' : 'Completadas'
 
-  const integratedSubtitle =
-    panel === 'create'
-      ? 'Nueva tarea'
-      : listScope === 'completadas'
-        ? 'Tareas completadas'
-        : listScope === 'sent'
-          ? 'Asignadas'
-          : 'Mis tareas'
-
-  const integratedSubtitleTone =
-    panel === 'create'
-      ? 'accent'
-      : listScope === 'completadas'
-        ? 'completed'
-        : listScope === 'sent'
-          ? 'completed'
-          : 'pending'
+  const integratedSubtitleTone = panel === 'create' ? 'accent' : 'completed'
 
   const showCreateNavBtn = !readOnly && panel === 'list'
 
@@ -1254,39 +1073,8 @@ export function HubTasksApp({
       />
 
       {panel === 'list' ? (
-        <section id="nm-hub-tareas-lista" className="nm-hub-section nm-hub-section--task-list" aria-label="Tareas del día">
+        <section id="nm-hub-tareas-lista" className="nm-hub-section nm-hub-section--task-list" aria-label="Tareas completadas">
           <div className="tasks-hub-filters-stack">
-            <div role="tablist" className="filter-track-rebel" aria-label="Vista de tareas">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={listScope === 'inbox'}
-                className={`filter-tab-item${listScope === 'inbox' ? ' active-pending' : ''}`}
-                onClick={() => setListScopeInUrl('inbox')}
-              >
-                Mis tareas
-              </button>
-              {showSentTab ? (
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={listScope === 'sent'}
-                  className={`filter-tab-item${listScope === 'sent' ? ' active-pending' : ''}`}
-                  onClick={() => setListScopeInUrl('sent')}
-                >
-                  Asignadas
-                </button>
-              ) : null}
-              <button
-                type="button"
-                role="tab"
-                aria-selected={listScope === 'completadas'}
-                className={`filter-tab-item${listScope === 'completadas' ? ' active-completed' : ''}`}
-                onClick={() => setListScopeInUrl('completadas')}
-              >
-                Completadas
-              </button>
-            </div>
             <div className="nm-hub-task-search-wrap tasks-hub-search-wrap">
               <label className="nm-hub-sr-only" htmlFor="nm-hub-task-q">
                 Buscar en tareas
@@ -1303,67 +1091,132 @@ export function HubTasksApp({
               />
             </div>
           </div>
-          {loading && rawPending.length === 0 && rawCompleted.length === 0 ? (
+          {loading && rawTasks.length === 0 ? (
             <p className="nm-hub-muted">Cargando…</p>
           ) : null}
           {!loading && sorted.length === 0 ? (
-            <p className="nm-hub-muted">
-              {listScope === 'completadas'
-                ? 'No hay tareas completadas.'
-                : listScope === 'sent'
-                  ? isAdmin
-                    ? 'No hay tareas del equipo asignadas.'
-                    : 'No hay tareas asignadas a otros.'
-                  : 'No hay tareas pendientes para vos.'}
-            </p>
+            <p className="nm-hub-muted">No hay tareas.</p>
           ) : null}
           {!loading && sorted.length > 0 && filteredSorted.length === 0 ? (
             <p className="nm-hub-muted">Ninguna tarea coincide con la búsqueda.</p>
           ) : null}
-          {listScope === 'completadas' ? (
-            <div className="hub-tasks-table-wrap" aria-busy={loading}>
-              <table className="hub-tasks-table">
-                <thead>
-                  <tr>
-                    <th scope="col">Tipo</th>
-                    <th scope="col">Título</th>
-                    <th scope="col">Detalle</th>
-                    <th scope="col" className="hub-tasks-table__col-delete">
-                      <span className="nm-hub-sr-only">Eliminar</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredSorted.map((t) => {
-                    const expanded = expandedCompletedIds.has(t.id)
-                    return (
-                      <Fragment key={t.id}>
-                        <tr className="hub-tasks-table__row">
-                          <td>
-                            {t.task_type ? (
-                              <span className={`task-type-badge task-type-badge--${t.task_type}`}>
-                                {TASK_TYPE_LABEL[t.task_type]}
-                              </span>
-                            ) : (
-                              '—'
-                            )}
-                          </td>
-                          <td className="hub-tasks-table__title">{t.title}</td>
-                          <td className="hub-tasks-table__detail-toggle">
-                            {t.body ? (
-                              <button
-                                type="button"
-                                className="hub-tasks-table__detail-btn"
-                                onClick={() => toggleCompletedDetail(t.id)}
-                                aria-expanded={expanded}
-                              >
-                                {expanded ? 'Ocultar' : 'Ver detalle'}
-                              </button>
-                            ) : (
-                              '—'
-                            )}
-                          </td>
-                          <td className="hub-tasks-table__col-delete">
+          <div className="hub-tasks-table-wrap" aria-busy={loading}>
+            <table className="hub-tasks-table">
+              <thead>
+                <tr>
+                  <th scope="col">Tipo</th>
+                  <th scope="col">Título</th>
+                  <th scope="col">Detalle</th>
+                  <th scope="col">Estado</th>
+                  <th scope="col">Pago</th>
+                  <th scope="col">Orden</th>
+                  <th scope="col" className="hub-tasks-table__col-delete">
+                    <span className="nm-hub-sr-only">Eliminar</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredSorted.map((t) => {
+                  const expanded = expandedDetailIds.has(t.id)
+                  const workflow = t.workflow_status ?? 'sin_ingresar'
+                  const payment = t.payment_status ?? 'sin_pagar'
+                  const shopifyUrl = taskHasOrderNumber(t) ? shopifyOrderAdminUrl(t.title) : null
+                  return (
+                    <Fragment key={t.id}>
+                      <tr className="hub-tasks-table__row">
+                        <td>
+                          {t.task_type ? (
+                            <span className={`task-type-badge task-type-badge--${t.task_type}`}>
+                              {TASK_TYPE_LABEL[t.task_type]}
+                            </span>
+                          ) : (
+                            '—'
+                          )}
+                        </td>
+                        <td className="hub-tasks-table__title">{t.title}</td>
+                        <td className="hub-tasks-table__detail-toggle">
+                          {t.body ? (
+                            <button
+                              type="button"
+                              className="hub-tasks-table__detail-btn"
+                              onClick={() => toggleDetail(t.id)}
+                              aria-expanded={expanded}
+                            >
+                              {expanded ? 'Ocultar' : 'Ver detalle'}
+                            </button>
+                          ) : (
+                            '—'
+                          )}
+                        </td>
+                        <td>
+                          <select
+                            className={`hub-tasks-status-select hub-tasks-status-select--${workflow}`}
+                            value={workflow}
+                            disabled={busy || readOnly}
+                            aria-label={`Estado de ${t.title}`}
+                            onChange={(e) =>
+                              void onWorkflowChange(t, e.target.value as HubTaskWorkflowStatus)
+                            }
+                          >
+                            {WORKFLOW_STATUS_OPTIONS.map((opt) => (
+                              <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td>
+                          <select
+                            className={`hub-tasks-status-select hub-tasks-payment-select--${payment}`}
+                            value={payment}
+                            disabled={busy || readOnly}
+                            aria-label={`Pago de ${t.title}`}
+                            onChange={(e) =>
+                              void onPaymentChange(t, e.target.value as HubTaskPaymentStatus)
+                            }
+                          >
+                            {PAYMENT_STATUS_OPTIONS.map((opt) => (
+                              <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="hub-tasks-table__shopify">
+                          {shopifyUrl ? (
+                            <a
+                              className="hub-tasks-shopify-btn"
+                              href={shopifyUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              Shopify
+                            </a>
+                          ) : taskHasOrderNumber(t) ? (
+                            <span
+                              className="hub-tasks-shopify-missing"
+                              title="Configurá VITE_SHOPIFY_STORE_HANDLE"
+                            >
+                              —
+                            </span>
+                          ) : (
+                            '—'
+                          )}
+                        </td>
+                        <td className="hub-tasks-table__col-delete">
+                          <div className="hub-tasks-table__row-actions">
+                            <button
+                              type="button"
+                              className="btn-task-notes hub-tasks-table__action-btn"
+                              onClick={() => setNotesTask(t)}
+                            >
+                              Notas
+                              {noteCounts[t.id] ? (
+                                <span className="btn-task-notes__count" aria-hidden="true">
+                                  {noteCounts[t.id]}
+                                </span>
+                              ) : null}
+                            </button>
                             {canDeleteTasks && !readOnly ? (
                               <button
                                 type="button"
@@ -1374,18 +1227,8 @@ export function HubTasksApp({
                                 title="Eliminar tareas"
                               >
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                  <path
-                                    d="M4 7h16"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                  />
-                                  <path
-                                    d="M10 11v6M14 11v6"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                  />
+                                  <path d="M4 7h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                                  <path d="M10 11v6M14 11v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                                   <path
                                     d="M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12"
                                     stroke="currentColor"
@@ -1403,105 +1246,25 @@ export function HubTasksApp({
                                 </svg>
                               </button>
                             ) : null}
+                          </div>
+                        </td>
+                      </tr>
+                      {expanded && t.body ? (
+                        <tr className="hub-tasks-table__detail-row">
+                          <td colSpan={7}>
+                            <div className="hub-tasks-table__detail-body">{t.body}</div>
+                            {(t.image_paths?.length ?? 0) > 0 ? (
+                              <TaskThumbnails paths={t.image_paths ?? []} rebel />
+                            ) : null}
                           </td>
                         </tr>
-                        {expanded && t.body ? (
-                          <tr className="hub-tasks-table__detail-row">
-                            <td colSpan={4}>
-                              <div className="hub-tasks-table__detail-body">{t.body}</div>
-                              {t.executed_at ? (
-                                <p className="hub-tasks-table__meta">
-                                  Completada por{' '}
-                                  <strong>
-                                    {hubProfileDisplayLabel(
-                                      t.executed_by,
-                                      executorNames,
-                                      executorNamesReady,
-                                      profileDisplaySelf,
-                                    )}
-                                  </strong>
-                                  {` · ${formatExecutedLabel(t.executed_at)}`}
-                                </p>
-                              ) : null}
-                              {(t.image_paths?.length ?? 0) > 0 ? (
-                                <TaskThumbnails paths={t.image_paths ?? []} rebel />
-                              ) : null}
-                            </td>
-                          </tr>
-                        ) : null}
-                      </Fragment>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="hub-tasks-table-wrap" aria-busy={loading}>
-              <table className="hub-tasks-table hub-tasks-table--pending">
-                <thead>
-                  <tr>
-                    <th scope="col">Tipo</th>
-                    <th scope="col">Título</th>
-                    <th scope="col">Asignado</th>
-                    <th scope="col">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredSorted.map((t) => (
-                    <tr key={t.id} className="hub-tasks-table__row">
-                      <td>
-                        {t.task_type ? (
-                          <span className={`task-type-badge task-type-badge--${t.task_type}`}>
-                            {TASK_TYPE_LABEL[t.task_type]}
-                          </span>
-                        ) : (
-                          '—'
-                        )}
-                      </td>
-                      <td className="hub-tasks-table__title">{t.title}</td>
-                      <td>{HUB_TASK_ASSIGNEE_LABEL[t.assigned_role]}</td>
-                      <td className="hub-tasks-table__actions">
-                        <button
-                          type="button"
-                          className="btn-task-notes hub-tasks-table__action-btn"
-                          onClick={() => setNotesTask(t)}
-                        >
-                          Notas
-                          {noteCounts[t.id] ? (
-                            <span className="btn-task-notes__count" aria-hidden="true">
-                              {noteCounts[t.id]}
-                            </span>
-                          ) : null}
-                        </button>
-                        {!readOnly && canMarkComplete(t) ? (
-                          <button
-                            type="button"
-                            className="btn-complete-compact hub-tasks-table__action-btn"
-                            disabled={busy}
-                            onClick={() => void onSetExecuted(t, true)}
-                          >
-                            Completar
-                          </button>
-                        ) : null}
-                        {canDeleteTasks && !readOnly ? (
-                          <button
-                            type="button"
-                            className="btn-delete-task hub-tasks-table__action-btn"
-                            disabled={busy}
-                            onClick={() => setPendingDeleteTask(t)}
-                            aria-label="Eliminar tarea"
-                            title="Eliminar tarea"
-                          >
-                            ×
-                          </button>
-                        ) : null}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                      ) : null}
+                    </Fragment>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         </section>
       ) : null}
 
@@ -1548,7 +1311,7 @@ export function HubTasksApp({
             aria-labelledby="hub-bulk-delete-title"
           >
             <h3 className="nm-prod-modal-title" id="hub-bulk-delete-title">
-              Eliminar tareas completadas
+              Eliminar tareas
             </h3>
             <p className="nm-prod-modal-text">
               Seleccioná las tareas que querés eliminar. Esta acción no se puede deshacer.
@@ -1557,7 +1320,7 @@ export function HubTasksApp({
               <button
                 type="button"
                 className="nm-prod-btn"
-                disabled={busy || completedForBulkDelete.length === 0}
+                disabled={busy || filteredSorted.length === 0}
                 onClick={selectAllBulkDelete}
               >
                 Seleccionar todas
@@ -1572,10 +1335,10 @@ export function HubTasksApp({
               </button>
             </div>
             <ul className="hub-tasks-bulk-delete-list" role="listbox" aria-multiselectable="true">
-              {completedForBulkDelete.length === 0 ? (
-                <li className="hub-tasks-bulk-delete-empty">No hay tareas completadas.</li>
+              {filteredSorted.length === 0 ? (
+                <li className="hub-tasks-bulk-delete-empty">No hay tareas.</li>
               ) : (
-                completedForBulkDelete.map((t) => {
+                filteredSorted.map((t) => {
                   const checked = bulkDeleteSelectedIds.has(t.id)
                   return (
                     <li key={t.id}>

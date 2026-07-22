@@ -1012,7 +1012,6 @@ export default function App() {
           profileId={profile.id}
           profileDisplayName={profile.display_name}
           isAdmin={profile.role === 'admin'}
-          showSentTab={Boolean(getHubPermissions(profile.role)?.createHubTasks)}
         />
       </>
     )

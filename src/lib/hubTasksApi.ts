@@ -5,7 +5,15 @@ import {
   HUB_TASK_ASSIGNEE_PROFILE_NAME,
   type HubTaskAssignableRole,
 } from './hubTaskAssignable'
-import type { HubImportance, HubUserRole, HubTaskCreateType, NmHubTask, NmHubTaskNote } from './types'
+import type {
+  HubImportance,
+  HubUserRole,
+  HubTaskCreateType,
+  HubTaskPaymentStatus,
+  HubTaskWorkflowStatus,
+  NmHubTask,
+  NmHubTaskNote,
+} from './types'
 
 const BUCKET = 'nm-hub-task-images'
 
@@ -24,11 +32,25 @@ function normalizeTaskType(raw: unknown): HubTaskCreateType | null {
   return null
 }
 
+function normalizeWorkflowStatus(raw: unknown): HubTaskWorkflowStatus {
+  const s = typeof raw === 'string' ? raw.trim().toLowerCase() : ''
+  if (s === 'enviado' || s === 'listo' || s === 'fabricacion' || s === 'sin_ingresar') return s
+  return 'sin_ingresar'
+}
+
+function normalizePaymentStatus(raw: unknown): HubTaskPaymentStatus {
+  const s = typeof raw === 'string' ? raw.trim().toLowerCase() : ''
+  if (s === 'pago' || s === 'sin_pagar') return s
+  return 'sin_pagar'
+}
+
 function coerceHubTask(row: Record<string, unknown>): NmHubTask {
   return {
     ...(row as unknown as NmHubTask),
     assigned_role: normalizeAssignedRole(row.assigned_role),
     task_type: normalizeTaskType(row.task_type),
+    workflow_status: normalizeWorkflowStatus(row.workflow_status),
+    payment_status: normalizePaymentStatus(row.payment_status),
   }
 }
 
@@ -125,6 +147,48 @@ export async function fetchAllHubTasksCompleted(): Promise<NmHubTask[]> {
 
   if (error) throw error
   return mapTaskRows(data)
+}
+
+/** Todas las tareas hub (pendientes + completadas), más nuevas primero. */
+export async function fetchAllHubTasks(): Promise<NmHubTask[]> {
+  const sb = requireClient()
+  const { data, error } = await sb
+    .from('nm_hub_tasks')
+    .select('*')
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return mapTaskRows(data)
+}
+
+export async function updateHubTaskWorkflowStatus(
+  taskId: string,
+  workflowStatus: HubTaskWorkflowStatus,
+): Promise<NmHubTask> {
+  const sb = requireClient()
+  const { data, error } = await sb.rpc('nm_hub_set_task_workflow_status', {
+    p_task_id: taskId,
+    p_workflow_status: workflowStatus,
+  })
+  if (error) throw error
+  const parsed = parseRpcTaskRow(data)
+  if (!parsed) throw new Error('No se pudo actualizar el estado.')
+  return parsed
+}
+
+export async function updateHubTaskPaymentStatus(
+  taskId: string,
+  paymentStatus: HubTaskPaymentStatus,
+): Promise<NmHubTask> {
+  const sb = requireClient()
+  const { data, error } = await sb.rpc('nm_hub_set_task_payment_status', {
+    p_task_id: taskId,
+    p_payment_status: paymentStatus,
+  })
+  if (error) throw error
+  const parsed = parseRpcTaskRow(data)
+  if (!parsed) throw new Error('No se pudo actualizar el pago.')
+  return parsed
 }
 
 /** Hay al menos una tarea pendiente (sin ejecutar) con for_date anterior al día mostrado. */
