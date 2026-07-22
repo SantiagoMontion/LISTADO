@@ -1,10 +1,6 @@
 import type { OperatorCutPlan } from '../lib/buildOperatorCutPlan'
 import { formatOperatorPieceLine } from '../lib/buildOperatorCutPlan'
-import {
-  firstPendingTaskForLabel,
-  lastCutTaskForLabel,
-  remainingQtyForLabel,
-} from '../lib/measureTaskMatch'
+import { remainingQtyForLabel } from '../lib/measureTaskMatch'
 import type { NmProdTask } from '../lib/types'
 
 interface CutStripPlanViewProps {
@@ -14,8 +10,10 @@ interface CutStripPlanViewProps {
   busy: boolean
   dismissedStripHeights: ReadonlySet<number>
   onToggleDismissStrip: (stripHeight: number) => void
-  onIncrementTask: (task: NmProdTask) => void
-  onDecrementTask: (task: NmProdTask) => void
+  /** Marca como cortado TODO lo pendiente de esa medida (no solo +1). */
+  onFinishLabel: (label: string) => void
+  /** Deshace una unidad cortada de esa medida. */
+  onUndoLabel: (label: string) => void
 }
 
 function sheetCountWord(count: number): string {
@@ -29,8 +27,8 @@ export function CutStripPlanView({
   busy,
   dismissedStripHeights,
   onToggleDismissStrip,
-  onIncrementTask,
-  onDecrementTask,
+  onFinishLabel,
+  onUndoLabel,
 }: CutStripPlanViewProps) {
   return (
     <div className="cut-strip-plan">
@@ -89,13 +87,8 @@ export function CutStripPlanView({
                               checked={allCut}
                               disabled={busy}
                               onChange={(e) => {
-                                if (e.target.checked) {
-                                  const next = firstPendingTaskForLabel(planTasks, p.label)
-                                  if (next) onIncrementTask(next)
-                                } else {
-                                  const prev = lastCutTaskForLabel(planTasks, p.label)
-                                  if (prev) onDecrementTask(prev)
-                                }
+                                if (e.target.checked) onFinishLabel(p.label)
+                                else onUndoLabel(p.label)
                               }}
                             />
                           </label>

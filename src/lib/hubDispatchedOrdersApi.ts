@@ -28,17 +28,55 @@ function rpcMissing(error: { code?: string; message?: string } | null): boolean 
   )
 }
 
+/** Alias: la columna `count` choca con el keyword de PostgREST. */
+const COUNT_SELECT = 'for_date, dispatched_count:count'
+const COUNT_ONLY_SELECT = 'dispatched_count:count'
+
+function readCountFromRow(row: { count?: unknown; dispatched_count?: unknown } | null): number | null {
+  return parseCountValue(row?.dispatched_count) ?? parseCountValue(row?.count)
+}
+
+const LAST_SAVE_KEY = 'nm_hub_dispatched_last_save'
+
+/** El calendario lee esto al volver, para no mostrar un total viejo. */
+export function rememberDispatchedSave(forDate: string, count: number): void {
+  try {
+    sessionStorage.setItem(
+      LAST_SAVE_KEY,
+      JSON.stringify({ forDate: normalizeCalendarDate(forDate), count, at: Date.now() }),
+    )
+  } catch {
+    /* ignore */
+  }
+}
+
+export function consumeDispatchedSaveHint(): { forDate: string; count: number } | null {
+  try {
+    const raw = sessionStorage.getItem(LAST_SAVE_KEY)
+    if (!raw) return null
+    sessionStorage.removeItem(LAST_SAVE_KEY)
+    const parsed = JSON.parse(raw) as { forDate?: string; count?: number; at?: number }
+    const forDate = normalizeCalendarDate(parsed.forDate)
+    const count = typeof parsed.count === 'number' ? Math.floor(parsed.count) : NaN
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(forDate) || !Number.isFinite(count) || count < 0) return null
+    if (typeof parsed.at === 'number' && Date.now() - parsed.at > 5 * 60_000) return null
+    return { forDate, count }
+  } catch {
+    return null
+  }
+}
+
 /** Conteo del día; 0 si no hay fila. */
 export async function fetchHubDispatchedCount(forDate: string): Promise<number> {
   const day = normalizeCalendarDate(forDate)
   const sb = requireClient()
   const { data, error } = await sb
     .from('nm_hub_dispatched_orders')
-    .select('count')
+    .select(COUNT_ONLY_SELECT)
     .eq('for_date', day)
     .maybeSingle()
   if (error) throw error
-  return parseCountValue(data?.count) ?? 0
+  return readCountFromRow(data) ?? 0
 }
 
 async function upsertHubDispatchedCount(forDate: string, total: number): Promise<number> {
@@ -47,10 +85,10 @@ async function upsertHubDispatchedCount(forDate: string, total: number): Promise
   const { data, error } = await sb
     .from('nm_hub_dispatched_orders')
     .upsert({ for_date: day, count: total }, { onConflict: 'for_date' })
-    .select('count')
+    .select(COUNT_ONLY_SELECT)
     .single()
   if (error) throw error
-  const n = parseCountValue(data?.count)
+  const n = readCountFromRow(data)
   if (n === null) {
     throw new Error('No se pudo confirmar el total guardado.')
   }
@@ -100,7 +138,7 @@ export async function fetchHubDispatchedCountsForMonth(
   const sb = requireClient()
   const { data, error } = await sb
     .from('nm_hub_dispatched_orders')
-    .select('for_date, count')
+    .select(COUNT_SELECT)
     .gte('for_date', start)
     .lte('for_date', end)
   if (error) throw error
@@ -108,7 +146,7 @@ export async function fetchHubDispatchedCountsForMonth(
   const out: HubDispatchedDayCounts = {}
   for (const row of data ?? []) {
     const iso = normalizeCalendarDate(row.for_date)
-    const n = parseCountValue(row.count)
+    const n = readCountFromRow(row)
     if (iso && n !== null) out[iso] = n
   }
   return out
@@ -135,7 +173,7 @@ export async function fetchHubDispatchedCountsForRange(
   const sb = requireClient()
   const { data, error } = await sb
     .from('nm_hub_dispatched_orders')
-    .select('for_date, count')
+    .select(COUNT_SELECT)
     .gte('for_date', start)
     .lte('for_date', end)
   if (error) throw error
@@ -143,7 +181,7 @@ export async function fetchHubDispatchedCountsForRange(
   const out: HubDispatchedDayCounts = {}
   for (const row of data ?? []) {
     const iso = normalizeCalendarDate(row.for_date)
-    const n = parseCountValue(row.count)
+    const n = readCountFromRow(row)
     if (iso && n !== null) out[iso] = n
   }
   return out

@@ -39,6 +39,7 @@ import {
   splitMoldAndPlanTasks,
 } from './lib/moldMeasures'
 import { ROLL_WIDTH_BY_TAB } from './lib/guillotineStripPack'
+import { tasksMatchingLabel } from './lib/measureTaskMatch'
 import { sortTasksForDisplay } from './lib/sortTasks'
 import { surfaceFromDimensions } from './lib/surface'
 import {
@@ -234,6 +235,15 @@ export default function App() {
   const [dismissedOrdenarStripHeights, setDismissedOrdenarStripHeights] = useState<Set<number>>(
     () => new Set(),
   )
+  /** Snapshot del plan de tiras al entrar en Ordenar (no se rehace al marcar cortado). */
+  const [ordenarPackBaseline, setOrdenarPackBaseline] = useState<{
+    key: string
+    planTasks: NmProdTask[]
+  } | null>(null)
+  const allPendingLenRef = useRef(0)
+  useEffect(() => {
+    allPendingLenRef.current = allPendingTasks.length
+  }, [allPendingTasks.length])
 
   useEffect(() => {
     if (!showCreadorMaterialImages || path !== '/creador') return
@@ -293,6 +303,7 @@ export default function App() {
 
   const patchTaskLocal = useCallback((taskId: string, updater: (t: NmProdTask) => NmProdTask) => {
     setTasks((prev) => prev.map((t) => (t.id === taskId ? updater(t) : t)))
+    setAllPendingTasks((prev) => prev.map((t) => (t.id === taskId ? updater(t) : t)))
   }, [])
 
   const markTaskCompletedNow = useCallback((taskId: string) => {
@@ -432,6 +443,7 @@ export default function App() {
     setStripPackSortActive(false)
     setMergeAllListsChecked(false)
     setDismissedOrdenarStripHeights(new Set())
+    setOrdenarPackBaseline(null)
   }, [reportId])
 
   useEffect(() => {
@@ -446,8 +458,12 @@ export default function App() {
       return
     }
 
+    // En Ordenar no refetch: evita “Calculando plan…” y que el layout salte al marcar cortado.
+    if (stripPackSortActive) return
+
     let cancelled = false
-    setAllPendingTasksLoading(true)
+    const showLoading = allPendingLenRef.current === 0
+    if (showLoading) setAllPendingTasksLoading(true)
     void fetchAllPendingTasks()
       .then((rows) => {
         if (cancelled) return
@@ -464,18 +480,29 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [configured, mode, mergeAllListsActive, reports])
+  }, [configured, mode, mergeAllListsActive, reports, stripPackSortActive])
 
-  const tasksByMainFilter = useMemo(
-    () => listSourceTasks.filter((t) => matchesTaskFilter(t, taskFilter)),
-    [listSourceTasks, taskFilter],
-  )
+  const tasksByMainFilter = useMemo(() => {
+    // En Ordenar dejamos cortados visibles para que marcar ✂ no saque la fila ni rehaga todo.
+    if (stripPackSortActive && taskFilter === 'all') return listSourceTasks
+    if (stripPackSortActive && taskFilter === 'priority') {
+      return listSourceTasks.filter((t) => t.is_priority)
+    }
+    if (stripPackSortActive && taskFilter === 'standard') {
+      return listSourceTasks.filter((t) => STANDARD_DIMENSIONS.has(t.dimensions.trim()))
+    }
+    return listSourceTasks.filter((t) => matchesTaskFilter(t, taskFilter))
+  }, [listSourceTasks, taskFilter, stripPackSortActive])
 
   const materialsAvailable = useMemo(() => {
     const present = new Set<MaterialTab>()
-    for (const t of tasksByMainFilter) present.add(tabForMaterialType(t.material_type))
+    const forTabs =
+      stripPackSortActive && taskFilter === 'all'
+        ? listSourceTasks.filter((t) => matchesTaskFilter(t, 'all'))
+        : tasksByMainFilter
+    for (const t of forTabs) present.add(tabForMaterialType(t.material_type))
     return TAB_ORDER.filter((m) => present.has(m))
-  }, [tasksByMainFilter])
+  }, [tasksByMainFilter, listSourceTasks, stripPackSortActive, taskFilter])
 
   const counts = useMemo(() => {
     const c: Record<MaterialTab, number> = {
@@ -486,11 +513,15 @@ export default function App() {
       mayorista: 0,
       otros: 0,
     }
-    for (const t of tasksByMainFilter) {
+    const forCounts =
+      stripPackSortActive && taskFilter === 'all'
+        ? listSourceTasks.filter((t) => matchesTaskFilter(t, 'all'))
+        : tasksByMainFilter
+    for (const t of forCounts) {
       c[tabForMaterialType(t.material_type)] += 1
     }
     return c
-  }, [tasksByMainFilter])
+  }, [tasksByMainFilter, listSourceTasks, stripPackSortActive, taskFilter])
 
   useEffect(() => {
     if (mode !== 'manager' || materialsAvailable.length === 0) return
@@ -509,14 +540,39 @@ export default function App() {
     [ordenarInputTasks],
   )
 
+  const ordenarPackKey = `${reportId ?? ''}|${activeTab}|${mergeAllListsActive}|${taskFilter}`
+
+  useEffect(() => {
+    if (!stripPackSortActive) {
+      setOrdenarPackBaseline(null)
+      return
+    }
+    setOrdenarPackBaseline((prev) => {
+      if (prev?.key === ordenarPackKey) return prev
+      return {
+        key: ordenarPackKey,
+        planTasks: planTasks.map((t) => ({ ...t })),
+      }
+    })
+  }, [stripPackSortActive, ordenarPackKey, planTasks])
+
   const operatorCutPlan = useMemo(() => {
     if (!stripPackSortActive || rollWidthForActiveTab === undefined) return null
+    const packSource =
+      ordenarPackBaseline?.key === ordenarPackKey ? ordenarPackBaseline.planTasks : planTasks
     return buildOperatorCutPlan(
-      planTasks,
+      packSource,
       rollWidthForActiveTab,
       taskFilter === 'completed',
     )
-  }, [stripPackSortActive, rollWidthForActiveTab, planTasks, taskFilter])
+  }, [
+    stripPackSortActive,
+    rollWidthForActiveTab,
+    planTasks,
+    taskFilter,
+    ordenarPackBaseline,
+    ordenarPackKey,
+  ])
 
   const mergedMoldGroups = useMemo(() => {
     if (!mergeAllListsActive) return null
@@ -710,8 +766,9 @@ export default function App() {
   }
 
   const markLocalListMutation = useCallback(() => {
-    suppressRealtimeUntilRef.current = Date.now() + 900
-  }, [])
+    // Ventana más larga en Ordenar: el realtime no debe reemplazar la lista a mitad de corte.
+    suppressRealtimeUntilRef.current = Date.now() + (stripPackSortActive ? 2500 : 900)
+  }, [stripPackSortActive])
 
   const toggleDismissOrdenarStrip = useCallback((stripHeight: number) => {
     setDismissedOrdenarStripHeights((prev) => {
@@ -826,6 +883,26 @@ export default function App() {
     const task = pendingCutTask
     setPendingCutTask(null)
     await runToggleCompleted(task)
+  }
+
+  const finishOrdenarLabel = async (label: string) => {
+    const pending = tasksMatchingLabel(planTasks, label).filter(
+      (t) => !t.is_completed && t.current_qty < t.total_qty,
+    )
+    for (const t of pending) {
+      await runToggleCompleted(t)
+    }
+  }
+
+  const undoOrdenarLabel = async (label: string) => {
+    const matches = tasksMatchingLabel(planTasks, label)
+    for (let i = matches.length - 1; i >= 0; i--) {
+      const t = matches[i]
+      if (t.current_qty > 0 || t.is_completed) {
+        await onDecrement(t)
+        return
+      }
+    }
   }
 
   const confirmCutAllMoldBatch = async () => {
@@ -1573,6 +1650,11 @@ export default function App() {
                               variant="rebel"
                               ordenarPlanchaHint={moldPlanchaHints.get(group.measureKey)}
                               ordenarPlancharMode
+                              listDayLabel={
+                                mergeAllListsActive && group.sources.length === 1
+                                  ? formatDayMonth(reportFechaById.get(group.sources[0].report_id) ?? '')
+                                  : undefined
+                              }
                             />
                           ))
                         : sortedMoldTasks.map((t) => (
@@ -1587,6 +1669,11 @@ export default function App() {
                               variant="rebel"
                               ordenarPlanchaHint={moldPlanchaHints.get(t.id)}
                               ordenarPlancharMode
+                              listDayLabel={
+                                mergeAllListsActive
+                                  ? formatDayMonth(reportFechaById.get(t.report_id) ?? '')
+                                  : undefined
+                              }
                             />
                           ))}
                     </section>
@@ -1603,8 +1690,12 @@ export default function App() {
                         busy={busyId !== null}
                         dismissedStripHeights={dismissedOrdenarStripHeights}
                         onToggleDismissStrip={toggleDismissOrdenarStrip}
-                        onIncrementTask={onIncrement}
-                        onDecrementTask={onDecrement}
+                        onFinishLabel={(label) => {
+                          void finishOrdenarLabel(label)
+                        }}
+                        onUndoLabel={(label) => {
+                          void undoOrdenarLabel(label)
+                        }}
                       />
                     </section>
                   ) : sortedMoldTasks.length === 0 ? (

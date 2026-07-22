@@ -95,6 +95,11 @@ export function TaskCard({
               Faltas
             </span>
           ) : null}
+          {isRectos ? (
+            <span className="cut-material-badge" title="Bordes rectos">
+              Rectos
+            </span>
+          ) : null}
           {listDayLabel ? (
             <span className="cut-list-day-label" title="Día de la lista">
               {listDayLabel}
@@ -208,6 +213,12 @@ export function TaskCard({
               <span className="nm-prod-task-faltas-tag" title="Cargado desde LISTA FALTAS">
                 {' '}
                 · Faltas
+              </span>
+            ) : null}
+            {isRectos ? (
+              <span className="nm-prod-task-faltas-tag" title="Bordes rectos">
+                {' '}
+                · Rectos
               </span>
             ) : null}
             <span className="nm-prod-task-separator">{showMeasureQtyLikeRectos ? ' ' : ' - '}</span>

@@ -10,7 +10,7 @@ import {
   todayIsoLocal,
 } from '../lib/date'
 import { formatSupabaseOrError } from '../lib/errors'
-import { fetchHubDispatchedCount, setHubDispatchedCount } from '../lib/hubDispatchedOrdersApi'
+import { fetchHubDispatchedCount, rememberDispatchedSave, setHubDispatchedCount } from '../lib/hubDispatchedOrdersApi'
 import type { HubUserRole } from '../lib/types'
 
 const CARGAR_PATH = '/pedidos-despachados/cargar'
@@ -59,10 +59,12 @@ export function HubDispatchedOrdersApp({
   const [draft, setDraft] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
   const loadSeqRef = useRef(0)
+  const draftDirtyRef = useRef(false)
 
   const applyDay = useCallback((next: string) => {
     const d = normalizeCalendarDate(next)
     if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return
+    draftDirtyRef.current = false
     setDay(d)
     setEditing(false)
     const u = new URL(window.location.href)
@@ -84,6 +86,7 @@ export function HubDispatchedOrdersApp({
       const n = await fetchHubDispatchedCount(forDay)
       if (seq !== loadSeqRef.current) return
       setCount(n)
+      if (!draftDirtyRef.current) setDraft(String(n))
     } catch (err: unknown) {
       if (seq !== loadSeqRef.current) return
       setError(formatSupabaseOrError(err))
@@ -117,6 +120,7 @@ export function HubDispatchedOrdersApp({
   }, [day])
 
   useEffect(() => {
+    draftDirtyRef.current = false
     setEditing(false)
     void loadCount(day)
   }, [day, loadCount])
@@ -129,15 +133,10 @@ export function HubDispatchedOrdersApp({
 
   useEffect(() => {
     if (!isAdmin || !configured || loading) return
-    setDraft(String(count))
+    if (!draftDirtyRef.current) setDraft(String(count))
     setEditing(true)
     setError(null)
-  }, [day, configured, isAdmin, loading])
-
-  useEffect(() => {
-    if (!editing || loading) return
-    setDraft(String(count))
-  }, [count, editing, loading])
+  }, [day, configured, isAdmin, loading, count])
 
   const closeEditor = () => {
     hubNavigate(`/pedidos-despachados?m=${day.slice(0, 7) || currentYearMonthLocal()}`)
@@ -153,15 +152,27 @@ export function HubDispatchedOrdersApp({
     setBusy(true)
     setError(null)
     loadSeqRef.current += 1
+    draftDirtyRef.current = false
     try {
       const saved = await setHubDispatchedCount(day, next)
-      setCount(saved)
-      setDraft('')
+      if (saved !== next) {
+        throw new Error(
+          `No se confirmó el guardado (esperaba ${next}, el servidor devolvió ${saved}). Probá de nuevo.`,
+        )
+      }
       const verified = await fetchHubDispatchedCount(day)
+      if (verified !== next) {
+        throw new Error(
+          `Se guardó mal el día (esperaba ${next}, quedó ${verified}). Probá de nuevo.`,
+        )
+      }
       setCount(verified)
+      setDraft(String(verified))
+      rememberDispatchedSave(day, verified)
       hubNavigate(`/pedidos-despachados?m=${day.slice(0, 7)}`)
     } catch (err: unknown) {
       setError(formatSupabaseOrError(err))
+      draftDirtyRef.current = true
       await loadCount(day, true)
     } finally {
       setBusy(false)
@@ -268,7 +279,10 @@ export function HubDispatchedOrdersApp({
               className="hub-dispatched-edit__input nm-hub-input field-input"
               value={draft}
               disabled={busy}
-              onChange={(e) => setDraft(e.target.value)}
+              onChange={(e) => {
+                draftDirtyRef.current = true
+                setDraft(e.target.value)
+              }}
               aria-label="Cantidad final de pedidos despachados"
             />
             <div className="hub-dispatched-edit__actions">

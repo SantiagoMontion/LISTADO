@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { HubBrandBar } from './HubBrandBar'
 import { HubDesktopNav } from './HubDesktopNav'
 import { HUB_NAV_EVENT, hubNavigate } from '../lib/hubNavigate'
@@ -12,6 +12,7 @@ import {
 } from '../lib/date'
 import { formatSupabaseOrError } from '../lib/errors'
 import {
+  consumeDispatchedSaveHint,
   fetchHubDispatchedCountsForMonth,
   sumHubDispatchedCounts,
 } from '../lib/hubDispatchedOrdersApi'
@@ -54,6 +55,7 @@ export function HubDispatchedStatsApp({
   const [counts, setCounts] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const loadSeqRef = useRef(0)
 
   const parsed = parseYearMonth(yearMonth)
   const grid = useMemo(
@@ -80,16 +82,23 @@ export function HubDispatchedStatsApp({
         setCounts({})
         return
       }
+      const seq = ++loadSeqRef.current
       setLoading(true)
       setError(null)
       try {
         const map = await fetchHubDispatchedCountsForMonth(ym)
+        if (seq !== loadSeqRef.current) return
+        const hint = consumeDispatchedSaveHint()
+        if (hint && hint.forDate.startsWith(ym)) {
+          map[hint.forDate] = hint.count
+        }
         setCounts(map)
       } catch (err: unknown) {
+        if (seq !== loadSeqRef.current) return
         setError(formatSupabaseOrError(err))
         setCounts({})
       } finally {
-        setLoading(false)
+        if (seq === loadSeqRef.current) setLoading(false)
       }
     },
     [configured],
@@ -105,6 +114,8 @@ export function HubDispatchedStatsApp({
       }
       const m = readMonthFromUrl() || currentYearMonthLocal()
       setYearMonth((prev) => (prev === m ? prev : m))
+      // Al volver desde “cargar” el mes suele ser el mismo: forzar refetch.
+      void loadMonth(m)
     }
     window.addEventListener('popstate', sync)
     window.addEventListener(HUB_NAV_EVENT, sync as EventListener)
@@ -113,7 +124,7 @@ export function HubDispatchedStatsApp({
       window.removeEventListener('popstate', sync)
       window.removeEventListener(HUB_NAV_EVENT, sync as EventListener)
     }
-  }, [])
+  }, [loadMonth])
 
   useEffect(() => {
     const u = new URL(window.location.href)
