@@ -1154,7 +1154,7 @@ export function HubTasksApp({
                   <th scope="col">Detalle</th>
                   <th scope="col">Estado</th>
                   <th scope="col">Pago</th>
-                  <th scope="col">Ver link</th>
+                  <th scope="col">Ver en Shopify</th>
                   <th scope="col" className="hub-tasks-table__col-delete">
                     <span className="nm-hub-sr-only">Eliminar</span>
                   </th>
@@ -1239,7 +1239,7 @@ export function HubTasksApp({
                               rel="noopener noreferrer"
                               aria-label={`Ver orden Shopify de ${t.title}`}
                             >
-                              Ver link
+                              Ver en Shopify
                             </a>
                           ) : (
                             <span
@@ -1251,7 +1251,7 @@ export function HubTasksApp({
                                   : 'Sin nº de orden en el título'
                               }
                             >
-                              Ver link
+                              Ver en Shopify
                             </span>
                           )}
                         </td>
