@@ -3172,8 +3172,11 @@ body:has(.nm-hub-app--cut-list) {
   flex: 0 0 auto;
 }
 
-.nm-hub-app--tasks .hub-tasks-table__shopify {
-  white-space: nowrap;
+.nm-hub-app--tasks .hub-tasks-table__payment-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .nm-hub-app--tasks .hub-tasks-table__row-actions {
@@ -3194,17 +3197,14 @@ body:has(.nm-hub-app--cut-list) {
   font-size: 0.72rem;
   font-weight: 700;
   text-decoration: none;
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  text-transform: none;
 }
 
 .nm-hub-app--tasks .hub-tasks-shopify-btn:hover {
   background: rgba(149, 191, 71, 0.24);
   color: #d4f59a;
-}
-
-.nm-hub-app--tasks .hub-tasks-shopify-missing {
-  color: #64748b;
 }
 
 .nm-hub-app--tasks .hub-tasks-status-select {
