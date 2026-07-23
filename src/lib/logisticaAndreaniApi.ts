@@ -116,7 +116,8 @@ function apiKey(): string {
 }
 
 function assertApiConfigured(): void {
-  if (apiBase() || import.meta.env.DEV) return
+  // '' = same-origin /api (Vite proxy en DEV, Vercel serverless en PROD)
+  if (apiBase() || import.meta.env.DEV || import.meta.env.PROD) return
   throw new LogisticsApiError(
     'Falta VITE_ANDREANI_API_URL en Vercel (URL de Railway) o ANDREANI_API_URL para el proxy. Redeploy.',
   )
@@ -402,4 +403,33 @@ export async function triggerDownloads(
     onProgress?.(filename, index, total)
     await downloadExportFile(filename)
   }
+}
+
+export type ResolvedShopifyOrder = {
+  order_id: number | string
+  order_name: string
+  shopify_url: string
+}
+
+/**
+ * Resuelve nº de orden → URL directa admin (mismo link que «Ver en Shopify» en logística).
+ * Usa el motor Andreani / Shopify ya configurado en Railway.
+ */
+export async function resolveShopifyOrderUrls(
+  orderNumbers: string[],
+): Promise<Record<string, ResolvedShopifyOrder>> {
+  const unique = [
+    ...new Set(
+      orderNumbers
+        .map((n) => n.trim().replace(/^#+/, ''))
+        .filter(Boolean),
+    ),
+  ]
+  if (unique.length === 0) return {}
+
+  const qs = encodeURIComponent(unique.join(','))
+  const data = await fetchApiJson<{ orders?: Record<string, ResolvedShopifyOrder> }>(
+    `/api/shopify/order-urls?names=${qs}`,
+  )
+  return data.orders ?? {}
 }

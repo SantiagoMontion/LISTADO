@@ -40,7 +40,8 @@ import {
   upsertMayoristaClient,
 } from '../lib/hubMayoristaClientsApi'
 import { HubMayoristaClientModal } from './HubMayoristaClientModal'
-import { shopifyOrderAdminUrl, taskHasOrderNumber } from '../lib/shopifyOrderUrl'
+import { parseShopifyOrderNumberFromTitle } from '../lib/shopifyOrderUrl'
+import { resolveShopifyOrderUrls } from '../lib/logisticaAndreaniApi'
 import type { HubTaskCreateType, NmHubMayoristaClient } from '../lib/types'
 
 const TASK_TYPE_LABEL: Record<HubTaskCreateType, string> = {
@@ -327,6 +328,8 @@ export function HubTasksApp({
   const [bulkDeleteSelectedIds, setBulkDeleteSelectedIds] = useState<Set<string>>(() => new Set())
   const [notesTask, setNotesTask] = useState<NmHubTask | null>(null)
   const [noteCounts, setNoteCounts] = useState<Record<string, number>>({})
+  /** nº orden → URL directa Shopify (misma que logística Andreani). */
+  const [shopifyUrlsByOrder, setShopifyUrlsByOrder] = useState<Record<string, string>>({})
 
   const [hubDataGen, setHubDataGen] = useState(0)
   useEffect(() => {
@@ -486,6 +489,38 @@ export function HubTasksApp({
   const assigneeRolesCreate = useMemo(() => getTaskAssigneeRolesForCreator(isAdmin), [isAdmin])
 
   const sorted = useMemo(() => sortTasksForList(rawTasks), [rawTasks])
+
+  const orderNumbersKey = useMemo(() => {
+    const nums = new Set<string>()
+    for (const t of rawTasks) {
+      const n = parseShopifyOrderNumberFromTitle(t.title ?? '')
+      if (n) nums.add(n)
+    }
+    return [...nums].sort().join(',')
+  }, [rawTasks])
+
+  useEffect(() => {
+    if (!orderNumbersKey) {
+      setShopifyUrlsByOrder({})
+      return
+    }
+    let cancelled = false
+    void resolveShopifyOrderUrls(orderNumbersKey.split(','))
+      .then((orders) => {
+        if (cancelled) return
+        const next: Record<string, string> = {}
+        for (const [key, row] of Object.entries(orders)) {
+          if (row?.shopify_url) next[key] = row.shopify_url
+        }
+        setShopifyUrlsByOrder(next)
+      })
+      .catch(() => {
+        if (!cancelled) setShopifyUrlsByOrder({})
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [orderNumbersKey])
 
   const filteredSorted = useMemo(() => {
     const q = taskQuery.trim().toLowerCase()
@@ -1131,7 +1166,8 @@ export function HubTasksApp({
                   const workflow = t.workflow_status ?? 'sin_ingresar'
                   const payment = t.payment_status ?? 'sin_pagar'
                   const completed = isHubTaskCompleted(t)
-                  const shopifyUrl = shopifyOrderAdminUrl(t.title)
+                  const orderNumber = parseShopifyOrderNumberFromTitle(t.title)
+                  const shopifyUrl = orderNumber ? (shopifyUrlsByOrder[orderNumber] ?? null) : null
                   const rowClass = `hub-tasks-table__row${completed ? ' hub-tasks-table__row--completed' : ' hub-tasks-table__row--pending'}`
                   return (
                     <Fragment key={t.id}>
@@ -1210,8 +1246,8 @@ export function HubTasksApp({
                               className="hub-tasks-shopify-btn hub-tasks-shopify-btn--disabled"
                               aria-disabled="true"
                               title={
-                                taskHasOrderNumber(t)
-                                  ? 'Configurá VITE_SHOPIFY_STORE_HANDLE'
+                                orderNumber
+                                  ? 'No se encontró la orden en Shopify'
                                   : 'Sin nº de orden en el título'
                               }
                             >

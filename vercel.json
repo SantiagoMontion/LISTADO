@@ -5,6 +5,10 @@
       "destination": "/api/andreani/logistics/:path*"
     },
     {
+      "source": "/api/shopify/:path*",
+      "destination": "/api/andreani/shopify/:path*"
+    },
+    {
       "source": "/api/health",
       "destination": "/api/andreani/health"
     },
