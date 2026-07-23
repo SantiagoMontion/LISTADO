@@ -42,14 +42,10 @@ describe('shopifyOrderAdminUrl', () => {
     expect(shopifyOrderAdminUrl('Juan 15000')).toBeNull()
   })
 
-  it('si hay store config, el query usa solo el número con # (no la frase)', () => {
+  it('con nº de orden, arma URL Notmid y query solo con #número', () => {
     const url = shopifyOrderAdminUrl('15704 Juan')
-    if (!url) {
-      // Sin VITE_SHOPIFY_STORE_HANDLE / DOMAIN en el entorno de test.
-      expect(url).toBeNull()
-      return
-    }
-    expect(url).toContain(`query=${encodeURIComponent('#15704')}`)
-    expect(url).not.toContain('Juan')
+    expect(url).toBe(
+      `https://admin.shopify.com/store/notmid/orders?query=${encodeURIComponent('#15704')}`,
+    )
   })
 })

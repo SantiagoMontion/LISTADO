@@ -1,6 +1,7 @@
 /**
  * URL al admin de Shopify para buscar una orden por número.
  * Configurar VITE_SHOPIFY_STORE_HANDLE (ej. notmid) o VITE_SHOPIFY_STORE_DOMAIN.
+ * Si no hay env, usa el handle Notmid por defecto.
  *
  * Títulos de tareas suelen ser: "15000", "#15000", "15000 Juan", "#15704 rehacer borde".
  * Por ahora los nros de orden son de 5 cifras (~15000–16000).
@@ -38,7 +39,8 @@ export function shopifyOrderAdminUrl(orderRaw: string): string | null {
     return `https://${host}/admin/orders?query=${query}`
   }
 
-  return null
+  // Sin env (p. ej. Vercel sin variable), default Notmid para que el botón no quede muerto.
+  return `https://admin.shopify.com/store/notmid/orders?query=${query}`
 }
 
 /** True si el título empieza con un nº de orden de 5 cifras (con o sin #). */
