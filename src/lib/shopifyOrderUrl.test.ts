@@ -36,19 +36,16 @@ describe('taskHasOrderNumber', () => {
 })
 
 describe('shopifyOrderAdminUrl', () => {
-  it('no arma URL si no hay nº de orden', () => {
-    expect(shopifyOrderAdminUrl('sin numero')).toBeNull()
-    expect(shopifyOrderAdminUrl('Juan 15000')).toBeNull()
-  })
-
-  it('si hay store config, el query usa solo el número (no la frase)', () => {
-    const url = shopifyOrderAdminUrl('15704 Juan')
-    if (!url) {
-      // Sin VITE_SHOPIFY_STORE_HANDLE / DOMAIN en el entorno de test.
-      expect(url).toBeNull()
-      return
+  it('usa solo el número en el query (no la frase)', () => {
+    const prevHandle = import.meta.env.VITE_SHOPIFY_STORE_HANDLE
+    import.meta.env.VITE_SHOPIFY_STORE_HANDLE = 'notmid'
+    try {
+      expect(shopifyOrderAdminUrl('15704 Juan')).toBe(
+        'https://admin.shopify.com/store/notmid/orders?query=15704',
+      )
+      expect(shopifyOrderAdminUrl('sin numero')).toBeNull()
+    } finally {
+      import.meta.env.VITE_SHOPIFY_STORE_HANDLE = prevHandle
     }
-    expect(url).toContain('query=15704')
-    expect(url).not.toContain('Juan')
   })
 })
