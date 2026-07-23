@@ -1,7 +1,6 @@
 /**
  * URL al admin de Shopify para buscar una orden por número.
- * Configurar VITE_SHOPIFY_STORE_HANDLE (ej. notmid) o VITE_SHOPIFY_STORE_DOMAIN.
- * Si no hay env, usa el handle Notmid por defecto.
+ * Mismo store que NOT-ANDREANI: kw0f4u-ji.myshopify.com → handle kw0f4u-ji.
  *
  * Títulos de tareas suelen ser: "15000", "#15000", "15000 Juan", "#15704 rehacer borde".
  * Por ahora los nros de orden son de 5 cifras (~15000–16000).
@@ -19,28 +18,33 @@ export function parseShopifyOrderNumberFromTitle(title: string): string | null {
   return match[1]
 }
 
+/** Handle admin.shopify.com/store/{slug} — igual que NOT-ANDREANI `shopify_admin_order_url`. */
+function resolveShopifyStoreHandle(): string {
+  const handle = (import.meta.env.VITE_SHOPIFY_STORE_HANDLE ?? '').trim()
+  if (handle) return handle
+
+  const domain = (import.meta.env.VITE_SHOPIFY_STORE_DOMAIN ?? '')
+    .trim()
+    .replace(/^https?:\/\//, '')
+    .replace(/\/$/, '')
+  if (domain) {
+    const slug = domain.split('.')[0]?.trim()
+    if (slug) return slug
+  }
+
+  // Default alineado con NOT-ANDREANI (SHOPIFY_STORE_DOMAIN=kw0f4u-ji.myshopify.com)
+  return 'kw0f4u-ji'
+}
+
 /** Arma el link de admin usando solo el nº de orden parseado del título. */
 export function shopifyOrderAdminUrl(orderRaw: string): string | null {
   const orderQuery = parseShopifyOrderNumberFromTitle(orderRaw)
   if (!orderQuery) return null
 
-  const handle = (import.meta.env.VITE_SHOPIFY_STORE_HANDLE ?? '').trim()
-  const domain = (import.meta.env.VITE_SHOPIFY_STORE_DOMAIN ?? '').trim().replace(/^https?:\/\//, '')
-
+  const storeHandle = resolveShopifyStoreHandle()
   // Shopify usa el nombre de orden con # (ej. #15704).
   const query = encodeURIComponent(`#${orderQuery}`)
-
-  if (handle) {
-    return `https://admin.shopify.com/store/${handle}/orders?query=${query}`
-  }
-
-  if (domain) {
-    const host = domain.replace(/\/$/, '')
-    return `https://${host}/admin/orders?query=${query}`
-  }
-
-  // Sin env (p. ej. Vercel sin variable), default Notmid para que el botón no quede muerto.
-  return `https://admin.shopify.com/store/notmid/orders?query=${query}`
+  return `https://admin.shopify.com/store/${storeHandle}/orders?query=${query}`
 }
 
 /** True si el título empieza con un nº de orden de 5 cifras (con o sin #). */

@@ -42,10 +42,10 @@ describe('shopifyOrderAdminUrl', () => {
     expect(shopifyOrderAdminUrl('Juan 15000')).toBeNull()
   })
 
-  it('con nº de orden, arma URL Notmid y query solo con #número', () => {
+  it('con nº de orden, arma URL con handle Andreani (kw0f4u-ji) y query #número', () => {
     const url = shopifyOrderAdminUrl('15704 Juan')
     expect(url).toBe(
-      `https://admin.shopify.com/store/notmid/orders?query=${encodeURIComponent('#15704')}`,
+      `https://admin.shopify.com/store/kw0f4u-ji/orders?query=${encodeURIComponent('#15704')}`,
     )
   })
 })
