@@ -1,32 +1,15 @@
 /**
- * URL al admin de Shopify para buscar una orden por número.
- * Configurar VITE_SHOPIFY_STORE_HANDLE (ej. notmid) o VITE_SHOPIFY_STORE_DOMAIN.
- *
- * Títulos de tareas suelen ser: "15000", "15000 Juan", "#15704 rehacer borde".
- * Por ahora los nros de orden son de 5 cifras (~15000–16000).
+ * URL al admin de Shopify para buscar una orden por número/nombre.
+ * Configurar VITE_SHOPIFY_STORE_HANDLE (ej. notmid) o VITE_SHOPIFY_STORE_DOMAIN (ej. notmid.myshopify.com).
  */
-
-/** Extrae el nº de orden de 5 cifras al inicio del título (opcional # y frase después). */
-export function parseShopifyOrderNumberFromTitle(title: string): string | null {
-  const raw = (title ?? '').trim()
-  if (!raw) return null
-
-  // #15000 | 15000 | 15000 Juan | 15000 - rehacer | 15000: nota
-  const match = raw.match(/^#?(\d{5})(?!\d)/)
-  if (!match) return null
-
-  return match[1]
-}
-
-/** Arma el link de admin usando solo el nº de orden parseado del título. */
 export function shopifyOrderAdminUrl(orderRaw: string): string | null {
-  const orderQuery = parseShopifyOrderNumberFromTitle(orderRaw)
-  if (!orderQuery) return null
+  const order = orderRaw.trim().replace(/^#+/, '')
+  if (!order) return null
 
   const handle = (import.meta.env.VITE_SHOPIFY_STORE_HANDLE ?? '').trim()
   const domain = (import.meta.env.VITE_SHOPIFY_STORE_DOMAIN ?? '').trim().replace(/^https?:\/\//, '')
 
-  const query = encodeURIComponent(orderQuery)
+  const query = encodeURIComponent(order.startsWith('#') ? order : order)
 
   if (handle) {
     return `https://admin.shopify.com/store/${handle}/orders?query=${query}`
@@ -40,10 +23,10 @@ export function shopifyOrderAdminUrl(orderRaw: string): string | null {
   return null
 }
 
-/** True si el título empieza con un nº de orden de 5 cifras. */
 export function taskHasOrderNumber(task: {
   task_type?: string | null
   title?: string | null
 }): boolean {
-  return Boolean(parseShopifyOrderNumberFromTitle(task.title ?? ''))
+  if (task.task_type !== 'rehacer' && task.task_type !== 'devolucion') return false
+  return Boolean((task.title ?? '').trim())
 }
