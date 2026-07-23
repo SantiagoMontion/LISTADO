@@ -3107,8 +3107,32 @@ body:has(.nm-hub-app--cut-list) {
   color: #e2e8f0;
 }
 
-.nm-hub-app--tasks .hub-tasks-table__row:nth-child(even) td {
-  background: rgba(255, 255, 255, 0.02);
+.nm-hub-app--tasks .hub-tasks-table__row--pending td {
+  background: rgba(56, 189, 248, 0.055);
+}
+
+.nm-hub-app--tasks .hub-tasks-table__row--pending .hub-tasks-table__title {
+  color: #f1f5f9;
+}
+
+.nm-hub-app--tasks .hub-tasks-table__row--completed td {
+  background: rgba(15, 23, 42, 0.25);
+  color: #94a3b8;
+  opacity: 0.62;
+}
+
+.nm-hub-app--tasks .hub-tasks-table__row--completed .task-type-badge,
+.nm-hub-app--tasks .hub-tasks-table__row--completed .hub-tasks-status-select,
+.nm-hub-app--tasks .hub-tasks-table__row--completed .hub-tasks-shopify-btn,
+.nm-hub-app--tasks .hub-tasks-table__row--completed .hub-tasks-table__detail-btn,
+.nm-hub-app--tasks .hub-tasks-table__row--completed .btn-task-notes,
+.nm-hub-app--tasks .hub-tasks-table__row--completed .btn-delete-task {
+  filter: saturate(0.45);
+  opacity: 0.85;
+}
+
+.nm-hub-app--tasks .hub-tasks-table__detail-row--completed td {
+  opacity: 0.62;
 }
 
 .nm-hub-app--tasks .hub-tasks-table__title {
@@ -3196,11 +3220,21 @@ body:has(.nm-hub-app--cut-list) {
   text-decoration: none;
   letter-spacing: 0.3px;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .nm-hub-app--tasks .hub-tasks-shopify-btn:hover {
   background: rgba(149, 191, 71, 0.24);
   color: #d4f59a;
+}
+
+.nm-hub-app--tasks .hub-tasks-shopify-btn--disabled {
+  border-color: rgba(100, 116, 139, 0.35);
+  background: rgba(71, 85, 105, 0.18);
+  color: #64748b;
+  cursor: default;
+  pointer-events: none;
+  user-select: none;
 }
 
 .nm-hub-app--tasks .hub-tasks-shopify-missing {

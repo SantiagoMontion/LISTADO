@@ -11,7 +11,7 @@ export interface HubDashboardStats {
   /** Día ISO (local) sobre el que agrupan las métricas de tareas hub. */
   day: string
   pendingCutItems: number
-  /** Tareas hub pendientes del día (`for_date`, sin `executed_at`). */
+  /** Tareas a realizar: sin ingresar + pago (sin filtrar por día). */
   pendingHubTasks: number
   /** Pendientes del mismo día con prioridad urgente (`importance = urgent`). */
   urgentHubTasks: number
@@ -41,8 +41,8 @@ export async function fetchHubDashboardStats(
       sb
         .from('nm_hub_tasks')
         .select('id', { count: 'exact', head: true })
-        .eq('for_date', day)
-        .is('executed_at', null),
+        .eq('workflow_status', 'sin_ingresar')
+        .eq('payment_status', 'pago'),
       sb
         .from('nm_hub_tasks')
         .select('id', { count: 'exact', head: true })

@@ -236,9 +236,19 @@ function replaceListPanelUrl() {
   window.dispatchEvent(new CustomEvent(HUB_NAV_EVENT))
 }
 
-/** Más nuevas arriba (por creación). */
-function sortTasksNewestFirst(list: NmHubTask[]): NmHubTask[] {
-  return [...list].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
+/** Completada: enviado + pago. */
+function isHubTaskCompleted(t: NmHubTask): boolean {
+  return (t.workflow_status ?? 'sin_ingresar') === 'enviado' && (t.payment_status ?? 'sin_pagar') === 'pago'
+}
+
+/** Pendientes arriba (más nuevas primero); completadas abajo (más nuevas primero). */
+function sortTasksForList(list: NmHubTask[]): NmHubTask[] {
+  return [...list].sort((a, b) => {
+    const aDone = isHubTaskCompleted(a) ? 1 : 0
+    const bDone = isHubTaskCompleted(b) ? 1 : 0
+    if (aDone !== bDone) return aDone - bDone
+    return Date.parse(b.created_at) - Date.parse(a.created_at)
+  })
 }
 
 function TaskThumbnails({ paths, rebel = false }: { paths: string[]; rebel?: boolean }) {
@@ -475,7 +485,7 @@ export function HubTasksApp({
 
   const assigneeRolesCreate = useMemo(() => getTaskAssigneeRolesForCreator(isAdmin), [isAdmin])
 
-  const sorted = useMemo(() => sortTasksNewestFirst(rawTasks), [rawTasks])
+  const sorted = useMemo(() => sortTasksForList(rawTasks), [rawTasks])
 
   const filteredSorted = useMemo(() => {
     const q = taskQuery.trim().toLowerCase()
@@ -1109,7 +1119,7 @@ export function HubTasksApp({
                   <th scope="col">Detalle</th>
                   <th scope="col">Estado</th>
                   <th scope="col">Pago</th>
-                  <th scope="col">Orden</th>
+                  <th scope="col">Ver link</th>
                   <th scope="col" className="hub-tasks-table__col-delete">
                     <span className="nm-hub-sr-only">Eliminar</span>
                   </th>
@@ -1120,10 +1130,12 @@ export function HubTasksApp({
                   const expanded = expandedDetailIds.has(t.id)
                   const workflow = t.workflow_status ?? 'sin_ingresar'
                   const payment = t.payment_status ?? 'sin_pagar'
-                  const shopifyUrl = taskHasOrderNumber(t) ? shopifyOrderAdminUrl(t.title) : null
+                  const completed = isHubTaskCompleted(t)
+                  const shopifyUrl = shopifyOrderAdminUrl(t.title)
+                  const rowClass = `hub-tasks-table__row${completed ? ' hub-tasks-table__row--completed' : ' hub-tasks-table__row--pending'}`
                   return (
                     <Fragment key={t.id}>
-                      <tr className="hub-tasks-table__row">
+                      <tr className={rowClass}>
                         <td>
                           {t.task_type ? (
                             <span className={`task-type-badge task-type-badge--${t.task_type}`}>
@@ -1189,18 +1201,22 @@ export function HubTasksApp({
                               href={shopifyUrl}
                               target="_blank"
                               rel="noopener noreferrer"
+                              aria-label={`Ver orden Shopify de ${t.title}`}
                             >
-                              Shopify
+                              Ver link
                             </a>
-                          ) : taskHasOrderNumber(t) ? (
-                            <span
-                              className="hub-tasks-shopify-missing"
-                              title="Configurá VITE_SHOPIFY_STORE_HANDLE"
-                            >
-                              —
-                            </span>
                           ) : (
-                            '—'
+                            <span
+                              className="hub-tasks-shopify-btn hub-tasks-shopify-btn--disabled"
+                              aria-disabled="true"
+                              title={
+                                taskHasOrderNumber(t)
+                                  ? 'Configurá VITE_SHOPIFY_STORE_HANDLE'
+                                  : 'Sin nº de orden en el título'
+                              }
+                            >
+                              Ver link
+                            </span>
                           )}
                         </td>
                         <td className="hub-tasks-table__col-delete">
@@ -1250,7 +1266,9 @@ export function HubTasksApp({
                         </td>
                       </tr>
                       {expanded && t.body ? (
-                        <tr className="hub-tasks-table__detail-row">
+                        <tr
+                          className={`hub-tasks-table__detail-row${completed ? ' hub-tasks-table__detail-row--completed' : ''}`}
+                        >
                           <td colSpan={7}>
                             <div className="hub-tasks-table__detail-body">{t.body}</div>
                             {(t.image_paths?.length ?? 0) > 0 ? (
