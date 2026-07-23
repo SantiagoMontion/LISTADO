@@ -2,7 +2,7 @@
  * URL al admin de Shopify para buscar una orden por número.
  * Configurar VITE_SHOPIFY_STORE_HANDLE (ej. notmid) o VITE_SHOPIFY_STORE_DOMAIN.
  *
- * Títulos de tareas suelen ser: "15000", "#15000", "15000 Juan", "#15704 rehacer borde".
+ * Títulos de tareas suelen ser: "15000", "15000 Juan", "#15704 rehacer borde".
  * Por ahora los nros de orden son de 5 cifras (~15000–16000).
  */
 
@@ -11,8 +11,8 @@ export function parseShopifyOrderNumberFromTitle(title: string): string | null {
   const raw = (title ?? '').trim()
   if (!raw) return null
 
-  // #15000 | # 15000 | 15000 | 15000 Juan | #15704 rehacer
-  const match = raw.match(/^#?\s*(\d{5})(?!\d)/)
+  // #15000 | 15000 | 15000 Juan | 15000 - rehacer | 15000: nota
+  const match = raw.match(/^#?(\d{5})(?!\d)/)
   if (!match) return null
 
   return match[1]
@@ -26,8 +26,7 @@ export function shopifyOrderAdminUrl(orderRaw: string): string | null {
   const handle = (import.meta.env.VITE_SHOPIFY_STORE_HANDLE ?? '').trim()
   const domain = (import.meta.env.VITE_SHOPIFY_STORE_DOMAIN ?? '').trim().replace(/^https?:\/\//, '')
 
-  // Shopify usa el nombre de orden con # (ej. #15704).
-  const query = encodeURIComponent(`#${orderQuery}`)
+  const query = encodeURIComponent(orderQuery)
 
   if (handle) {
     return `https://admin.shopify.com/store/${handle}/orders?query=${query}`
@@ -41,7 +40,7 @@ export function shopifyOrderAdminUrl(orderRaw: string): string | null {
   return null
 }
 
-/** True si el título empieza con un nº de orden de 5 cifras (con o sin #). */
+/** True si el título empieza con un nº de orden de 5 cifras. */
 export function taskHasOrderNumber(task: {
   task_type?: string | null
   title?: string | null

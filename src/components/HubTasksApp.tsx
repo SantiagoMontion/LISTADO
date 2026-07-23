@@ -40,7 +40,7 @@ import {
   upsertMayoristaClient,
 } from '../lib/hubMayoristaClientsApi'
 import { HubMayoristaClientModal } from './HubMayoristaClientModal'
-import { shopifyOrderAdminUrl } from '../lib/shopifyOrderUrl'
+import { shopifyOrderAdminUrl, taskHasOrderNumber } from '../lib/shopifyOrderUrl'
 import type { HubTaskCreateType, NmHubMayoristaClient } from '../lib/types'
 
 const TASK_TYPE_LABEL: Record<HubTaskCreateType, string> = {
@@ -1109,6 +1109,7 @@ export function HubTasksApp({
                   <th scope="col">Detalle</th>
                   <th scope="col">Estado</th>
                   <th scope="col">Pago</th>
+                  <th scope="col">Orden</th>
                   <th scope="col" className="hub-tasks-table__col-delete">
                     <span className="nm-hub-sr-only">Eliminar</span>
                   </th>
@@ -1119,7 +1120,7 @@ export function HubTasksApp({
                   const expanded = expandedDetailIds.has(t.id)
                   const workflow = t.workflow_status ?? 'sin_ingresar'
                   const payment = t.payment_status ?? 'sin_pagar'
-                  const shopifyUrl = shopifyOrderAdminUrl(t.title)
+                  const shopifyUrl = taskHasOrderNumber(t) ? shopifyOrderAdminUrl(t.title) : null
                   return (
                     <Fragment key={t.id}>
                       <tr className="hub-tasks-table__row">
@@ -1164,34 +1165,43 @@ export function HubTasksApp({
                             ))}
                           </select>
                         </td>
-                        <td className="hub-tasks-table__payment">
-                          <div className="hub-tasks-table__payment-cell">
-                            <select
-                              className={`hub-tasks-status-select hub-tasks-payment-select--${payment}`}
-                              value={payment}
-                              disabled={busy || readOnly}
-                              aria-label={`Pago de ${t.title}`}
-                              onChange={(e) =>
-                                void onPaymentChange(t, e.target.value as HubTaskPaymentStatus)
-                              }
+                        <td>
+                          <select
+                            className={`hub-tasks-status-select hub-tasks-payment-select--${payment}`}
+                            value={payment}
+                            disabled={busy || readOnly}
+                            aria-label={`Pago de ${t.title}`}
+                            onChange={(e) =>
+                              void onPaymentChange(t, e.target.value as HubTaskPaymentStatus)
+                            }
+                          >
+                            {PAYMENT_STATUS_OPTIONS.map((opt) => (
+                              <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="hub-tasks-table__shopify">
+                          {shopifyUrl ? (
+                            <a
+                              className="hub-tasks-shopify-btn"
+                              href={shopifyUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
                             >
-                              {PAYMENT_STATUS_OPTIONS.map((opt) => (
-                                <option key={opt.value} value={opt.value}>
-                                  {opt.label}
-                                </option>
-                              ))}
-                            </select>
-                            {shopifyUrl ? (
-                              <a
-                                className="hub-tasks-shopify-btn"
-                                href={shopifyUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                ir a shopify
-                              </a>
-                            ) : null}
-                          </div>
+                              Shopify
+                            </a>
+                          ) : taskHasOrderNumber(t) ? (
+                            <span
+                              className="hub-tasks-shopify-missing"
+                              title="Configurá VITE_SHOPIFY_STORE_HANDLE"
+                            >
+                              —
+                            </span>
+                          ) : (
+                            '—'
+                          )}
                         </td>
                         <td className="hub-tasks-table__col-delete">
                           <div className="hub-tasks-table__row-actions">
