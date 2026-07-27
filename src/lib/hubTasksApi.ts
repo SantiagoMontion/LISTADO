@@ -44,6 +44,12 @@ function normalizePaymentStatus(raw: unknown): HubTaskPaymentStatus {
   return 'sin_pagar'
 }
 
+function normalizeTrackingUrl(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null
+  const t = raw.trim()
+  return t || null
+}
+
 function coerceHubTask(row: Record<string, unknown>): NmHubTask {
   return {
     ...(row as unknown as NmHubTask),
@@ -51,6 +57,7 @@ function coerceHubTask(row: Record<string, unknown>): NmHubTask {
     task_type: normalizeTaskType(row.task_type),
     workflow_status: normalizeWorkflowStatus(row.workflow_status),
     payment_status: normalizePaymentStatus(row.payment_status),
+    tracking_url: normalizeTrackingUrl(row.tracking_url),
   }
 }
 
@@ -188,6 +195,21 @@ export async function updateHubTaskPaymentStatus(
   if (error) throw error
   const parsed = parseRpcTaskRow(data)
   if (!parsed) throw new Error('No se pudo actualizar el pago.')
+  return parsed
+}
+
+export async function updateHubTaskTrackingUrl(
+  taskId: string,
+  trackingUrl: string | null,
+): Promise<NmHubTask> {
+  const sb = requireClient()
+  const { data, error } = await sb.rpc('nm_hub_set_task_tracking_url', {
+    p_task_id: taskId,
+    p_tracking_url: trackingUrl?.trim() || null,
+  })
+  if (error) throw error
+  const parsed = parseRpcTaskRow(data)
+  if (!parsed) throw new Error('No se pudo guardar el link de seguimiento.')
   return parsed
 }
 

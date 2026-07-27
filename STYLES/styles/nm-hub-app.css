@@ -2860,7 +2860,15 @@ body:has(.nm-hub-app--cut-list) {
   line-height: 1.2;
   text-transform: uppercase;
   cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  position: relative;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease,
+    opacity 0.15s ease,
+    box-shadow 0.15s ease,
+    filter 0.15s ease;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -2947,38 +2955,109 @@ body:has(.nm-hub-app--cut-list) {
 }
 
 .nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-btn--active {
-  box-shadow: 0 0 10px rgba(70, 207, 248, 0.12);
+  transform: scale(1.06);
+  font-weight: 800;
+  box-shadow: 0 0 0 2px rgba(248, 250, 252, 0.35), 0 0 16px rgba(70, 207, 248, 0.28);
+  z-index: 1;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-btn--dimmed {
+  opacity: 0.42;
+  filter: saturate(0.55);
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-row--has-selection .task-create-preset-btn--active {
+  opacity: 1;
+  filter: none;
 }
 
 .nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-btn--falta.task-create-preset-btn--active {
-  background-color: rgba(251, 191, 36, 0.28);
-  border-color: rgba(251, 191, 36, 0.65);
-  color: #fde68a;
-  box-shadow: 0 0 10px rgba(251, 191, 36, 0.15);
+  background-color: rgba(251, 191, 36, 0.42);
+  border-color: #fbbf24;
+  color: #fff7ed;
+  box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.45), 0 0 14px rgba(251, 191, 36, 0.35);
 }
 
 .nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-btn--mayorista.task-create-preset-btn--active {
-  background-color: rgba(248, 113, 113, 0.3);
-  border-color: rgba(248, 113, 113, 0.7);
-  box-shadow: 0 0 10px rgba(248, 113, 113, 0.18);
+  background-color: rgba(248, 113, 113, 0.45);
+  border-color: #f87171;
+  color: #fff;
+  box-shadow: 0 0 0 2px rgba(248, 113, 113, 0.5), 0 0 14px rgba(248, 113, 113, 0.35);
 }
 
 .nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-btn--rehacer.task-create-preset-btn--active {
-  background-color: rgba(251, 146, 60, 0.3);
-  border-color: rgba(251, 146, 60, 0.7);
-  box-shadow: 0 0 10px rgba(251, 146, 60, 0.18);
+  background-color: rgba(251, 146, 60, 0.45);
+  border-color: #fb923c;
+  color: #fff7ed;
+  box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.5), 0 0 14px rgba(251, 146, 60, 0.35);
 }
 
 .nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-btn--canje.task-create-preset-btn--active {
-  background-color: rgba(192, 132, 252, 0.3);
-  border-color: rgba(192, 132, 252, 0.7);
-  box-shadow: 0 0 10px rgba(192, 132, 252, 0.18);
+  background-color: rgba(192, 132, 252, 0.45);
+  border-color: #c084fc;
+  color: #fff;
+  box-shadow: 0 0 0 2px rgba(192, 132, 252, 0.5), 0 0 14px rgba(192, 132, 252, 0.35);
 }
 
 .nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-btn--devolucion.task-create-preset-btn--active {
-  background-color: rgba(250, 204, 21, 0.24);
-  border-color: rgba(250, 204, 21, 0.7);
-  box-shadow: 0 0 10px rgba(250, 204, 21, 0.15);
+  background-color: rgba(250, 204, 21, 0.4);
+  border-color: #facc15;
+  color: #1e293b;
+  box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.55), 0 0 14px rgba(250, 204, 21, 0.3);
+}
+
+.nm-hub-app--tasks .hub-tasks-table__tracking {
+  white-space: nowrap;
+  min-width: 110px;
+}
+
+.nm-hub-app--tasks .hub-tasks-tracking-cell {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.nm-hub-app--tasks .hub-tasks-tracking-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 7px;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  background: rgba(56, 189, 248, 0.12);
+  color: #7dd3fc;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.25px;
+}
+
+.nm-hub-app--tasks .hub-tasks-tracking-link:hover {
+  background: rgba(56, 189, 248, 0.22);
+  color: #bae6fd;
+}
+
+.nm-hub-app--tasks .hub-tasks-tracking-edit {
+  margin: 0;
+  padding: 4px 8px;
+  border-radius: 7px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(100, 116, 139, 0.16);
+  color: #cbd5e1;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.nm-hub-app--tasks .hub-tasks-tracking-edit:hover:not(:disabled) {
+  background: rgba(100, 116, 139, 0.28);
+}
+
+.nm-hub-app--tasks .hub-tasks-tracking-edit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-title-wrap {
@@ -3097,6 +3176,59 @@ body:has(.nm-hub-app--cut-list) {
   font-variant-numeric: tabular-nums;
   color: #94a3b8;
   font-size: 0.78rem;
+}
+
+.nm-hub-app--tasks .hub-tasks-table__images {
+  min-width: 52px;
+  vertical-align: middle;
+}
+
+.nm-hub-app--tasks .task-media-attachment--compact {
+  margin-top: 0;
+  gap: 4px;
+}
+
+.nm-hub-app--tasks .task-thumb-rebel--compact,
+.nm-hub-app--tasks .nm-hub-thumb-placeholder--compact {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .upload-zone-rebel--dragover {
+  border-color: rgba(56, 189, 248, 0.7) !important;
+  background: rgba(56, 189, 248, 0.1) !important;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .upload-zone-hint {
+  margin: 0 0 10px;
+  text-align: center;
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .nm-hub-create-file-list--previews {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 0;
+  list-style: none;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .nm-hub-create-file-row--preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .nm-hub-create-file-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  flex: 0 0 auto;
 }
 
 .nm-hub-app--tasks .task-create-client-choice__row {

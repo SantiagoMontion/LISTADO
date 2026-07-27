@@ -115,6 +115,8 @@ export interface NmHubTask {
   workflow_status?: HubTaskWorkflowStatus
   /** Estado de pago (pago / sin_pagar). */
   payment_status?: HubTaskPaymentStatus
+  /** URL de seguimiento (Andreani u otro). */
+  tracking_url?: string | null
   importance: HubImportance
   /** Día calendario (YYYY-MM-DD) al que pertenece la tarea en el taller. */
   for_date?: string

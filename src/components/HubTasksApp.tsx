@@ -10,6 +10,7 @@ import {
   signedImageUrl,
   updateHubTaskWorkflowStatus,
   updateHubTaskPaymentStatus,
+  updateHubTaskTrackingUrl,
 } from '../lib/hubTasksApi'
 import { formatSupabaseOrError } from '../lib/errors'
 import {
@@ -107,6 +108,13 @@ function formatTaskCreatedAt(iso: string): string {
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
 }
 
+function normalizeExternalUrl(raw: string): string | null {
+  const t = raw.trim()
+  if (!t) return null
+  if (/^https?:\/\//i.test(t)) return t
+  return `https://${t}`
+}
+
 function tasksYearMonthFromLocation(): string {
   if (typeof window === 'undefined') return currentYearMonthLocal()
   const m = new URLSearchParams(window.location.search).get('m')
@@ -183,9 +191,18 @@ function sortTasksForList(list: NmHubTask[]): NmHubTask[] {
   })
 }
 
-function TaskThumbnails({ paths, rebel = false }: { paths: string[]; rebel?: boolean }) {
+function TaskThumbnails({
+  paths,
+  rebel = false,
+  compact = false,
+}: {
+  paths: string[]
+  rebel?: boolean
+  compact?: boolean
+}) {
   const [urls, setUrls] = useState<Record<string, string>>({})
   const [lightbox, setLightbox] = useState<string | null>(null)
+  const pathsKey = paths.join('|')
 
   useEffect(() => {
     let cancelled = false
@@ -201,12 +218,22 @@ function TaskThumbnails({ paths, rebel = false }: { paths: string[]; rebel?: boo
     return () => {
       cancelled = true
     }
-  }, [paths])
+  }, [pathsKey])
 
   if (paths.length === 0) return null
-  const wrapCls = rebel ? 'task-media-attachment' : 'nm-hub-task-images'
+  const wrapCls = [
+    rebel ? 'task-media-attachment' : 'nm-hub-task-images',
+    compact ? 'task-media-attachment--compact' : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
   const btnCls = rebel ? 'task-thumb-hit' : 'nm-hub-thumb-btn'
-  const imgCls = rebel ? 'task-thumb-rebel' : 'nm-hub-thumb'
+  const imgCls = [
+    rebel ? 'task-thumb-rebel' : 'nm-hub-thumb',
+    compact ? 'task-thumb-rebel--compact' : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   return (
     <>
@@ -223,7 +250,11 @@ function TaskThumbnails({ paths, rebel = false }: { paths: string[]; rebel?: boo
               <img src={urls[p]} alt="" className={imgCls} />
             </button>
           ) : (
-            <span key={p} className="nm-hub-thumb-placeholder" aria-hidden />
+            <span
+              key={p}
+              className={`nm-hub-thumb-placeholder${compact ? ' nm-hub-thumb-placeholder--compact' : ''}`}
+              aria-hidden
+            />
           ),
         )}
       </div>
@@ -259,6 +290,8 @@ export function HubTasksApp({
   const [bulkDeleteSelectedIds, setBulkDeleteSelectedIds] = useState<Set<string>>(() => new Set())
   const [notesTask, setNotesTask] = useState<NmHubTask | null>(null)
   const [noteCounts, setNoteCounts] = useState<Record<string, number>>({})
+  const [trackingEditTask, setTrackingEditTask] = useState<NmHubTask | null>(null)
+  const [trackingDraft, setTrackingDraft] = useState('')
   /** nº orden → URL directa Shopify (misma que logística Andreani). */
   const [shopifyUrlsByOrder, setShopifyUrlsByOrder] = useState<Record<string, string>>({})
 
@@ -298,6 +331,8 @@ export function HubTasksApp({
   const taskCameraInputRef = useRef<HTMLInputElement>(null)
   const titleInputRef = useRef<HTMLInputElement>(null)
   const clientSuggestRef = useRef<HTMLDivElement>(null)
+  const [imageDragOver, setImageDragOver] = useState(false)
+  const [filePreviewUrls, setFilePreviewUrls] = useState<string[]>([])
   /** Evita que un fetch viejo pise tareas nuevas (realtime + mutación simultánea). */
   const tasksLoadSeqRef = useRef(0)
   const hubTasksRealtimeDebounceRef = useRef<number | null>(null)
@@ -308,11 +343,28 @@ export function HubTasksApp({
     suppressHubRealtimeUntilRef.current = Date.now() + 900
   }, [])
 
-  const appendTaskFilesFromInput = useCallback((e: ChangeEvent<HTMLInputElement>) => {
-    const picked = e.target.files ? Array.from(e.target.files) : []
-    if (picked.length > 0) setFiles((prev) => [...prev, ...picked])
-    e.target.value = ''
+  const appendImageFiles = useCallback((list: FileList | File[] | null | undefined) => {
+    if (!list) return
+    const images = Array.from(list).filter((f) => f.type.startsWith('image/'))
+    if (images.length === 0) return
+    setFiles((prev) => [...prev, ...images])
   }, [])
+
+  const appendTaskFilesFromInput = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      appendImageFiles(e.target.files)
+      e.target.value = ''
+    },
+    [appendImageFiles],
+  )
+
+  useEffect(() => {
+    const urls = files.map((f) => URL.createObjectURL(f))
+    setFilePreviewUrls(urls)
+    return () => {
+      for (const u of urls) URL.revokeObjectURL(u)
+    }
+  }, [files])
 
   const loadSilent = useCallback(async () => {
     const seq = ++tasksLoadSeqRef.current
@@ -585,6 +637,31 @@ export function HubTasksApp({
     }
   }
 
+  const openTrackingEditor = useCallback((t: NmHubTask) => {
+    setTrackingEditTask(t)
+    setTrackingDraft(t.tracking_url ?? '')
+    setError(null)
+  }, [])
+
+  const onSaveTrackingUrl = async () => {
+    if (readOnly || !trackingEditTask) return
+    setBusy(true)
+    setError(null)
+    markLocalHubMutation()
+    try {
+      const normalized = normalizeExternalUrl(trackingDraft)
+      const updated = await updateHubTaskTrackingUrl(trackingEditTask.id, normalized)
+      patchTaskLocal(updated)
+      setTrackingEditTask(null)
+      setTrackingDraft('')
+    } catch (err: unknown) {
+      setError(formatSupabaseOrError(err))
+      await loadSilent()
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const applyTaskType = useCallback((type: HubTaskCreateType) => {
     setTaskCreateType(type)
     setClientDni('')
@@ -664,6 +741,8 @@ export function HubTasksApp({
       taskTypeUsesClientFields(taskCreateType) && loadClientData === 'yes'
 
     try {
+      // Solo se recuerda cliente si el usuario eligió «Sí» y completó los datos.
+      // Con «No» / omitir: la tarea se crea sin upsert en mayorista_clients.
       if (shouldSaveClient) {
         const clientPayload = {
           full_name: titleDraft,
@@ -835,22 +914,27 @@ export function HubTasksApp({
             <span className="field-label" id="nm-hub-t-type-label">
               Tipo de tarea
             </span>
-            <div className="task-create-preset-row" role="group" aria-labelledby="nm-hub-t-type-label">
+            <div
+              className={`task-create-preset-row${taskCreateType ? ' task-create-preset-row--has-selection' : ''}`}
+              role="group"
+              aria-labelledby="nm-hub-t-type-label"
+            >
               {TASK_CREATE_TYPES.map((type) => (
                 <button
                   key={type}
                   type="button"
-                  className={`task-create-preset-btn task-create-preset-btn--${type}${taskCreateType === type ? ' task-create-preset-btn--active' : ''}`}
+                  className={`task-create-preset-btn task-create-preset-btn--${type}${taskCreateType === type ? ' task-create-preset-btn--active' : ''}${taskCreateType && taskCreateType !== type ? ' task-create-preset-btn--dimmed' : ''}`}
                   onClick={() => applyTaskType(type)}
                   disabled={busy}
                   aria-pressed={taskCreateType === type}
                 >
+                  {taskCreateType === type ? '✓ ' : ''}
                   {TASK_TYPE_LABEL[type]}
                 </button>
               ))}
               <button
                 type="button"
-                className="task-create-preset-btn task-create-preset-btn--crear-cliente"
+                className={`task-create-preset-btn task-create-preset-btn--crear-cliente${taskCreateType ? ' task-create-preset-btn--dimmed' : ''}`}
                 onClick={() => setClientModalOpen(true)}
                 disabled={busy}
               >
@@ -1046,10 +1130,38 @@ export function HubTasksApp({
               aria-labelledby="nm-hub-t-files-legend"
               onChange={appendTaskFilesFromInput}
             />
-            <div className="nm-hub-image-picker upload-zone-rebel" role="group" aria-labelledby="nm-hub-t-files-legend nm-hub-t-files-title">
+            <div
+              className={`nm-hub-image-picker upload-zone-rebel${imageDragOver ? ' upload-zone-rebel--dragover' : ''}`}
+              role="group"
+              aria-labelledby="nm-hub-t-files-legend nm-hub-t-files-title"
+              onDragEnter={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setImageDragOver(true)
+              }}
+              onDragOver={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setImageDragOver(true)
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                const related = e.relatedTarget as Node | null
+                if (related && e.currentTarget.contains(related)) return
+                setImageDragOver(false)
+              }}
+              onDrop={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setImageDragOver(false)
+                appendImageFiles(e.dataTransfer.files)
+              }}
+            >
               <p className="nm-hub-image-picker-title upload-zone-title" id="nm-hub-t-files-title">
                 Cargar imagen
               </p>
+              <p className="upload-zone-hint">Arrastrá imágenes acá, o elegí galería / cámara</p>
               <div className="nm-hub-image-picker-split upload-buttons-row">
                 <button
                   type="button"
@@ -1089,9 +1201,16 @@ export function HubTasksApp({
               </div>
             </div>
             {files.length > 0 ? (
-              <ul className="nm-hub-create-file-list" aria-label="Imágenes seleccionadas">
+              <ul className="nm-hub-create-file-list nm-hub-create-file-list--previews" aria-label="Imágenes seleccionadas">
                 {files.map((file, idx) => (
-                  <li key={`${file.name}-${file.size}-${file.lastModified}-${idx}`} className="nm-hub-create-file-row">
+                  <li key={`${file.name}-${file.size}-${file.lastModified}-${idx}`} className="nm-hub-create-file-row nm-hub-create-file-row--preview">
+                    {filePreviewUrls[idx] ? (
+                      <img
+                        src={filePreviewUrls[idx]}
+                        alt=""
+                        className="nm-hub-create-file-thumb"
+                      />
+                    ) : null}
                     <span className="nm-hub-create-file-name" title={file.name}>
                       {file.name}
                     </span>
@@ -1192,6 +1311,8 @@ export function HubTasksApp({
                   <th scope="col">Pago</th>
                   <th scope="col">Ver en Shopify</th>
                   <th scope="col">Creada</th>
+                  <th scope="col">Imagen</th>
+                  <th scope="col">Seguimiento</th>
                   <th scope="col" className="hub-tasks-table__col-delete">
                     <span className="nm-hub-sr-only">Eliminar</span>
                   </th>
@@ -1293,6 +1414,43 @@ export function HubTasksApp({
                           )}
                         </td>
                         <td className="hub-tasks-table__created">{formatTaskCreatedAt(t.created_at)}</td>
+                        <td className="hub-tasks-table__images">
+                          {completed && (t.image_paths?.length ?? 0) > 0 ? (
+                            <TaskThumbnails paths={t.image_paths ?? []} rebel compact />
+                          ) : (
+                            '—'
+                          )}
+                        </td>
+                        <td className="hub-tasks-table__tracking">
+                          {completed ? (
+                            <div className="hub-tasks-tracking-cell">
+                              {t.tracking_url ? (
+                                <a
+                                  className="hub-tasks-tracking-link"
+                                  href={t.tracking_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  Ver seguimiento
+                                </a>
+                              ) : null}
+                              {!readOnly ? (
+                                <button
+                                  type="button"
+                                  className="hub-tasks-tracking-edit"
+                                  disabled={busy}
+                                  onClick={() => openTrackingEditor(t)}
+                                >
+                                  {t.tracking_url ? 'Editar' : 'Cargar link'}
+                                </button>
+                              ) : t.tracking_url ? null : (
+                                '—'
+                              )}
+                            </div>
+                          ) : (
+                            '—'
+                          )}
+                        </td>
                         <td className="hub-tasks-table__col-delete">
                           <div className="hub-tasks-table__row-actions">
                             <button
@@ -1343,7 +1501,7 @@ export function HubTasksApp({
                         <tr
                           className={`hub-tasks-table__detail-row${completed ? ' hub-tasks-table__detail-row--completed' : ''}`}
                         >
-                          <td colSpan={8}>
+                          <td colSpan={10}>
                             <div className="hub-tasks-table__detail-body">{t.body}</div>
                             {(t.image_paths?.length ?? 0) > 0 ? (
                               <TaskThumbnails paths={t.image_paths ?? []} rebel />
@@ -1474,6 +1632,92 @@ export function HubTasksApp({
                   : bulkDeleteSelectedIds.size === 0
                     ? 'Eliminar'
                     : `Eliminar (${bulkDeleteSelectedIds.size})`}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {trackingEditTask ? (
+        <div
+          className="nm-prod-modal-backdrop"
+          role="presentation"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !busy) {
+              setTrackingEditTask(null)
+              setTrackingDraft('')
+            }
+          }}
+        >
+          <section className="nm-prod-modal" role="dialog" aria-modal="true" aria-labelledby="hub-tracking-title">
+            <h3 className="nm-prod-modal-title" id="hub-tracking-title">
+              Link de seguimiento
+            </h3>
+            <p className="nm-prod-modal-text">
+              Pegá el link de seguimiento de «{trackingEditTask.title}» (ej. Andreani).
+            </p>
+            <label className="nm-hub-sr-only" htmlFor="hub-tracking-url">
+              URL de seguimiento
+            </label>
+            <input
+              id="hub-tracking-url"
+              className="nm-hub-input field-input"
+              type="url"
+              inputMode="url"
+              placeholder="https://www.andreani.com/?numero=..."
+              value={trackingDraft}
+              onChange={(e) => setTrackingDraft(e.target.value)}
+              disabled={busy}
+              autoFocus
+            />
+            <div className="nm-prod-row" style={{ marginTop: '1rem' }}>
+              <button
+                type="button"
+                className="nm-prod-btn"
+                disabled={busy}
+                onClick={() => {
+                  setTrackingEditTask(null)
+                  setTrackingDraft('')
+                }}
+              >
+                Cancelar
+              </button>
+              {trackingEditTask.tracking_url || trackingDraft.trim() ? (
+                <button
+                  type="button"
+                  className="nm-prod-btn"
+                  disabled={busy}
+                  onClick={() => {
+                    setTrackingDraft('')
+                    void (async () => {
+                      if (readOnly || !trackingEditTask) return
+                      setBusy(true)
+                      setError(null)
+                      markLocalHubMutation()
+                      try {
+                        const updated = await updateHubTaskTrackingUrl(trackingEditTask.id, null)
+                        patchTaskLocal(updated)
+                        setTrackingEditTask(null)
+                        setTrackingDraft('')
+                      } catch (err: unknown) {
+                        setError(formatSupabaseOrError(err))
+                        await loadSilent()
+                      } finally {
+                        setBusy(false)
+                      }
+                    })()
+                  }}
+                >
+                  Quitar link
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="nm-prod-btn nm-prod-btn-primary"
+                disabled={busy}
+                onClick={() => void onSaveTrackingUrl()}
+              >
+                {busy ? 'Guardando…' : 'Guardar'}
               </button>
             </div>
           </section>
