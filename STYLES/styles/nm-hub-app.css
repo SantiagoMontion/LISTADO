@@ -3060,6 +3060,21 @@ body:has(.nm-hub-app--cut-list) {
   cursor: not-allowed;
 }
 
+.nm-hub-app--tasks .hub-tasks-tracking-preview {
+  margin: 0.65rem 0 0;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  word-break: break-all;
+}
+
+.nm-hub-app--tasks .hub-tasks-tracking-preview a {
+  color: #7dd3fc;
+}
+
+.nm-hub-app--tasks .hub-tasks-tracking-preview--warn {
+  color: #fbbf24;
+}
+
 .nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-title-wrap {
   position: relative;
 }

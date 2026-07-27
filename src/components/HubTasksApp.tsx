@@ -111,8 +111,25 @@ function formatTaskCreatedAt(iso: string): string {
 function normalizeExternalUrl(raw: string): string | null {
   const t = raw.trim()
   if (!t) return null
-  if (/^https?:\/\//i.test(t)) return t
-  return `https://${t}`
+  // Si pegaron texto con un link adentro, usar el primer URL detectado.
+  const embedded = t.match(/https?:\/\/[^\s<>"']+/i)
+  if (embedded) {
+    return embedded[0].replace(/[),.;]+$/g, '')
+  }
+  // Dominio sin protocolo (ej. andreani.com/?numero=123)
+  if (/^[a-z0-9.-]+\.[a-z]{2,}([/:?].*)?$/i.test(t)) {
+    return `https://${t}`
+  }
+  if (/^www\./i.test(t)) {
+    return `https://${t}`
+  }
+  return null
+}
+
+/** URL lista para abrir en un click (siempre con protocolo). */
+function trackingHref(raw: string | null | undefined): string | null {
+  if (!raw) return null
+  return normalizeExternalUrl(raw)
 }
 
 function tasksYearMonthFromLocation(): string {
@@ -645,11 +662,15 @@ export function HubTasksApp({
 
   const onSaveTrackingUrl = async () => {
     if (readOnly || !trackingEditTask) return
+    const normalized = normalizeExternalUrl(trackingDraft)
+    if (trackingDraft.trim() && !normalized) {
+      setError('Pegá un link válido (ej. https://www.andreani.com/?numero=...).')
+      return
+    }
     setBusy(true)
     setError(null)
     markLocalHubMutation()
     try {
-      const normalized = normalizeExternalUrl(trackingDraft)
       const updated = await updateHubTaskTrackingUrl(trackingEditTask.id, normalized)
       patchTaskLocal(updated)
       setTrackingEditTask(null)
@@ -1422,34 +1443,36 @@ export function HubTasksApp({
                           )}
                         </td>
                         <td className="hub-tasks-table__tracking">
-                          {completed ? (
-                            <div className="hub-tasks-tracking-cell">
-                              {t.tracking_url ? (
-                                <a
-                                  className="hub-tasks-tracking-link"
-                                  href={t.tracking_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  Ver seguimiento
-                                </a>
-                              ) : null}
-                              {!readOnly ? (
-                                <button
-                                  type="button"
-                                  className="hub-tasks-tracking-edit"
-                                  disabled={busy}
-                                  onClick={() => openTrackingEditor(t)}
-                                >
-                                  {t.tracking_url ? 'Editar' : 'Cargar link'}
-                                </button>
-                              ) : t.tracking_url ? null : (
-                                '—'
-                              )}
-                            </div>
-                          ) : (
-                            '—'
-                          )}
+                          {(() => {
+                            const href = trackingHref(t.tracking_url)
+                            return (
+                              <div className="hub-tasks-tracking-cell">
+                                {href ? (
+                                  <a
+                                    className="hub-tasks-tracking-link"
+                                    href={href}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    title={href}
+                                  >
+                                    Ver seguimiento
+                                  </a>
+                                ) : null}
+                                {!readOnly ? (
+                                  <button
+                                    type="button"
+                                    className="hub-tasks-tracking-edit"
+                                    disabled={busy}
+                                    onClick={() => openTrackingEditor(t)}
+                                  >
+                                    {href ? 'Editar' : 'Cargar link'}
+                                  </button>
+                                ) : href ? null : (
+                                  '—'
+                                )}
+                              </div>
+                            )
+                          })()}
                         </td>
                         <td className="hub-tasks-table__col-delete">
                           <div className="hub-tasks-table__row-actions">
@@ -1654,7 +1677,7 @@ export function HubTasksApp({
               Link de seguimiento
             </h3>
             <p className="nm-prod-modal-text">
-              Pegá el link de seguimiento de «{trackingEditTask.title}» (ej. Andreani).
+              Pegá el link de seguimiento de «{trackingEditTask.title}» (ej. Andreani). Se puede cargar en cualquier estado.
             </p>
             <label className="nm-hub-sr-only" htmlFor="hub-tracking-url">
               URL de seguimiento
@@ -1662,7 +1685,7 @@ export function HubTasksApp({
             <input
               id="hub-tracking-url"
               className="nm-hub-input field-input"
-              type="url"
+              type="text"
               inputMode="url"
               placeholder="https://www.andreani.com/?numero=..."
               value={trackingDraft}
@@ -1670,6 +1693,22 @@ export function HubTasksApp({
               disabled={busy}
               autoFocus
             />
+            {trackingHref(trackingDraft) ? (
+              <p className="hub-tasks-tracking-preview">
+                Link detectado:{' '}
+                <a
+                  href={trackingHref(trackingDraft) ?? undefined}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {trackingHref(trackingDraft)}
+                </a>
+              </p>
+            ) : trackingDraft.trim() ? (
+              <p className="hub-tasks-tracking-preview hub-tasks-tracking-preview--warn">
+                No se detectó un link válido. Pegá una URL completa.
+              </p>
+            ) : null}
             <div className="nm-prod-row" style={{ marginTop: '1rem' }}>
               <button
                 type="button"
