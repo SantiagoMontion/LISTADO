@@ -65,7 +65,7 @@ function hubTaskPushListener(profile: NmHubProfile | null | undefined) {
     <HubTaskPushListener
       profileRole={profile.role}
       profileId={profile.id}
-      isAdmin={profile.role === 'admin'}
+      isAdmin
     />
   )
 }
@@ -1085,10 +1085,10 @@ export default function App() {
         {hubTaskPushListener(profile)}
         <HubTasksApp
           readOnly={hubReadOnly}
+          isAdmin
           profileRole={profile.role}
           profileId={profile.id}
           profileDisplayName={profile.display_name}
-          isAdmin={profile.role === 'admin'}
         />
       </>
     )
@@ -1106,7 +1106,7 @@ export default function App() {
       <HubPrintedFilesApp
         configured={configured}
         profileRole={profile?.role}
-        adminSignOut={profile?.role === 'admin'}
+        adminSignOut
       />
     )
   }
@@ -1133,7 +1133,7 @@ export default function App() {
     isHubCutAnalytics &&
     profileReady &&
     profile &&
-    profile.role === 'admin'
+    getHubPermissions(profile.role)?.viewCutList
   ) {
     return (
       <HubAdminCutAnalytics configured={configured} role={profile.role} adminSignOut />
@@ -1147,7 +1147,7 @@ export default function App() {
     isHubDispatchedAnalytics &&
     profileReady &&
     profile &&
-    profile.role === 'admin'
+    getHubPermissions(profile.role)?.viewDispatchedOrders
   ) {
     return (
       <HubAdminDispatchAnalytics
@@ -1170,7 +1170,7 @@ export default function App() {
     return (
       <HubLogisticaAndreaniApp
         profileRole={profile.role}
-        adminSignOut={profile.role === 'admin'}
+        adminSignOut
       />
     )
   }
@@ -1187,9 +1187,9 @@ export default function App() {
     return (
       <HubDispatchedOrdersApp
         configured={configured}
-        isAdmin={profile.role === 'admin'}
+        isAdmin
         profileRole={profile.role}
-        adminSignOut={profile.role === 'admin'}
+        adminSignOut
       />
     )
   }
@@ -1206,9 +1206,9 @@ export default function App() {
     return (
       <HubDispatchedStatsApp
         configured={configured}
-        isAdmin={profile.role === 'admin'}
+        isAdmin
         profileRole={profile.role}
-        adminSignOut={profile.role === 'admin'}
+        adminSignOut
       />
     )
   }
@@ -1304,7 +1304,7 @@ export default function App() {
       >
         <HubBrandBar
           integratedDashboard={isListaUpload || isCutList}
-          adminSignOut={profile?.role === 'admin'}
+          adminSignOut={Boolean(profile)}
           integratedSubtitle={
             isListaUpload ? 'Subir lista de corte' : isCutList ? 'Lista de corte' : undefined
           }

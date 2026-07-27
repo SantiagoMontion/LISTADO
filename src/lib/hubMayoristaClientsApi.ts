@@ -172,6 +172,14 @@ export async function upsertMayoristaClient(input: MayoristaClientInput): Promis
   return coerceClient(data as Record<string, unknown>)
 }
 
+export async function deleteMayoristaClient(id: string): Promise<void> {
+  const clientId = id.trim()
+  if (!clientId) throw new Error('Cliente inválido.')
+  const sb = requireClient()
+  const { error } = await sb.from('nm_hub_mayorista_clients').delete().eq('id', clientId)
+  if (error) throw error
+}
+
 export function formatMayoristaClientBlock(client: MayoristaClientInput): string {
   const c = prepareClientPayload(client)
   return [

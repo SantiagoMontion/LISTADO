@@ -12,7 +12,13 @@ import {
   updateHubTaskPaymentStatus,
 } from '../lib/hubTasksApi'
 import { formatSupabaseOrError } from '../lib/errors'
-import { todayIsoLocal } from '../lib/date'
+import {
+  addMonthsToYearMonth,
+  currentYearMonthLocal,
+  formatMonthYearLabel,
+  parseYearMonth,
+  todayIsoLocal,
+} from '../lib/date'
 import { supabase } from '../lib/supabase'
 import type {
   HubImportance,
@@ -27,11 +33,6 @@ import { HubImageLightbox } from './HubImageLightbox'
 import { HubTaskNotesPanel } from './HubTaskNotesPanel'
 import { HubPushNotificationSetup } from './HubPushNotificationSetup'
 import { HUB_NAV_EVENT } from '../lib/hubNavigate'
-import {
-  getTaskAssigneeRolesForCreator,
-  HUB_TASK_ASSIGNEE_CREATE_LABEL,
-  type HubTaskAssignableRole,
-} from '../lib/hubTaskAssignable'
 import { canDeleteHubTasks } from '../lib/hubRoles'
 import {
   appendClientToTaskBody,
@@ -43,6 +44,9 @@ import { HubMayoristaClientModal } from './HubMayoristaClientModal'
 import { parseShopifyOrderNumberFromTitle } from '../lib/shopifyOrderUrl'
 import { resolveShopifyOrderUrls } from '../lib/logisticaAndreaniApi'
 import type { HubTaskCreateType, NmHubMayoristaClient } from '../lib/types'
+
+/** Rol interno por defecto (ya no se elige destinatario en la UI). */
+const DEFAULT_ASSIGNED_ROLE = 'taller_1' as const
 
 const TASK_TYPE_LABEL: Record<HubTaskCreateType, string> = {
   falta: 'Falta',
@@ -91,107 +95,34 @@ function createFormTitleLabel(type: HubTaskCreateType | null): string {
   return 'Título'
 }
 
-function AssigneeRoleSelect({
-  id,
-  value,
-  onChange,
-  roles,
-  disabled = false,
-}: {
-  id: string
-  value: HubTaskAssignableRole | null
-  onChange: (v: HubTaskAssignableRole) => void
-  roles: readonly HubTaskAssignableRole[]
-  disabled?: boolean
-}) {
-  const [open, setOpen] = useState(false)
-  const rootRef = useRef<HTMLDivElement>(null)
+function yearMonthFromCreatedAt(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
 
-  useEffect(() => {
-    if (!open) return
-    const onDocDown = (e: MouseEvent) => {
-      if (rootRef.current?.contains(e.target as Node)) return
-      setOpen(false)
-    }
-    document.addEventListener('mousedown', onDocDown)
-    return () => document.removeEventListener('mousedown', onDocDown)
-  }, [open])
+function formatTaskCreatedAt(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '—'
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
+}
 
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [open])
+function tasksYearMonthFromLocation(): string {
+  if (typeof window === 'undefined') return currentYearMonthLocal()
+  const m = new URLSearchParams(window.location.search).get('m')
+  return parseYearMonth(m ?? '') ? (m as string) : currentYearMonthLocal()
+}
 
-  const select = (k: HubTaskAssignableRole) => {
-    onChange(k)
-    setOpen(false)
-  }
-
-  return (
-    <div ref={rootRef} className="importance-dropdown assignee-dropdown">
-      <button
-        type="button"
-        id={id}
-        className="importance-dropdown__trigger nm-hub-input field-select"
-        disabled={disabled}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-controls={`${id}-assignee-listbox`}
-        aria-invalid={value === null && !disabled}
-        onClick={() => !disabled && setOpen((o) => !o)}
-      >
-        <span
-          className={`importance-dropdown__value${value ? '' : ' importance-dropdown__value--placeholder'}`}
-        >
-          {value ? HUB_TASK_ASSIGNEE_CREATE_LABEL[value] : 'Elegí a quién va'}
-        </span>
-        <svg
-          className="importance-dropdown__chevron"
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          aria-hidden="true"
-        >
-          <path
-            d="M6 9l6 6 6-6"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </button>
-      {open ? (
-        <div
-          id={`${id}-assignee-listbox`}
-          className="importance-dropdown__panel"
-          role="listbox"
-          aria-labelledby={id}
-        >
-          {roles.map((k) => (
-            <button
-              key={k}
-              type="button"
-              role="option"
-              aria-selected={value === k}
-              className="importance-dropdown__option"
-              onClick={() => select(k)}
-            >
-              {HUB_TASK_ASSIGNEE_CREATE_LABEL[k]}
-            </button>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  )
+function replaceTasksMonthUrl(yearMonth: string) {
+  if (typeof window === 'undefined') return
+  const u = new URL(window.location.href)
+  u.searchParams.set('m', yearMonth)
+  window.history.replaceState(null, '', `${u.pathname}${u.search}${u.hash}`)
+  window.dispatchEvent(new CustomEvent(HUB_NAV_EVENT))
 }
 
 type TasksPanel = 'list' | 'create'
+type ClientDataChoice = null | 'yes' | 'no'
 
 /** Hash explícito gana; si no hay hash útil, `?hub=crear` (desde inicio) abre el formulario aunque el fragmento se pierda. */
 function hubTasksPanelFromLocation(readOnly: boolean): TasksPanel {
@@ -356,7 +287,12 @@ export function HubTasksApp({
   const [clientSuggestions, setClientSuggestions] = useState<NmHubMayoristaClient[]>([])
   const [clientSuggestOpen, setClientSuggestOpen] = useState(false)
   const [clientModalOpen, setClientModalOpen] = useState(false)
-  const [assignedRoleCreate, setAssignedRoleCreate] = useState<HubTaskAssignableRole | null>(null)
+  /** null = aún no eligió; yes = mostrar/guardar datos; no = solo título. */
+  const [loadClientData, setLoadClientData] = useState<ClientDataChoice>(null)
+  const [pendingClient, setPendingClient] = useState<NmHubMayoristaClient | null>(null)
+  const [yearMonth, setYearMonth] = useState(() =>
+    typeof window !== 'undefined' ? tasksYearMonthFromLocation() : currentYearMonthLocal(),
+  )
   const [files, setFiles] = useState<File[]>([])
   const taskGalleryInputRef = useRef<HTMLInputElement>(null)
   const taskCameraInputRef = useRef<HTMLInputElement>(null)
@@ -486,18 +422,39 @@ export function HubTasksApp({
     }
   }, [syncUrlToState])
 
-  const assigneeRolesCreate = useMemo(() => getTaskAssigneeRolesForCreator(isAdmin), [isAdmin])
+  const monthTasks = useMemo(() => {
+    return rawTasks.filter((t) => yearMonthFromCreatedAt(t.created_at) === yearMonth)
+  }, [rawTasks, yearMonth])
 
-  const sorted = useMemo(() => sortTasksForList(rawTasks), [rawTasks])
+  const sorted = useMemo(() => sortTasksForList(monthTasks), [monthTasks])
 
   const orderNumbersKey = useMemo(() => {
     const nums = new Set<string>()
-    for (const t of rawTasks) {
+    for (const t of monthTasks) {
       const n = parseShopifyOrderNumberFromTitle(t.title ?? '')
       if (n) nums.add(n)
     }
     return [...nums].sort().join(',')
-  }, [rawTasks])
+  }, [monthTasks])
+
+  useEffect(() => {
+    const syncMonth = () => {
+      if (normalizeTasksPathname() !== '/tareas') return
+      setYearMonth(tasksYearMonthFromLocation())
+    }
+    syncMonth()
+    window.addEventListener(HUB_NAV_EVENT, syncMonth as EventListener)
+    window.addEventListener('popstate', syncMonth)
+    return () => {
+      window.removeEventListener(HUB_NAV_EVENT, syncMonth as EventListener)
+      window.removeEventListener('popstate', syncMonth)
+    }
+  }, [])
+
+  const applyMonth = useCallback((next: string) => {
+    setYearMonth(next)
+    replaceTasksMonthUrl(next)
+  }, [])
 
   useEffect(() => {
     if (!orderNumbersKey) {
@@ -548,18 +505,40 @@ export function HubTasksApp({
     setClientAddress('')
     setClientSuggestions([])
     setClientSuggestOpen(false)
-    setAssignedRoleCreate(null)
+    setLoadClientData(null)
+    setPendingClient(null)
     setFiles([])
   }, [])
 
   const applyClientSelection = useCallback((client: NmHubMayoristaClient) => {
     setTitle(client.full_name)
-    setClientDni(client.dni)
-    setClientPhone(client.phone)
-    setClientEmail(client.email)
-    setClientAddress(client.address)
+    setPendingClient(client)
+    setClientDni('')
+    setClientPhone('')
+    setClientEmail('')
+    setClientAddress('')
+    setLoadClientData(null)
     setClientSuggestOpen(false)
   }, [])
+
+  const chooseLoadClientData = useCallback(
+    (choice: 'yes' | 'no') => {
+      setLoadClientData(choice)
+      if (choice === 'yes' && pendingClient) {
+        setClientDni(pendingClient.dni)
+        setClientPhone(pendingClient.phone)
+        setClientEmail(pendingClient.email)
+        setClientAddress(pendingClient.address)
+      }
+      if (choice === 'no') {
+        setClientDni('')
+        setClientPhone('')
+        setClientEmail('')
+        setClientAddress('')
+      }
+    },
+    [pendingClient],
+  )
 
   const toggleDetail = useCallback((taskId: string) => {
     setExpandedDetailIds((prev) => {
@@ -614,6 +593,8 @@ export function HubTasksApp({
     setClientAddress('')
     setClientSuggestions([])
     setClientSuggestOpen(false)
+    setLoadClientData(null)
+    setPendingClient(null)
     setError(null)
     setTitle('')
   }, [])
@@ -662,7 +643,7 @@ export function HubTasksApp({
 
   const onCreate = async (e: FormEvent) => {
     e.preventDefault()
-    if (readOnly || !title.trim() || assignedRoleCreate === null || !taskCreateType) return
+    if (readOnly || !title.trim() || !taskCreateType) return
     setBusy(true)
     setError(null)
     const titleDraft = title.trim()
@@ -679,9 +660,11 @@ export function HubTasksApp({
 
     let finalBody = body.trim() || null
     const finalImportance: HubImportance = 'normal'
+    const shouldSaveClient =
+      taskTypeUsesClientFields(taskCreateType) && loadClientData === 'yes'
 
     try {
-      if (taskTypeUsesClientFields(taskCreateType)) {
+      if (shouldSaveClient) {
         const clientPayload = {
           full_name: titleDraft,
           dni: clientDni.trim(),
@@ -703,13 +686,13 @@ export function HubTasksApp({
         finalBody = appendClientToTaskBody(body, clientPayload)
       }
 
-      const assignedTo = await resolveAssignedToUserId(assignedRoleCreate)
+      const assignedTo = await resolveAssignedToUserId(DEFAULT_ASSIGNED_ROLE)
       const created = await createHubTask({
         title: titleDraft,
         body: finalBody,
         importance: finalImportance,
         for_date: todayIsoLocal(),
-        assigned_role: assignedRoleCreate,
+        assigned_role: DEFAULT_ASSIGNED_ROLE,
         assigned_to: assignedTo,
         task_type: taskCreateType,
       })
@@ -886,7 +869,18 @@ export function HubTasksApp({
                 id="nm-hub-t-title"
                 className="nm-hub-input field-input"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => {
+                  const next = e.target.value
+                  setTitle(next)
+                  if (!next.trim()) {
+                    setLoadClientData(null)
+                    setPendingClient(null)
+                    setClientDni('')
+                    setClientPhone('')
+                    setClientEmail('')
+                    setClientAddress('')
+                  }
+                }}
                 onFocus={() => {
                   if (taskTypeUsesClientFields(taskCreateType) && clientSuggestions.length > 0) {
                     setClientSuggestOpen(true)
@@ -914,7 +908,39 @@ export function HubTasksApp({
             </div>
           </div>
 
-          {taskTypeUsesClientFields(taskCreateType) ? (
+          {taskTypeUsesClientFields(taskCreateType) && title.trim() ? (
+            <div className="field-group task-create-client-choice">
+              <span className="field-label" id="nm-hub-t-client-data-label">
+                ¿Cargar datos del cliente?
+              </span>
+              <div
+                className="task-create-client-choice__row"
+                role="group"
+                aria-labelledby="nm-hub-t-client-data-label"
+              >
+                <button
+                  type="button"
+                  className={`task-create-preset-btn${loadClientData === 'yes' ? ' task-create-preset-btn--active' : ''}`}
+                  onClick={() => chooseLoadClientData('yes')}
+                  disabled={busy}
+                  aria-pressed={loadClientData === 'yes'}
+                >
+                  Sí
+                </button>
+                <button
+                  type="button"
+                  className={`task-create-preset-btn${loadClientData === 'no' ? ' task-create-preset-btn--active' : ''}`}
+                  onClick={() => chooseLoadClientData('no')}
+                  disabled={busy}
+                  aria-pressed={loadClientData === 'no'}
+                >
+                  No
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {taskTypeUsesClientFields(taskCreateType) && loadClientData === 'yes' ? (
             <div className="task-create-client-fields">
               <div className="field-group">
                 <label className="field-label" htmlFor="nm-hub-t-client-dni">
@@ -993,19 +1019,6 @@ export function HubTasksApp({
                     ? 'Indicá el motivo de la devolución'
                     : undefined
               }
-            />
-          </div>
-
-          <div className="field-group">
-            <label className="field-label" htmlFor="nm-hub-t-assign">
-              Asignar a:
-            </label>
-            <AssigneeRoleSelect
-              id="nm-hub-t-assign"
-              roles={assigneeRolesCreate}
-              value={assignedRoleCreate}
-              onChange={(v) => setAssignedRoleCreate(v)}
-              disabled={busy || !taskCreateType}
             />
           </div>
 
@@ -1099,7 +1112,11 @@ export function HubTasksApp({
           <button
             type="submit"
             className="btn-submit-task"
-            disabled={busy || assignedRoleCreate === null || !taskCreateType}
+            disabled={
+              busy ||
+              !taskCreateType ||
+              (taskTypeUsesClientFields(taskCreateType) && Boolean(title.trim()) && loadClientData === null)
+            }
           >
             {busy ? 'Guardando…' : 'Crear tarea'}
           </button>
@@ -1118,7 +1135,26 @@ export function HubTasksApp({
       />
 
       {panel === 'list' ? (
-        <section id="nm-hub-tareas-lista" className="nm-hub-section nm-hub-section--task-list" aria-label="Tareas completadas">
+        <section id="nm-hub-tareas-lista" className="nm-hub-section nm-hub-section--task-list" aria-label="Tareas">
+          <div className="hub-tasks-month-bar" aria-label="Mes">
+            <button
+              type="button"
+              className="nm-hub-btn nm-hub-btn-ghost"
+              onClick={() => applyMonth(addMonthsToYearMonth(yearMonth, -1))}
+              aria-label="Mes anterior"
+            >
+              ‹
+            </button>
+            <h2 className="hub-tasks-month-title">{formatMonthYearLabel(yearMonth)}</h2>
+            <button
+              type="button"
+              className="nm-hub-btn nm-hub-btn-ghost"
+              onClick={() => applyMonth(addMonthsToYearMonth(yearMonth, 1))}
+              aria-label="Mes siguiente"
+            >
+              ›
+            </button>
+          </div>
           <div className="tasks-hub-filters-stack">
             <div className="nm-hub-task-search-wrap tasks-hub-search-wrap">
               <label className="nm-hub-sr-only" htmlFor="nm-hub-task-q">
@@ -1139,10 +1175,10 @@ export function HubTasksApp({
           {loading && rawTasks.length === 0 ? (
             <p className="nm-hub-muted">Cargando…</p>
           ) : null}
-          {!loading && sorted.length === 0 ? (
-            <p className="nm-hub-muted">No hay tareas.</p>
+          {!loading && monthTasks.length === 0 ? (
+            <p className="nm-hub-muted">No hay tareas en {formatMonthYearLabel(yearMonth)}.</p>
           ) : null}
-          {!loading && sorted.length > 0 && filteredSorted.length === 0 ? (
+          {!loading && monthTasks.length > 0 && filteredSorted.length === 0 ? (
             <p className="nm-hub-muted">Ninguna tarea coincide con la búsqueda.</p>
           ) : null}
           <div className="hub-tasks-table-wrap" aria-busy={loading}>
@@ -1155,6 +1191,7 @@ export function HubTasksApp({
                   <th scope="col">Estado</th>
                   <th scope="col">Pago</th>
                   <th scope="col">Ver en Shopify</th>
+                  <th scope="col">Creada</th>
                   <th scope="col" className="hub-tasks-table__col-delete">
                     <span className="nm-hub-sr-only">Eliminar</span>
                   </th>
@@ -1255,6 +1292,7 @@ export function HubTasksApp({
                             </span>
                           )}
                         </td>
+                        <td className="hub-tasks-table__created">{formatTaskCreatedAt(t.created_at)}</td>
                         <td className="hub-tasks-table__col-delete">
                           <div className="hub-tasks-table__row-actions">
                             <button
@@ -1305,7 +1343,7 @@ export function HubTasksApp({
                         <tr
                           className={`hub-tasks-table__detail-row${completed ? ' hub-tasks-table__detail-row--completed' : ''}`}
                         >
-                          <td colSpan={7}>
+                          <td colSpan={8}>
                             <div className="hub-tasks-table__detail-body">{t.body}</div>
                             {(t.image_paths?.length ?? 0) > 0 ? (
                               <TaskThumbnails paths={t.image_paths ?? []} rebel />

@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useId, useState } from 'react'
 import {
+  deleteMayoristaClient,
   fetchMayoristaClients,
   normalizeMayoristaPhone,
   saveMayoristaClient,
@@ -33,6 +34,8 @@ export function HubMayoristaClientModal({
   const [address, setAddress] = useState('')
   const [localError, setLocalError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   useEffect(() => {
     if (!open) return
@@ -44,6 +47,8 @@ export function HubMayoristaClientModal({
     setAddress('')
     setLocalError(null)
     setSaving(false)
+    setDeleting(false)
+    setConfirmDelete(false)
     setLoadingClients(true)
     void fetchMayoristaClients()
       .then((rows) => setClients(rows))
@@ -72,6 +77,7 @@ export function HubMayoristaClientModal({
 
   const onSelectClient = (id: string) => {
     setSelectedClientId(id)
+    setConfirmDelete(false)
     if (!id) {
       setFullName('')
       setDni('')
@@ -86,6 +92,27 @@ export function HubMayoristaClientModal({
   }
 
   if (!open) return null
+
+  const onDelete = async () => {
+    if (!selectedClientId) return
+    if (!confirmDelete) {
+      setConfirmDelete(true)
+      setLocalError(null)
+      return
+    }
+    setDeleting(true)
+    setLocalError(null)
+    try {
+      await deleteMayoristaClient(selectedClientId)
+      onSaved()
+      onClose()
+    } catch (err: unknown) {
+      setLocalError(err instanceof Error ? err.message : 'No se pudo eliminar el cliente.')
+      setConfirmDelete(false)
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -118,7 +145,7 @@ export function HubMayoristaClientModal({
   }
 
   const displayError = localError ?? error
-  const disabled = busy || saving
+  const disabled = busy || saving || deleting
   const isEditing = Boolean(selectedClientId)
 
   return (
@@ -248,6 +275,20 @@ export function HubMayoristaClientModal({
           <button type="button" className="btn-modal-cancel" disabled={disabled} onClick={onClose}>
             Cancelar
           </button>
+          {isEditing ? (
+            <button
+              type="button"
+              className="btn-modal-cancel hub-mayorista-client-modal__delete"
+              disabled={disabled}
+              onClick={() => void onDelete()}
+            >
+              {deleting
+                ? 'Eliminando…'
+                : confirmDelete
+                  ? 'Confirmar eliminar'
+                  : 'Eliminar cliente'}
+            </button>
+          ) : null}
           <button type="submit" className="btn-modal-add" disabled={disabled}>
             {saving ? 'Guardando…' : isEditing ? 'Guardar cambios' : 'Crear cliente'}
           </button>

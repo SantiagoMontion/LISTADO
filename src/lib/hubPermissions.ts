@@ -1,7 +1,7 @@
+/** Permisos granulares del hub (RBAC). */
 import { todayIsoLocal } from './date'
 import type { HubUserRole } from './types'
 
-/** Permisos granulares del hub (RBAC). */
 export interface HubPermissions {
   uploadProductionList: boolean
   uploadMaterialImages: boolean
@@ -19,87 +19,30 @@ export interface HubPermissions {
   viewDashboardSummary: boolean
 }
 
+/** Acceso completo para todos: ya no hay diferencias por usuario/rol. */
+const FULL_ACCESS: HubPermissions = {
+  uploadProductionList: true,
+  uploadMaterialImages: true,
+  viewCutList: true,
+  editCutList: true,
+  deleteCutList: true,
+  viewHubTasks: true,
+  createHubTasks: true,
+  editHubTasks: true,
+  deleteHubTasks: true,
+  viewPrintedFiles: true,
+  viewDispatchedOrders: true,
+  editDispatchedOrders: true,
+  viewLogisticaAndreani: true,
+  viewDashboardSummary: true,
+}
+
 export const HUB_PERMISSIONS: Record<HubUserRole, HubPermissions> = {
-  admin: {
-    uploadProductionList: true,
-    uploadMaterialImages: true,
-    viewCutList: true,
-    editCutList: true,
-    deleteCutList: true,
-    viewHubTasks: true,
-    createHubTasks: true,
-    editHubTasks: true,
-    deleteHubTasks: true,
-    viewPrintedFiles: true,
-    viewDispatchedOrders: true,
-    editDispatchedOrders: true,
-    viewLogisticaAndreani: true,
-    viewDashboardSummary: true,
-  },
-  lista_creator: {
-    uploadProductionList: true,
-    uploadMaterialImages: true,
-    viewCutList: true,
-    editCutList: false,
-    deleteCutList: false,
-    viewHubTasks: true,
-    createHubTasks: true,
-    editHubTasks: true,
-    deleteHubTasks: true,
-    viewPrintedFiles: false,
-    viewDispatchedOrders: false,
-    editDispatchedOrders: false,
-    viewLogisticaAndreani: false,
-    viewDashboardSummary: true,
-  },
-  taller_1: {
-    uploadProductionList: false,
-    uploadMaterialImages: false,
-    viewCutList: false,
-    editCutList: false,
-    deleteCutList: false,
-    viewHubTasks: true,
-    createHubTasks: true,
-    editHubTasks: true,
-    deleteHubTasks: true,
-    viewPrintedFiles: true,
-    viewDispatchedOrders: true,
-    editDispatchedOrders: false,
-    viewLogisticaAndreani: false,
-    viewDashboardSummary: true,
-  },
-  online_1: {
-    uploadProductionList: false,
-    uploadMaterialImages: false,
-    viewCutList: false,
-    editCutList: false,
-    deleteCutList: false,
-    viewHubTasks: true,
-    createHubTasks: true,
-    editHubTasks: true,
-    deleteHubTasks: true,
-    viewPrintedFiles: false,
-    viewDispatchedOrders: false,
-    editDispatchedOrders: false,
-    viewLogisticaAndreani: false,
-    viewDashboardSummary: true,
-  },
-  taller_2: {
-    uploadProductionList: false,
-    uploadMaterialImages: false,
-    viewCutList: true,
-    editCutList: true,
-    deleteCutList: true,
-    viewHubTasks: false,
-    createHubTasks: false,
-    editHubTasks: false,
-    deleteHubTasks: false,
-    viewPrintedFiles: false,
-    viewDispatchedOrders: false,
-    editDispatchedOrders: false,
-    viewLogisticaAndreani: false,
-    viewDashboardSummary: false,
-  },
+  admin: FULL_ACCESS,
+  lista_creator: FULL_ACCESS,
+  taller_1: FULL_ACCESS,
+  online_1: FULL_ACCESS,
+  taller_2: FULL_ACCESS,
 }
 
 export const HUB_ROLE_LABEL: Record<HubUserRole, string> = {
@@ -154,9 +97,9 @@ export function canAccessHubPath(
     case '/pedidos-despachados/cargar':
       return perms.editDispatchedOrders
     case '/pedidos-despachados/analitica':
-      return role === 'admin'
+      return perms.viewDispatchedOrders
     case '/lista-corte/analitica':
-      return role === 'admin'
+      return perms.viewCutList
     case '/logistica-andreani':
       return perms.viewLogisticaAndreani
     default:
@@ -183,17 +126,8 @@ export function normalizeHubPath(path: string): HubAppPath | string {
 }
 
 /** Ruta principal tras login (menos clics). */
-export function defaultHubPathForRole(role: HubUserRole | null | undefined): string {
-  switch (role) {
-    case 'taller_2':
-      return '/manejador'
-    case 'lista_creator':
-      return '/'
-    case 'online_1':
-      return '/tareas'
-    default:
-      return '/'
-  }
+export function defaultHubPathForRole(_role: HubUserRole | null | undefined): string {
+  return '/'
 }
 
 export function hubPathBlockedMessage(path: string, role: HubUserRole | null | undefined): string {
@@ -229,8 +163,8 @@ export function hubDashboardLinks(day: string = todayIsoLocal()) {
     uploadImages: `/creador?subir=imagenes`,
     cutList: '/manejador',
     createTask: `/tareas?d=${d}&hub=crear#nm-hub-tareas-nueva`,
-    pendingTasks: `/tareas?d=${d}#nm-hub-tareas-lista`,
-    completedTasks: `/tareas?d=${d}&hub=completadas#nm-hub-tareas-lista`,
+    pendingTasks: `/tareas?m=${d.slice(0, 7)}#nm-hub-tareas-lista`,
+    completedTasks: `/tareas?m=${d.slice(0, 7)}&hub=completadas#nm-hub-tareas-lista`,
     printedFiles: `/archivos-impresos?d=${d}`,
     dispatchedOrders: `/pedidos-despachados?m=${d.slice(0, 7)}`,
     dispatchAnalytics: '/pedidos-despachados/analitica',
@@ -244,7 +178,7 @@ export interface HubDesktopNavItem {
   label: string
 }
 
-/** Enlaces del menú horizontal (solo escritorio). */
+/** Enlaces del menú horizontal (solo escritorio). Todos ven lo mismo. */
 export function hubDesktopNavLinks(
   role: HubUserRole | null | undefined,
 ): HubDesktopNavItem[] {
@@ -254,30 +188,15 @@ export function hubDesktopNavLinks(
   const day = todayIsoLocal()
   const d = encodeURIComponent(day)
   const links = hubDashboardLinks(day)
-  const items: HubDesktopNavItem[] = [{ href: '/', label: 'Inicio' }]
-
-  if (perms.viewHubTasks) {
-    items.push({ href: `/tareas?d=${d}`, label: 'Tareas' })
-  }
-  if (perms.viewCutList) {
-    items.push({ href: links.cutList, label: 'Lista corte' })
-  }
-  if (perms.uploadProductionList) {
-    items.push({ href: links.uploadList, label: 'Subir lista' })
-  }
-  if (perms.viewPrintedFiles) {
-    items.push({ href: links.printedFiles, label: 'Impresos' })
-  }
-  if (perms.viewDispatchedOrders) {
-    items.push({ href: links.dispatchedOrders, label: 'Despachos' })
-  }
-  if (perms.viewLogisticaAndreani) {
-    items.push({ href: links.logisticaAndreani, label: 'Andreani' })
-  }
-  if (role === 'admin') {
-    items.push({ href: links.dispatchAnalytics, label: 'Analítica desp.' })
-    items.push({ href: links.cutAnalytics, label: 'Analítica corte' })
-  }
-
-  return items
+  return [
+    { href: '/', label: 'Inicio' },
+    { href: `/tareas?m=${d.slice(0, 7)}`, label: 'Tareas' },
+    { href: links.cutList, label: 'Lista corte' },
+    { href: links.uploadList, label: 'Subir lista' },
+    { href: links.printedFiles, label: 'Impresos' },
+    { href: links.dispatchedOrders, label: 'Despachos' },
+    { href: links.logisticaAndreani, label: 'Andreani' },
+    { href: links.dispatchAnalytics, label: 'Analítica desp.' },
+    { href: links.cutAnalytics, label: 'Analítica corte' },
+  ]
 }

@@ -11,10 +11,6 @@ import { displayNameFromAuthUser } from '../../lib/userDisplayName'
 import type { HubUserRole, NmHubProfile } from '../../lib/types'
 import {
   AdminDashboard,
-  ListaCreatorDashboard,
-  OnlineOperatorDashboard,
-  Taller1Dashboard,
-  Taller2Dashboard,
 } from './roleDashboards'
 import { HubDesktopNav } from '../HubDesktopNav'
 import { HubPushNotificationSetup } from '../HubPushNotificationSetup'
@@ -38,7 +34,7 @@ const EMPTY_STATS: HubDashboardStats = {
 }
 
 function RoleDashboardView({
-  role,
+  role: _role,
   stats,
   perms,
 }: {
@@ -46,21 +42,8 @@ function RoleDashboardView({
   stats: HubDashboardStats
   perms: HubPermissions
 }) {
-  const props = { stats, perms }
-  switch (role) {
-    case 'admin':
-      return <AdminDashboard {...props} />
-    case 'lista_creator':
-      return <ListaCreatorDashboard {...props} />
-    case 'taller_1':
-      return <Taller1Dashboard {...props} />
-    case 'online_1':
-      return <OnlineOperatorDashboard {...props} />
-    case 'taller_2':
-      return <Taller2Dashboard {...props} />
-    default:
-      return <Taller1Dashboard {...props} />
-  }
+  // Todos ven el mismo panel (acceso unificado).
+  return <AdminDashboard stats={stats} perms={perms} />
 }
 
 export function DashboardContainer({

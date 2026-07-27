@@ -3070,6 +3070,51 @@ body:has(.nm-hub-app--cut-list) {
   letter-spacing: normal;
 }
 
+.nm-hub-app--tasks .hub-tasks-month-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.5rem;
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 12px;
+}
+
+.nm-hub-app--tasks .hub-tasks-month-title {
+  margin: 0;
+  flex: 1;
+  text-align: center;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #f1f5f9;
+  letter-spacing: 0.02em;
+}
+
+.nm-hub-app--tasks .hub-tasks-table__created {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: #94a3b8;
+  font-size: 0.78rem;
+}
+
+.nm-hub-app--tasks .task-create-client-choice__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hub-mayorista-client-modal__delete {
+  border-color: rgba(248, 113, 113, 0.55) !important;
+  color: #f87171 !important;
+}
+
+.hub-mayorista-client-modal__delete:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.16) !important;
+  color: #fecaca !important;
+}
+
 .nm-hub-app--tasks .hub-tasks-table-wrap {
   width: 100%;
   overflow-x: auto;
