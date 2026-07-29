@@ -18,6 +18,7 @@ import {
   totalMinutesToBedTime,
   type Printing3DPrinterConfig,
   type Printing3DQuoteInputs,
+  type Printing3DResults,
 } from '../lib/printing3dCalc'
 import type { HubUserRole } from '../lib/types'
 
@@ -196,20 +197,80 @@ function BedPrintTimeSelect({ horasCama, minutosCama, onChange }: BedPrintTimeSe
   )
 }
 
-interface ResultCardProps {
+interface SummaryStatProps {
   label: string
   value: string
-  sub?: string
-  highlight?: boolean
+  hint: string
+  totalLabel?: string
 }
 
-function ResultCard({ label, value, sub, highlight }: ResultCardProps) {
+function SummaryStat({ label, value, hint, totalLabel }: SummaryStatProps) {
   return (
-    <div className={`printing3d-result-card${highlight ? ' printing3d-result-card--highlight' : ''}`}>
-      <span className="printing3d-result-card__label">{label}</span>
-      <strong className="printing3d-result-card__value">{value}</strong>
-      {sub ? <span className="printing3d-result-card__sub">{sub}</span> : null}
+    <div className="printing3d-summary-stat">
+      <span className="printing3d-summary-stat__label">{label}</span>
+      <strong className="printing3d-summary-stat__value">{value}</strong>
+      <span className="printing3d-summary-stat__hint">{hint}</span>
+      {totalLabel ? <span className="printing3d-summary-stat__total">{totalLabel}</span> : null}
     </div>
+  )
+}
+
+interface ResultAccordionProps {
+  title: string
+  children: React.ReactNode
+}
+
+function ResultAccordion({ title, children }: ResultAccordionProps) {
+  return (
+    <details className="printing3d-accordion">
+      <summary className="printing3d-accordion__summary">{title}</summary>
+      <div className="printing3d-accordion__body">{children}</div>
+    </details>
+  )
+}
+
+interface MainSummaryProps {
+  result: Printing3DResults
+  quantity: number
+}
+
+function MainSummary({ result, quantity }: MainSummaryProps) {
+  const gananciaUnitaria = result.gananciaNetaTotal / quantity
+  const showTotal = quantity > 1
+  const totalLabel = (total: number) => `Total del pedido (${quantity} u.): ${formatMoney(total)}`
+
+  return (
+    <section className="printing3d-output-block printing3d-summary">
+      <h2 className="printing3d-output-block__title">Resumen principal</h2>
+      <div className="printing3d-summary__layout">
+        <div className="printing3d-summary__side">
+          <SummaryStat
+            label="Costo de producción"
+            value={formatMoney(result.costoUnitarioFinal)}
+            hint="por unidad"
+            totalLabel={showTotal ? totalLabel(result.costoTotalProduccion) : undefined}
+          />
+          <SummaryStat
+            label="Ganancia neta"
+            value={formatMoney(gananciaUnitaria)}
+            hint={`por unidad · margen ${formatNumber(result.margenRealPorcentaje, 1)}%`}
+            totalLabel={showTotal ? totalLabel(result.gananciaNetaTotal) : undefined}
+          />
+        </div>
+        <div className="printing3d-summary__hero">
+          <span className="printing3d-summary__hero-label">Precio de venta sugerido</span>
+          <strong className="printing3d-summary__hero-value">
+            {formatMoney(result.precioVentaUnitario)}
+          </strong>
+          <span className="printing3d-summary__hero-hint">por unidad</span>
+          {showTotal ? (
+            <span className="printing3d-summary__hero-total">
+              {totalLabel(result.precioVentaTotal)}
+            </span>
+          ) : null}
+        </div>
+      </div>
+    </section>
   )
 }
 
@@ -559,31 +620,9 @@ export function Hub3DApp({
               </div>
             ) : (
               <>
-                <section className="printing3d-output-block">
-                  <h2 className="printing3d-output-block__title">Resumen principal</h2>
-                  <div className="printing3d-result-grid">
-                    <ResultCard
-                      label="Precio de venta sugerido"
-                      value={formatMoney(result.precioVentaUnitario)}
-                      sub={`Lote: ${formatMoney(result.precioVentaTotal)}`}
-                      highlight
-                    />
-                    <ResultCard
-                      label="Costo total de producción"
-                      value={formatMoney(result.costoUnitarioFinal)}
-                      sub={`Lote: ${formatMoney(result.costoTotalProduccion)}`}
-                    />
-                    <ResultCard
-                      label="Ganancia neta obtenida"
-                      value={formatMoney(result.gananciaNetaTotal)}
-                      sub={`Margen real: ${formatNumber(result.margenRealPorcentaje, 1)}%`}
-                      highlight
-                    />
-                  </div>
-                </section>
+                <MainSummary result={result} quantity={quote.cantidadTotalUnidades} />
 
-                <section className="printing3d-output-block">
-                  <h2 className="printing3d-output-block__title">Desglose del costo unitario</h2>
+                <ResultAccordion title="Desglose del costo unitario">
                   <div className="printing3d-breakdown">
                     <BreakdownRow
                       label="Filamento"
@@ -610,10 +649,9 @@ export function Hub3DApp({
                       value={formatMoney(result.breakdown.reservaFallos)}
                     />
                   </div>
-                </section>
+                </ResultAccordion>
 
-                <section className="printing3d-output-block">
-                  <h2 className="printing3d-output-block__title">Datos logísticos de producción</h2>
+                <ResultAccordion title="Datos logísticos de producción">
                   <div className="printing3d-logistics">
                     <div className="printing3d-logistics__item">
                       <span>Camas / platos necesarios</span>
@@ -633,7 +671,7 @@ export function Hub3DApp({
                       </strong>
                     </div>
                   </div>
-                </section>
+                </ResultAccordion>
               </>
             )}
           </div>

@@ -7630,43 +7630,137 @@ body:has(.nm-hub-app--logistica-andreani) {
   color: rgba(248, 250, 252, 0.88);
 }
 
-.printing3d-result-grid {
+.printing3d-summary__layout {
   display: grid;
-  gap: 0.65rem;
+  gap: 0.85rem;
+  align-items: stretch;
 }
 
-.printing3d-result-card {
-  padding: 0.85rem 0.95rem;
+.printing3d-summary__side {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.printing3d-summary-stat {
+  padding: 0.75rem 0.85rem;
   border-radius: 0.85rem;
   border: 1px solid rgba(255, 255, 255, 0.07);
-  background: rgba(30, 34, 44, 0.55);
+  background: rgba(30, 34, 44, 0.45);
 }
 
-.printing3d-result-card--highlight {
-  border-color: rgba(96, 165, 250, 0.35);
-  background: rgba(37, 99, 235, 0.12);
-}
-
-.printing3d-result-card__label {
+.printing3d-summary-stat__label {
   display: block;
   font-size: 0.72rem;
   font-weight: 600;
   color: rgba(248, 250, 252, 0.62);
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.2rem;
 }
 
-.printing3d-result-card__value {
+.printing3d-summary-stat__value {
   display: block;
-  font-size: 1.2rem;
+  font-size: 1rem;
   font-weight: 800;
   letter-spacing: -0.02em;
+  color: #f8fafc;
 }
 
-.printing3d-result-card__sub {
+.printing3d-summary-stat__hint {
   display: block;
-  margin-top: 0.2rem;
+  margin-top: 0.15rem;
+  font-size: 0.72rem;
+  color: rgba(248, 250, 252, 0.5);
+}
+
+.printing3d-summary-stat__total {
+  display: block;
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: rgba(148, 163, 184, 0.95);
+}
+
+.printing3d-summary__hero {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100%;
+  padding: 1rem 1.1rem;
+  border-radius: 0.95rem;
+  border: 1px solid rgba(96, 165, 250, 0.35);
+  background: linear-gradient(145deg, rgba(37, 99, 235, 0.2), rgba(30, 34, 44, 0.55));
+}
+
+.printing3d-summary__hero-label {
   font-size: 0.78rem;
-  color: rgba(248, 250, 252, 0.58);
+  font-weight: 700;
+  color: rgba(219, 234, 254, 0.85);
+}
+
+.printing3d-summary__hero-value {
+  margin-top: 0.25rem;
+  font-size: clamp(1.6rem, 5vw, 2.15rem);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  color: #f8fafc;
+}
+
+.printing3d-summary__hero-hint {
+  margin-top: 0.2rem;
+  font-size: 0.74rem;
+  color: rgba(219, 234, 254, 0.65);
+}
+
+.printing3d-summary__hero-total {
+  margin-top: 0.55rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid rgba(96, 165, 250, 0.22);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #dbeafe;
+}
+
+.printing3d-accordion {
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(16, 18, 24, 0.95);
+  overflow: hidden;
+}
+
+.printing3d-accordion__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.95rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: rgba(248, 250, 252, 0.88);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.printing3d-accordion__summary::-webkit-details-marker {
+  display: none;
+}
+
+.printing3d-accordion__summary::after {
+  content: '▾';
+  font-size: 0.85rem;
+  color: rgba(248, 250, 252, 0.45);
+  transition: transform 0.15s ease;
+}
+
+.printing3d-accordion[open] .printing3d-accordion__summary::after {
+  transform: rotate(180deg);
+}
+
+.printing3d-accordion__body {
+  padding: 0.85rem 1rem 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .printing3d-breakdown {
@@ -7738,15 +7832,16 @@ body:has(.nm-hub-app--logistica-andreani) {
   .printing3d-section__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .printing3d-summary__layout {
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.25fr);
+    gap: 1rem;
+  }
 }
 
 @media (min-width: 960px) {
   .printing3d-layout {
     grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
     align-items: start;
-  }
-
-  .printing3d-result-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
