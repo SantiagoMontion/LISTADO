@@ -74,7 +74,7 @@ export const DEFAULT_PRINTING_3D_INPUTS: Printing3DInputs = {
   minutosPostproceso: 10,
   insumosExtraPieza: 0,
   porcentajeFallos: 5,
-  porcentajeGanancia: 30,
+  porcentajeGanancia: 50,
 }
 
 export type Printing3DPrinterConfig = Pick<
@@ -95,6 +95,8 @@ export type SalePriceRoundStep = 500 | 1000
 
 export const SALE_PRICE_ROUND_STEPS: SalePriceRoundStep[] = [500, 1000]
 
+export const DEFAULT_SALE_PRICE_ROUND_STEP: SalePriceRoundStep = 500
+
 export type Printing3DQuoteInputs = Pick<
   Printing3DInputs,
   | 'pesoPieza'
@@ -104,9 +106,7 @@ export type Printing3DQuoteInputs = Pick<
   | 'cantidadTotalUnidades'
   | 'insumosExtraPieza'
   | 'porcentajeGanancia'
-> & {
-  redondeoPrecioVenta: SalePriceRoundStep
-}
+>
 
 export const DEFAULT_PRINTING_3D_PRINTER_CONFIG: Printing3DPrinterConfig = {
   precioRollo: DEFAULT_PRINTING_3D_INPUTS.precioRollo,
@@ -129,7 +129,6 @@ export const DEFAULT_PRINTING_3D_QUOTE_INPUTS: Printing3DQuoteInputs = {
   cantidadTotalUnidades: DEFAULT_PRINTING_3D_INPUTS.cantidadTotalUnidades,
   insumosExtraPieza: DEFAULT_PRINTING_3D_INPUTS.insumosExtraPieza,
   porcentajeGanancia: DEFAULT_PRINTING_3D_INPUTS.porcentajeGanancia,
-  redondeoPrecioVenta: 500,
 }
 
 export const PRINTING_3D_CONFIG_STORAGE_KEY = 'nm-hub-printing3d-printer-config'
@@ -138,8 +137,7 @@ export function mergePrinting3DInputs(
   config: Printing3DPrinterConfig,
   quote: Printing3DQuoteInputs,
 ): Printing3DInputs {
-  const { redondeoPrecioVenta: _roundStep, ...quoteCore } = quote
-  return { ...config, ...quoteCore }
+  return { ...config, ...quote }
 }
 
 export function roundSalePrice(value: number, step: SalePriceRoundStep): number {

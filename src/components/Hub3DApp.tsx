@@ -13,16 +13,15 @@ import {
   computePrinting3D,
   DEFAULT_PRINTING_3D_PRINTER_CONFIG,
   DEFAULT_PRINTING_3D_QUOTE_INPUTS,
+  DEFAULT_SALE_PRICE_ROUND_STEP,
   loadPrinting3DPrinterConfigLocal,
   mergePrinting3DInputs,
   savePrinting3DPrinterConfig,
-  SALE_PRICE_ROUND_STEPS,
   totalMinutesToBedTime,
   type Printing3DPrinterConfig,
   type Printing3DQuoteInputs,
   type Printing3DRoundedSale,
   type Printing3DResults,
-  type SalePriceRoundStep,
 } from '../lib/printing3dCalc'
 import type { HubUserRole } from '../lib/types'
 
@@ -173,31 +172,6 @@ function ProfitField({ value, onChange, id = 'porcentaje-ganancia' }: ProfitFiel
   )
 }
 
-interface SaleRoundSelectProps {
-  value: SalePriceRoundStep
-  onChange: (value: SalePriceRoundStep) => void
-}
-
-function SaleRoundSelect({ value, onChange }: SaleRoundSelectProps) {
-  return (
-    <label className="printing3d-field" htmlFor="redondeo-precio">
-      <span className="printing3d-field__label">Redondear precio de venta a</span>
-      <select
-        id="redondeo-precio"
-        className="nm-hub-input printing3d-select"
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value) as SalePriceRoundStep)}
-      >
-        {SALE_PRICE_ROUND_STEPS.map((step) => (
-          <option key={step} value={step}>
-            {formatWholeMoney(step)}
-          </option>
-        ))}
-      </select>
-    </label>
-  )
-}
-
 const BED_PRINT_TIME_OPTIONS = buildBedPrintTimeOptions()
 
 interface BedPrintTimeSelectProps {
@@ -279,7 +253,6 @@ function MainSummary({ result, sale, quantity }: MainSummaryProps) {
   const showTotal = quantity > 1
   const totalLabel = (total: number, format: (value: number) => string = formatWholeMoney) =>
     `Total del pedido (${quantity} u.): ${format(total)}`
-  const roundLabel = formatWholeMoney(sale.redondeoPrecioVenta)
 
   return (
     <section className="printing3d-output-block printing3d-summary">
@@ -304,9 +277,7 @@ function MainSummary({ result, sale, quantity }: MainSummaryProps) {
           <strong className="printing3d-summary__hero-value">
             {formatWholeMoney(sale.precioVentaUnitario)}
           </strong>
-          <span className="printing3d-summary__hero-hint">
-            por unidad · redondeado a {roundLabel}
-          </span>
+          <span className="printing3d-summary__hero-hint">por unidad</span>
           {showTotal ? (
             <span className="printing3d-summary__hero-total">
               {totalLabel(sale.precioVentaTotal)}
@@ -563,10 +534,10 @@ export function Hub3DApp({
         ? applySalePriceRounding(
             result,
             quote.cantidadTotalUnidades,
-            quote.redondeoPrecioVenta,
+            DEFAULT_SALE_PRICE_ROUND_STEP,
           )
         : null,
-    [result, quote.cantidadTotalUnidades, quote.redondeoPrecioVenta],
+    [result, quote.cantidadTotalUnidades],
   )
 
   const patchQuote = (partial: Partial<Printing3DQuoteInputs>) => {
@@ -659,10 +630,6 @@ export function Hub3DApp({
               <ProfitField
                 value={quote.porcentajeGanancia}
                 onChange={(v) => patchQuote({ porcentajeGanancia: v })}
-              />
-              <SaleRoundSelect
-                value={quote.redondeoPrecioVenta}
-                onChange={(v) => patchQuote({ redondeoPrecioVenta: v })}
               />
             </InputSection>
           </div>
