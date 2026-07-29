@@ -88,7 +88,6 @@ export type Printing3DPrinterConfig = Pick<
   | 'costoKwh'
   | 'costoHoraTrabajo'
   | 'minutosPostproceso'
-  | 'insumosExtraPieza'
   | 'porcentajeFallos'
 >
 
@@ -99,6 +98,7 @@ export type Printing3DQuoteInputs = Pick<
   | 'minutosCama'
   | 'piezasPorCama'
   | 'cantidadTotalUnidades'
+  | 'insumosExtraPieza'
   | 'porcentajeGanancia'
 >
 
@@ -112,7 +112,6 @@ export const DEFAULT_PRINTING_3D_PRINTER_CONFIG: Printing3DPrinterConfig = {
   costoKwh: DEFAULT_PRINTING_3D_INPUTS.costoKwh,
   costoHoraTrabajo: DEFAULT_PRINTING_3D_INPUTS.costoHoraTrabajo,
   minutosPostproceso: DEFAULT_PRINTING_3D_INPUTS.minutosPostproceso,
-  insumosExtraPieza: DEFAULT_PRINTING_3D_INPUTS.insumosExtraPieza,
   porcentajeFallos: DEFAULT_PRINTING_3D_INPUTS.porcentajeFallos,
 }
 
@@ -122,6 +121,7 @@ export const DEFAULT_PRINTING_3D_QUOTE_INPUTS: Printing3DQuoteInputs = {
   minutosCama: DEFAULT_PRINTING_3D_INPUTS.minutosCama,
   piezasPorCama: DEFAULT_PRINTING_3D_INPUTS.piezasPorCama,
   cantidadTotalUnidades: DEFAULT_PRINTING_3D_INPUTS.cantidadTotalUnidades,
+  insumosExtraPieza: DEFAULT_PRINTING_3D_INPUTS.insumosExtraPieza,
   porcentajeGanancia: DEFAULT_PRINTING_3D_INPUTS.porcentajeGanancia,
 }
 
@@ -158,7 +158,6 @@ export function coercePrinting3DPrinterConfig(raw: unknown): Printing3DPrinterCo
     costoKwh: num('costoKwh'),
     costoHoraTrabajo: num('costoHoraTrabajo'),
     minutosPostproceso: num('minutosPostproceso'),
-    insumosExtraPieza: num('insumosExtraPieza'),
     porcentajeFallos: num('porcentajeFallos'),
   }
 }

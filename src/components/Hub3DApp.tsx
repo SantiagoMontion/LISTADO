@@ -337,7 +337,7 @@ function PrinterConfigModal({
             />
           </InputSection>
 
-          <InputSection title="Mano de obra e insumos">
+          <InputSection title="Mano de obra">
             <NumberField
               id="cfg-costo-hora"
               label="Costo hora de trabajo"
@@ -353,14 +353,6 @@ function PrinterConfigModal({
               onChange={(v) => patch({ minutosPostproceso: v })}
               step={1}
               suffix="min"
-            />
-            <NumberField
-              id="cfg-insumos-extra"
-              label="Insumos extra por pieza"
-              value={config.insumosExtraPieza}
-              onChange={(v) => patch({ insumosExtraPieza: v })}
-              step={10}
-              suffix="$"
             />
           </InputSection>
 
@@ -539,6 +531,14 @@ export function Hub3DApp({
                 min={1}
                 step={1}
                 suffix="u"
+              />
+              <NumberField
+                id="insumos-extra"
+                label="Insumos extra por pieza (opcional)"
+                value={quote.insumosExtraPieza}
+                onChange={(v) => patchQuote({ insumosExtraPieza: v })}
+                step={10}
+                suffix="$"
               />
               <ProfitField
                 value={quote.porcentajeGanancia}
