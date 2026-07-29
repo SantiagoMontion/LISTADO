@@ -2,12 +2,16 @@ import { useEffect, useMemo, useState } from 'react'
 import { HubBrandBar } from './HubBrandBar'
 import { HubDesktopNav } from './HubDesktopNav'
 import {
+  bedPrintTimeOptionsIncluding,
+  bedTimeToTotalMinutes,
+  buildBedPrintTimeOptions,
   computePrinting3D,
   DEFAULT_PRINTING_3D_PRINTER_CONFIG,
   DEFAULT_PRINTING_3D_QUOTE_INPUTS,
   loadPrinting3DPrinterConfig,
   mergePrinting3DInputs,
   savePrinting3DPrinterConfig,
+  totalMinutesToBedTime,
   type Printing3DPrinterConfig,
   type Printing3DQuoteInputs,
 } from '../lib/printing3dCalc'
@@ -144,6 +148,45 @@ function ProfitField({ value, onChange, id = 'porcentaje-ganancia' }: ProfitFiel
         <span className="printing3d-field__suffix">%</span>
       </div>
     </div>
+  )
+}
+
+const BED_PRINT_TIME_OPTIONS = buildBedPrintTimeOptions()
+
+interface BedPrintTimeSelectProps {
+  horasCama: number
+  minutosCama: number
+  onChange: (horasCama: number, minutosCama: number) => void
+}
+
+function BedPrintTimeSelect({ horasCama, minutosCama, onChange }: BedPrintTimeSelectProps) {
+  const options = useMemo(
+    () => bedPrintTimeOptionsIncluding(horasCama, minutosCama, BED_PRINT_TIME_OPTIONS),
+    [horasCama, minutosCama],
+  )
+  const totalMinutes = bedTimeToTotalMinutes(horasCama, minutosCama)
+
+  return (
+    <label className="printing3d-field" htmlFor="tiempo-cama">
+      <span className="printing3d-field__label">Tiempo de impresión de la cama</span>
+      <select
+        id="tiempo-cama"
+        className="nm-hub-input printing3d-select"
+        value={totalMinutes}
+        onChange={(e) => {
+          const { horasCama: h, minutosCama: m } = totalMinutesToBedTime(
+            Number(e.target.value),
+          )
+          onChange(h, m)
+        }}
+      >
+        {options.map((option) => (
+          <option key={option.totalMinutes} value={option.totalMinutes}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
   )
 }
 
@@ -394,26 +437,11 @@ export function Hub3DApp({ profileRole, adminSignOut = false }: Hub3DAppProps) {
                 step={0.1}
                 suffix="g"
               />
-              <div className="printing3d-field printing3d-field--time">
-                <span className="printing3d-field__label">Tiempo de impresión de la cama</span>
-                <div className="printing3d-time-row">
-                  <NumberField
-                    id="horas-cama"
-                    label="Horas"
-                    value={quote.horasCama}
-                    onChange={(v) => patchQuote({ horasCama: v })}
-                    suffix="hs"
-                  />
-                  <NumberField
-                    id="minutos-cama"
-                    label="Minutos"
-                    value={quote.minutosCama}
-                    onChange={(v) => patchQuote({ minutosCama: v })}
-                    step={1}
-                    suffix="min"
-                  />
-                </div>
-              </div>
+              <BedPrintTimeSelect
+                horasCama={quote.horasCama}
+                minutosCama={quote.minutosCama}
+                onChange={(horasCama, minutosCama) => patchQuote({ horasCama, minutosCama })}
+              />
               <NumberField
                 id="piezas-cama"
                 label="Piezas por cama"

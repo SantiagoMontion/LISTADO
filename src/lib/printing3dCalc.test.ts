@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
+  bedTimeToTotalMinutes,
   computePrinting3D,
   DEFAULT_PRINTING_3D_INPUTS,
   DEFAULT_PRINTING_3D_PRINTER_CONFIG,
   DEFAULT_PRINTING_3D_QUOTE_INPUTS,
+  formatBedPrintTimeLabel,
   mergePrinting3DInputs,
+  totalMinutesToBedTime,
 } from './printing3dCalc'
 
 describe('printing3dCalc', () => {
@@ -90,5 +93,13 @@ describe('printing3dCalc', () => {
 
     expect(result.costoGramo).toBe(20)
     expect(result.gramosPorPieza).toBe(45)
+  })
+
+  it('formatea y convierte tiempo de cama', () => {
+    expect(bedTimeToTotalMinutes(6, 30)).toBe(390)
+    expect(totalMinutesToBedTime(390)).toEqual({ horasCama: 6, minutosCama: 30 })
+    expect(formatBedPrintTimeLabel(6, 30)).toBe('6 h 30 min')
+    expect(formatBedPrintTimeLabel(2, 0)).toBe('2 h')
+    expect(formatBedPrintTimeLabel(0, 45)).toBe('45 min')
   })
 })

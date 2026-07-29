@@ -7490,14 +7490,19 @@ body:has(.nm-hub-app--logistica-andreani) {
   background: rgba(34, 197, 94, 0.26);
 }
 
-.printing3d-field--time {
-  grid-column: 1 / -1;
-}
-
-.printing3d-time-row {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.65rem;
+.printing3d-select {
+  width: 100%;
+  cursor: pointer;
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgba(248, 250, 252, 0.55) 50%),
+    linear-gradient(135deg, rgba(248, 250, 252, 0.55) 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) calc(50% + 2px),
+    calc(100% - 12px) calc(50% + 2px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 2rem;
 }
 
 .printing3d-page__title {

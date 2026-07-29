@@ -151,6 +151,62 @@ export function savePrinting3DPrinterConfig(config: Printing3DPrinterConfig): vo
   window.localStorage.setItem(PRINTING_3D_CONFIG_STORAGE_KEY, JSON.stringify(config))
 }
 
+export function bedTimeToTotalMinutes(horasCama: number, minutosCama: number): number {
+  return Math.max(0, Math.round(horasCama) * 60 + Math.round(minutosCama))
+}
+
+export function totalMinutesToBedTime(
+  totalMinutes: number,
+): Pick<Printing3DQuoteInputs, 'horasCama' | 'minutosCama'> {
+  const mins = Math.max(0, Math.round(totalMinutes))
+  return { horasCama: Math.floor(mins / 60), minutosCama: mins % 60 }
+}
+
+export function formatBedPrintTimeLabel(horasCama: number, minutosCama: number): string {
+  const hours = Math.floor(horasCama)
+  const minutes = Math.round(minutosCama) % 60
+  if (hours === 0) return `${minutes} min`
+  if (minutes === 0) return `${hours} h`
+  return `${hours} h ${minutes} min`
+}
+
+export interface BedPrintTimeOption {
+  totalMinutes: number
+  label: string
+}
+
+export function buildBedPrintTimeOptions(
+  maxHours = 72,
+  stepMinutes = 15,
+): BedPrintTimeOption[] {
+  const options: BedPrintTimeOption[] = []
+  const maxMinutes = maxHours * 60
+  for (let mins = stepMinutes; mins <= maxMinutes; mins += stepMinutes) {
+    const { horasCama, minutosCama } = totalMinutesToBedTime(mins)
+    options.push({
+      totalMinutes: mins,
+      label: formatBedPrintTimeLabel(horasCama, minutosCama),
+    })
+  }
+  return options
+}
+
+export function bedPrintTimeOptionsIncluding(
+  horasCama: number,
+  minutosCama: number,
+  options: BedPrintTimeOption[],
+): BedPrintTimeOption[] {
+  const current = bedTimeToTotalMinutes(horasCama, minutosCama)
+  if (current === 0 || options.some((option) => option.totalMinutes === current)) {
+    return options
+  }
+  const { horasCama: h, minutosCama: m } = totalMinutesToBedTime(current)
+  return [
+    ...options,
+    { totalMinutes: current, label: formatBedPrintTimeLabel(h, m) },
+  ].sort((a, b) => a.totalMinutes - b.totalMinutes)
+}
+
 function nonNegative(value: number, label: string, errors: string[]): number {
   if (!Number.isFinite(value) || value < 0) {
     errors.push(`${label} no puede ser negativo.`)
