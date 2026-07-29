@@ -91,6 +91,10 @@ export type Printing3DPrinterConfig = Pick<
   | 'porcentajeFallos'
 >
 
+export type SalePriceRoundStep = 500 | 1000
+
+export const SALE_PRICE_ROUND_STEPS: SalePriceRoundStep[] = [500, 1000]
+
 export type Printing3DQuoteInputs = Pick<
   Printing3DInputs,
   | 'pesoPieza'
@@ -100,7 +104,9 @@ export type Printing3DQuoteInputs = Pick<
   | 'cantidadTotalUnidades'
   | 'insumosExtraPieza'
   | 'porcentajeGanancia'
->
+> & {
+  redondeoPrecioVenta: SalePriceRoundStep
+}
 
 export const DEFAULT_PRINTING_3D_PRINTER_CONFIG: Printing3DPrinterConfig = {
   precioRollo: DEFAULT_PRINTING_3D_INPUTS.precioRollo,
@@ -123,6 +129,7 @@ export const DEFAULT_PRINTING_3D_QUOTE_INPUTS: Printing3DQuoteInputs = {
   cantidadTotalUnidades: DEFAULT_PRINTING_3D_INPUTS.cantidadTotalUnidades,
   insumosExtraPieza: DEFAULT_PRINTING_3D_INPUTS.insumosExtraPieza,
   porcentajeGanancia: DEFAULT_PRINTING_3D_INPUTS.porcentajeGanancia,
+  redondeoPrecioVenta: 500,
 }
 
 export const PRINTING_3D_CONFIG_STORAGE_KEY = 'nm-hub-printing3d-printer-config'
@@ -131,7 +138,45 @@ export function mergePrinting3DInputs(
   config: Printing3DPrinterConfig,
   quote: Printing3DQuoteInputs,
 ): Printing3DInputs {
-  return { ...config, ...quote }
+  const { redondeoPrecioVenta: _roundStep, ...quoteCore } = quote
+  return { ...config, ...quoteCore }
+}
+
+export function roundSalePrice(value: number, step: SalePriceRoundStep): number {
+  if (!Number.isFinite(value) || value <= 0) return 0
+  return Math.round(value / step) * step
+}
+
+export interface Printing3DRoundedSale {
+  precioVentaUnitario: number
+  precioVentaTotal: number
+  gananciaNetaTotal: number
+  gananciaNetaUnitaria: number
+  margenRealPorcentaje: number
+  redondeoPrecioVenta: SalePriceRoundStep
+}
+
+export function applySalePriceRounding(
+  result: Printing3DResults,
+  quantity: number,
+  step: SalePriceRoundStep,
+): Printing3DRoundedSale {
+  const qty = Math.max(1, Math.floor(quantity))
+  const precioVentaUnitario = roundSalePrice(result.precioVentaUnitario, step)
+  const precioVentaTotal = precioVentaUnitario * qty
+  const gananciaNetaTotal = precioVentaTotal - result.costoTotalProduccion
+  const gananciaNetaUnitaria = gananciaNetaTotal / qty
+  const margenRealPorcentaje =
+    precioVentaTotal > 0 ? (gananciaNetaTotal / precioVentaTotal) * 100 : 0
+
+  return {
+    precioVentaUnitario,
+    precioVentaTotal,
+    gananciaNetaTotal,
+    gananciaNetaUnitaria,
+    margenRealPorcentaje,
+    redondeoPrecioVenta: step,
+  }
 }
 
 export function savePrinting3DPrinterConfig(config: Printing3DPrinterConfig): void {

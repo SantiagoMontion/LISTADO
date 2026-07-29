@@ -1,13 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import {
+  applySalePriceRounding,
   bedTimeToTotalMinutes,
   computePrinting3D,
+  coercePrinting3DPrinterConfig,
   DEFAULT_PRINTING_3D_INPUTS,
   DEFAULT_PRINTING_3D_PRINTER_CONFIG,
   DEFAULT_PRINTING_3D_QUOTE_INPUTS,
   formatBedPrintTimeLabel,
   mergePrinting3DInputs,
-  coercePrinting3DPrinterConfig,
+  roundSalePrice,
   totalMinutesToBedTime,
 } from './printing3dCalc'
 
@@ -109,5 +111,20 @@ describe('printing3dCalc', () => {
       ...DEFAULT_PRINTING_3D_PRINTER_CONFIG,
       precioRollo: 22000,
     })
+  })
+
+  it('redondea precio de venta al paso elegido', () => {
+    const result = computePrinting3D(DEFAULT_PRINTING_3D_INPUTS)
+    expect(result.valid).toBe(true)
+    if (!result.valid) return
+
+    const rounded500 = applySalePriceRounding(result, 5, 500)
+    expect(rounded500.precioVentaUnitario % 500).toBe(0)
+    expect(rounded500.precioVentaTotal).toBe(rounded500.precioVentaUnitario * 5)
+
+    const rounded1000 = applySalePriceRounding(result, 1, 1000)
+    expect(rounded1000.precioVentaUnitario % 1000).toBe(0)
+    expect(roundSalePrice(12783.75, 500)).toBe(13000)
+    expect(roundSalePrice(12783.75, 1000)).toBe(13000)
   })
 })
