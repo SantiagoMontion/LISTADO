@@ -7447,6 +7447,21 @@ body:has(.nm-hub-app--logistica-andreani) {
   box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.25);
 }
 
+.printing3d-config-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.printing3d-config-status {
+  margin: 0.35rem 0 0;
+  font-size: 0.78rem;
+  color: rgba(148, 163, 184, 0.9);
+}
+
+.printing3d-config-status--warn {
+  color: #fecaca;
+}
+
 .printing3d-config-modal {
   width: min(100%, 42rem);
   max-height: min(92dvh, 44rem);

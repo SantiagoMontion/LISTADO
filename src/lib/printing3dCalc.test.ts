@@ -7,6 +7,7 @@ import {
   DEFAULT_PRINTING_3D_QUOTE_INPUTS,
   formatBedPrintTimeLabel,
   mergePrinting3DInputs,
+  coercePrinting3DPrinterConfig,
   totalMinutesToBedTime,
 } from './printing3dCalc'
 
@@ -101,5 +102,12 @@ describe('printing3dCalc', () => {
     expect(formatBedPrintTimeLabel(6, 30)).toBe('6 h 30 min')
     expect(formatBedPrintTimeLabel(2, 0)).toBe('2 h')
     expect(formatBedPrintTimeLabel(0, 45)).toBe('45 min')
+  })
+
+  it('normaliza config parcial desde json', () => {
+    expect(coercePrinting3DPrinterConfig({ precioRollo: 22000, consumoWatts: 'bad' })).toEqual({
+      ...DEFAULT_PRINTING_3D_PRINTER_CONFIG,
+      precioRollo: 22000,
+    })
   })
 })

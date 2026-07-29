@@ -1171,7 +1171,7 @@ export default function App() {
     profile &&
     getHubPermissions(profile.role)?.view3DCalculator
   ) {
-    return <Hub3DApp profileRole={profile.role} adminSignOut />
+    return <Hub3DApp configured={configured} profileId={profile.id} profileRole={profile.role} adminSignOut />
   }
 
   if (

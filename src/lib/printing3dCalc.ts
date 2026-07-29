@@ -134,21 +134,49 @@ export function mergePrinting3DInputs(
   return { ...config, ...quote }
 }
 
-export function loadPrinting3DPrinterConfig(): Printing3DPrinterConfig {
+export function savePrinting3DPrinterConfig(config: Printing3DPrinterConfig): void {
+  if (typeof window === 'undefined') return
+  window.localStorage.setItem(PRINTING_3D_CONFIG_STORAGE_KEY, JSON.stringify(config))
+}
+
+export function coercePrinting3DPrinterConfig(raw: unknown): Printing3DPrinterConfig {
+  const source =
+    raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {}
+
+  const num = (key: keyof Printing3DPrinterConfig): number => {
+    const value = Number(source[key])
+    return Number.isFinite(value) ? value : DEFAULT_PRINTING_3D_PRINTER_CONFIG[key]
+  }
+
+  return {
+    precioRollo: num('precioRollo'),
+    pesoRolloGramos: num('pesoRolloGramos'),
+    pesoPurgaCama: num('pesoPurgaCama'),
+    valorImpresora: num('valorImpresora'),
+    vidaUtilHoras: num('vidaUtilHoras'),
+    consumoWatts: num('consumoWatts'),
+    costoKwh: num('costoKwh'),
+    costoHoraTrabajo: num('costoHoraTrabajo'),
+    minutosPostproceso: num('minutosPostproceso'),
+    insumosExtraPieza: num('insumosExtraPieza'),
+    porcentajeFallos: num('porcentajeFallos'),
+  }
+}
+
+export function loadPrinting3DPrinterConfigLocal(): Printing3DPrinterConfig {
   if (typeof window === 'undefined') return DEFAULT_PRINTING_3D_PRINTER_CONFIG
   try {
     const raw = window.localStorage.getItem(PRINTING_3D_CONFIG_STORAGE_KEY)
     if (!raw) return DEFAULT_PRINTING_3D_PRINTER_CONFIG
-    const parsed = JSON.parse(raw) as Partial<Printing3DPrinterConfig>
-    return { ...DEFAULT_PRINTING_3D_PRINTER_CONFIG, ...parsed }
+    return coercePrinting3DPrinterConfig(JSON.parse(raw))
   } catch {
     return DEFAULT_PRINTING_3D_PRINTER_CONFIG
   }
 }
 
-export function savePrinting3DPrinterConfig(config: Printing3DPrinterConfig): void {
-  if (typeof window === 'undefined') return
-  window.localStorage.setItem(PRINTING_3D_CONFIG_STORAGE_KEY, JSON.stringify(config))
+/** @deprecated Usar loadPrinting3DPrinterConfigLocal o fetch desde Supabase. */
+export function loadPrinting3DPrinterConfig(): Printing3DPrinterConfig {
+  return loadPrinting3DPrinterConfigLocal()
 }
 
 export function bedTimeToTotalMinutes(horasCama: number, minutosCama: number): number {

@@ -1,6 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { HubBrandBar } from './HubBrandBar'
 import { HubDesktopNav } from './HubDesktopNav'
+import {
+  fetchPrinting3DPrinterConfig,
+  savePrinting3DPrinterConfigRemote,
+} from '../lib/printing3dConfigApi'
 import {
   bedPrintTimeOptionsIncluding,
   bedTimeToTotalMinutes,
@@ -8,7 +12,7 @@ import {
   computePrinting3D,
   DEFAULT_PRINTING_3D_PRINTER_CONFIG,
   DEFAULT_PRINTING_3D_QUOTE_INPUTS,
-  loadPrinting3DPrinterConfig,
+  loadPrinting3DPrinterConfigLocal,
   mergePrinting3DInputs,
   savePrinting3DPrinterConfig,
   totalMinutesToBedTime,
@@ -18,6 +22,8 @@ import {
 import type { HubUserRole } from '../lib/types'
 
 interface Hub3DAppProps {
+  configured?: boolean
+  profileId?: string | null
   profileRole?: HubUserRole | null
   adminSignOut?: boolean
 }
@@ -226,9 +232,16 @@ interface PrinterConfigModalProps {
   config: Printing3DPrinterConfig
   onChange: (config: Printing3DPrinterConfig) => void
   onClose: () => void
+  cloudSync?: boolean
 }
 
-function PrinterConfigModal({ open, config, onChange, onClose }: PrinterConfigModalProps) {
+function PrinterConfigModal({
+  open,
+  config,
+  onChange,
+  onClose,
+  cloudSync = false,
+}: PrinterConfigModalProps) {
   if (!open) return null
 
   const patch = (partial: Partial<Printing3DPrinterConfig>) => {
@@ -253,7 +266,9 @@ function PrinterConfigModal({ open, config, onChange, onClose }: PrinterConfigMo
             Configurar impresora
           </h2>
           <p className="printing3d-config-modal__lead">
-            Estos valores se guardan en este dispositivo y se usan en todas las cotizaciones.
+            {cloudSync
+              ? 'Estos valores se guardan en la nube y los comparte todo el equipo.'
+              : 'Estos valores se guardan en este dispositivo hasta conectar Supabase.'}
           </p>
         </header>
 
@@ -371,23 +386,74 @@ function PrinterConfigModal({ open, config, onChange, onClose }: PrinterConfigMo
   )
 }
 
-export function Hub3DApp({ profileRole, adminSignOut = false }: Hub3DAppProps) {
+export function Hub3DApp({
+  configured = false,
+  profileId = null,
+  profileRole,
+  adminSignOut = false,
+}: Hub3DAppProps) {
   const [printerConfig, setPrinterConfig] = useState<Printing3DPrinterConfig>(
     DEFAULT_PRINTING_3D_PRINTER_CONFIG,
   )
   const [quote, setQuote] = useState<Printing3DQuoteInputs>(DEFAULT_PRINTING_3D_QUOTE_INPUTS)
   const [configOpen, setConfigOpen] = useState(false)
-  const [configReady, setConfigReady] = useState(false)
+  const [configLoading, setConfigLoading] = useState(configured)
+  const [configSaveError, setConfigSaveError] = useState<string | null>(null)
+  const configHydratedRef = useRef(false)
 
   useEffect(() => {
-    setPrinterConfig(loadPrinting3DPrinterConfig())
-    setConfigReady(true)
-  }, [])
+    let cancelled = false
+
+    async function hydrateConfig() {
+      setConfigLoading(true)
+      setConfigSaveError(null)
+
+      let nextConfig = loadPrinting3DPrinterConfigLocal()
+
+      if (configured) {
+        try {
+          const remoteConfig = await fetchPrinting3DPrinterConfig()
+          if (remoteConfig) nextConfig = remoteConfig
+        } catch (error) {
+          console.warn('[Hub3D] No se pudo cargar config desde Supabase:', error)
+          if (!cancelled) {
+            setConfigSaveError('No se pudo cargar la config desde la nube. Usando copia local.')
+          }
+        }
+      }
+
+      if (!cancelled) {
+        setPrinterConfig(nextConfig)
+        savePrinting3DPrinterConfig(nextConfig)
+        configHydratedRef.current = true
+        setConfigLoading(false)
+      }
+    }
+
+    void hydrateConfig()
+    return () => {
+      cancelled = true
+    }
+  }, [configured])
 
   useEffect(() => {
-    if (!configReady) return
+    if (!configHydratedRef.current) return
+
     savePrinting3DPrinterConfig(printerConfig)
-  }, [printerConfig, configReady])
+
+    if (!configured) return
+
+    const timer = window.setTimeout(() => {
+      void savePrinting3DPrinterConfigRemote(printerConfig, profileId)
+        .then(() => setConfigSaveError(null))
+        .catch((error) => {
+          console.warn('[Hub3D] No se pudo guardar config en Supabase:', error)
+          setConfigSaveError('No se pudo guardar en la nube. Quedó guardada solo en este dispositivo.')
+        })
+    }, 600)
+
+    return () => window.clearTimeout(timer)
+  }, [printerConfig, configured, profileId])
 
   const inputs = useMemo(
     () => mergePrinting3DInputs(printerConfig, quote),
@@ -420,10 +486,20 @@ export function Hub3DApp({ profileRole, adminSignOut = false }: Hub3DAppProps) {
               type="button"
               className="printing3d-config-btn"
               onClick={() => setConfigOpen(true)}
+              disabled={configLoading}
             >
-              Configurar impresora
+              {configLoading ? 'Cargando config…' : 'Configurar impresora'}
             </button>
           </div>
+          {configSaveError ? (
+            <p className="printing3d-config-status printing3d-config-status--warn" role="status">
+              {configSaveError}
+            </p>
+          ) : configured ? (
+            <p className="printing3d-config-status" role="status">
+              Config compartida del taller (guardada en la nube).
+            </p>
+          ) : null}
         </header>
 
         <div className="printing3d-layout">
@@ -569,6 +645,7 @@ export function Hub3DApp({ profileRole, adminSignOut = false }: Hub3DAppProps) {
         config={printerConfig}
         onChange={setPrinterConfig}
         onClose={() => setConfigOpen(false)}
+        cloudSync={configured}
       />
     </div>
   )
