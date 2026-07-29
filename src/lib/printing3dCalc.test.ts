@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { computePrinting3D, DEFAULT_PRINTING_3D_INPUTS } from './printing3dCalc'
+import {
+  computePrinting3D,
+  DEFAULT_PRINTING_3D_INPUTS,
+  DEFAULT_PRINTING_3D_PRINTER_CONFIG,
+  DEFAULT_PRINTING_3D_QUOTE_INPUTS,
+  mergePrinting3DInputs,
+} from './printing3dCalc'
 
 describe('printing3dCalc', () => {
   it('calcula costos unitarios y totales con valores por defecto', () => {
@@ -71,5 +77,18 @@ describe('printing3dCalc', () => {
 
     expect(result.breakdown.reservaFallos).toBeCloseTo(result.subtotalPieza * 0.1, 5)
     expect(result.costoUnitarioFinal).toBeCloseTo(result.subtotalPieza * 1.1, 5)
+  })
+
+  it('combina config fija y cotización', () => {
+    const merged = mergePrinting3DInputs(
+      { ...DEFAULT_PRINTING_3D_PRINTER_CONFIG, precioRollo: 20000 },
+      { ...DEFAULT_PRINTING_3D_QUOTE_INPUTS, pesoPieza: 40 },
+    )
+    const result = computePrinting3D(merged)
+    expect(result.valid).toBe(true)
+    if (!result.valid) return
+
+    expect(result.costoGramo).toBe(20)
+    expect(result.gramosPorPieza).toBe(45)
   })
 })

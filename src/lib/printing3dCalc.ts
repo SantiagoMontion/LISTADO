@@ -77,6 +77,80 @@ export const DEFAULT_PRINTING_3D_INPUTS: Printing3DInputs = {
   porcentajeGanancia: 30,
 }
 
+export type Printing3DPrinterConfig = Pick<
+  Printing3DInputs,
+  | 'precioRollo'
+  | 'pesoRolloGramos'
+  | 'pesoPurgaCama'
+  | 'valorImpresora'
+  | 'vidaUtilHoras'
+  | 'consumoWatts'
+  | 'costoKwh'
+  | 'costoHoraTrabajo'
+  | 'minutosPostproceso'
+  | 'insumosExtraPieza'
+  | 'porcentajeFallos'
+>
+
+export type Printing3DQuoteInputs = Pick<
+  Printing3DInputs,
+  | 'pesoPieza'
+  | 'horasCama'
+  | 'minutosCama'
+  | 'piezasPorCama'
+  | 'cantidadTotalUnidades'
+  | 'porcentajeGanancia'
+>
+
+export const DEFAULT_PRINTING_3D_PRINTER_CONFIG: Printing3DPrinterConfig = {
+  precioRollo: DEFAULT_PRINTING_3D_INPUTS.precioRollo,
+  pesoRolloGramos: DEFAULT_PRINTING_3D_INPUTS.pesoRolloGramos,
+  pesoPurgaCama: DEFAULT_PRINTING_3D_INPUTS.pesoPurgaCama,
+  valorImpresora: DEFAULT_PRINTING_3D_INPUTS.valorImpresora,
+  vidaUtilHoras: DEFAULT_PRINTING_3D_INPUTS.vidaUtilHoras,
+  consumoWatts: DEFAULT_PRINTING_3D_INPUTS.consumoWatts,
+  costoKwh: DEFAULT_PRINTING_3D_INPUTS.costoKwh,
+  costoHoraTrabajo: DEFAULT_PRINTING_3D_INPUTS.costoHoraTrabajo,
+  minutosPostproceso: DEFAULT_PRINTING_3D_INPUTS.minutosPostproceso,
+  insumosExtraPieza: DEFAULT_PRINTING_3D_INPUTS.insumosExtraPieza,
+  porcentajeFallos: DEFAULT_PRINTING_3D_INPUTS.porcentajeFallos,
+}
+
+export const DEFAULT_PRINTING_3D_QUOTE_INPUTS: Printing3DQuoteInputs = {
+  pesoPieza: DEFAULT_PRINTING_3D_INPUTS.pesoPieza,
+  horasCama: DEFAULT_PRINTING_3D_INPUTS.horasCama,
+  minutosCama: DEFAULT_PRINTING_3D_INPUTS.minutosCama,
+  piezasPorCama: DEFAULT_PRINTING_3D_INPUTS.piezasPorCama,
+  cantidadTotalUnidades: DEFAULT_PRINTING_3D_INPUTS.cantidadTotalUnidades,
+  porcentajeGanancia: DEFAULT_PRINTING_3D_INPUTS.porcentajeGanancia,
+}
+
+export const PRINTING_3D_CONFIG_STORAGE_KEY = 'nm-hub-printing3d-printer-config'
+
+export function mergePrinting3DInputs(
+  config: Printing3DPrinterConfig,
+  quote: Printing3DQuoteInputs,
+): Printing3DInputs {
+  return { ...config, ...quote }
+}
+
+export function loadPrinting3DPrinterConfig(): Printing3DPrinterConfig {
+  if (typeof window === 'undefined') return DEFAULT_PRINTING_3D_PRINTER_CONFIG
+  try {
+    const raw = window.localStorage.getItem(PRINTING_3D_CONFIG_STORAGE_KEY)
+    if (!raw) return DEFAULT_PRINTING_3D_PRINTER_CONFIG
+    const parsed = JSON.parse(raw) as Partial<Printing3DPrinterConfig>
+    return { ...DEFAULT_PRINTING_3D_PRINTER_CONFIG, ...parsed }
+  } catch {
+    return DEFAULT_PRINTING_3D_PRINTER_CONFIG
+  }
+}
+
+export function savePrinting3DPrinterConfig(config: Printing3DPrinterConfig): void {
+  if (typeof window === 'undefined') return
+  window.localStorage.setItem(PRINTING_3D_CONFIG_STORAGE_KEY, JSON.stringify(config))
+}
+
 function nonNegative(value: number, label: string, errors: string[]): number {
   if (!Number.isFinite(value) || value < 0) {
     errors.push(`${label} no puede ser negativo.`)

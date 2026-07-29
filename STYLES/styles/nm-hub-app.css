@@ -7417,6 +7417,89 @@ body:has(.nm-hub-app--logistica-andreani) {
   margin-bottom: 1.25rem;
 }
 
+.printing3d-page__head-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.85rem;
+}
+
+.printing3d-config-btn {
+  flex-shrink: 0;
+  border: 1px solid rgba(96, 165, 250, 0.35);
+  background: rgba(37, 99, 235, 0.14);
+  color: #dbeafe;
+  border-radius: 0.75rem;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.printing3d-config-btn:hover {
+  background: rgba(37, 99, 235, 0.24);
+}
+
+.printing3d-config-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.25);
+}
+
+.printing3d-config-modal {
+  width: min(100%, 42rem);
+  max-height: min(92dvh, 44rem);
+}
+
+.printing3d-config-modal__head {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.printing3d-config-modal__lead {
+  margin: 0;
+  font-size: 0.82rem;
+  color: rgba(248, 250, 252, 0.62);
+  line-height: 1.45;
+}
+
+.printing3d-config-modal__body {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.printing3d-config-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.printing3d-config-modal__btn {
+  border: 1px solid rgba(74, 222, 128, 0.35);
+  background: rgba(34, 197, 94, 0.16);
+  color: #bbf7d0;
+  border-radius: 0.75rem;
+  padding: 0.6rem 1.1rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.printing3d-config-modal__btn:hover {
+  background: rgba(34, 197, 94, 0.26);
+}
+
+.printing3d-field--time {
+  grid-column: 1 / -1;
+}
+
+.printing3d-time-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
 .printing3d-page__title {
   margin: 0 0 0.35rem;
   font-size: 1.35rem;

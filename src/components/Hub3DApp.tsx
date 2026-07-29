@@ -1,10 +1,15 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { HubBrandBar } from './HubBrandBar'
 import { HubDesktopNav } from './HubDesktopNav'
 import {
   computePrinting3D,
-  DEFAULT_PRINTING_3D_INPUTS,
-  type Printing3DInputs,
+  DEFAULT_PRINTING_3D_PRINTER_CONFIG,
+  DEFAULT_PRINTING_3D_QUOTE_INPUTS,
+  loadPrinting3DPrinterConfig,
+  mergePrinting3DInputs,
+  savePrinting3DPrinterConfig,
+  type Printing3DPrinterConfig,
+  type Printing3DQuoteInputs,
 } from '../lib/printing3dCalc'
 import type { HubUserRole } from '../lib/types'
 
@@ -99,6 +104,49 @@ function InputSection({ title, children }: InputSectionProps) {
   )
 }
 
+interface ProfitFieldProps {
+  value: number
+  onChange: (value: number) => void
+  id?: string
+}
+
+function ProfitField({ value, onChange, id = 'porcentaje-ganancia' }: ProfitFieldProps) {
+  return (
+    <div className="printing3d-field printing3d-field--full">
+      <label className="printing3d-field__label" htmlFor={id}>
+        Porcentaje de ganancia deseada
+      </label>
+      <div className="printing3d-slider-row">
+        <input
+          id={id}
+          className="printing3d-slider"
+          type="range"
+          min={0}
+          max={95}
+          step={1}
+          value={Math.min(95, value)}
+          onChange={(e) => onChange(Number(e.target.value))}
+        />
+        <input
+          className="nm-hub-input printing3d-slider__number"
+          type="number"
+          inputMode="decimal"
+          min={0}
+          max={99}
+          step={1}
+          value={value}
+          aria-label="Porcentaje de ganancia deseada"
+          onChange={(e) => {
+            const parsed = Number.parseFloat(e.target.value)
+            onChange(Number.isFinite(parsed) ? parsed : 0)
+          }}
+        />
+        <span className="printing3d-field__suffix">%</span>
+      </div>
+    </div>
+  )
+}
+
 interface ResultCardProps {
   label: string
   value: string
@@ -130,13 +178,182 @@ function BreakdownRow({ label, value }: BreakdownRowProps) {
   )
 }
 
-export function Hub3DApp({ profileRole, adminSignOut = false }: Hub3DAppProps) {
-  const [inputs, setInputs] = useState<Printing3DInputs>(DEFAULT_PRINTING_3D_INPUTS)
+interface PrinterConfigModalProps {
+  open: boolean
+  config: Printing3DPrinterConfig
+  onChange: (config: Printing3DPrinterConfig) => void
+  onClose: () => void
+}
 
+function PrinterConfigModal({ open, config, onChange, onClose }: PrinterConfigModalProps) {
+  if (!open) return null
+
+  const patch = (partial: Partial<Printing3DPrinterConfig>) => {
+    onChange({ ...config, ...partial })
+  }
+
+  return (
+    <div
+      className="upload-images-modal-backdrop printing3d-config-backdrop"
+      role="presentation"
+      onClick={onClose}
+    >
+      <div
+        className="upload-images-modal printing3d-config-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="printing3d-config-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="printing3d-config-modal__head">
+          <h2 id="printing3d-config-title" className="modal-title-rebel">
+            Configurar impresora
+          </h2>
+          <p className="printing3d-config-modal__lead">
+            Estos valores se guardan en este dispositivo y se usan en todas las cotizaciones.
+          </p>
+        </header>
+
+        <div className="printing3d-config-modal__body">
+          <InputSection title="Material (filamento)">
+            <NumberField
+              id="cfg-precio-rollo"
+              label="Precio del rollo"
+              value={config.precioRollo}
+              onChange={(v) => patch({ precioRollo: v })}
+              step={100}
+              suffix="$"
+            />
+            <NumberField
+              id="cfg-peso-rollo"
+              label="Peso del rollo"
+              value={config.pesoRolloGramos}
+              onChange={(v) => patch({ pesoRolloGramos: v })}
+              min={1}
+              step={50}
+              suffix="g"
+            />
+            <NumberField
+              id="cfg-peso-purga"
+              label="Purga / soportes / desperdicio por cama"
+              value={config.pesoPurgaCama}
+              onChange={(v) => patch({ pesoPurgaCama: v })}
+              step={0.1}
+              suffix="g"
+            />
+          </InputSection>
+
+          <InputSection title="Máquina y energía">
+            <NumberField
+              id="cfg-valor-impresora"
+              label="Valor / costo de la impresora"
+              value={config.valorImpresora}
+              onChange={(v) => patch({ valorImpresora: v })}
+              step={1000}
+              suffix="$"
+            />
+            <NumberField
+              id="cfg-vida-util"
+              label="Vida útil estimada"
+              value={config.vidaUtilHoras}
+              onChange={(v) => patch({ vidaUtilHoras: v })}
+              min={1}
+              step={100}
+              suffix="hs"
+            />
+            <NumberField
+              id="cfg-consumo-watts"
+              label="Consumo eléctrico promedio"
+              value={config.consumoWatts}
+              onChange={(v) => patch({ consumoWatts: v })}
+              step={5}
+              suffix="W"
+            />
+            <NumberField
+              id="cfg-costo-kwh"
+              label="Costo del kWh"
+              value={config.costoKwh}
+              onChange={(v) => patch({ costoKwh: v })}
+              step={1}
+              suffix="$/kWh"
+            />
+          </InputSection>
+
+          <InputSection title="Mano de obra e insumos">
+            <NumberField
+              id="cfg-costo-hora"
+              label="Costo hora de trabajo"
+              value={config.costoHoraTrabajo}
+              onChange={(v) => patch({ costoHoraTrabajo: v })}
+              step={100}
+              suffix="$/h"
+            />
+            <NumberField
+              id="cfg-minutos-post"
+              label="Preparación / post-procesado por pieza"
+              value={config.minutosPostproceso}
+              onChange={(v) => patch({ minutosPostproceso: v })}
+              step={1}
+              suffix="min"
+            />
+            <NumberField
+              id="cfg-insumos-extra"
+              label="Insumos extra por pieza"
+              value={config.insumosExtraPieza}
+              onChange={(v) => patch({ insumosExtraPieza: v })}
+              step={10}
+              suffix="$"
+            />
+          </InputSection>
+
+          <InputSection title="Márgenes y riesgos">
+            <NumberField
+              id="cfg-porcentaje-fallos"
+              label="Porcentaje de fallos / mermas"
+              value={config.porcentajeFallos}
+              onChange={(v) => patch({ porcentajeFallos: v })}
+              step={0.5}
+              suffix="%"
+            />
+          </InputSection>
+        </div>
+
+        <div className="printing3d-config-modal__actions">
+          <button type="button" className="printing3d-config-modal__btn" onClick={onClose}>
+            Listo
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export function Hub3DApp({ profileRole, adminSignOut = false }: Hub3DAppProps) {
+  const [printerConfig, setPrinterConfig] = useState<Printing3DPrinterConfig>(
+    DEFAULT_PRINTING_3D_PRINTER_CONFIG,
+  )
+  const [quote, setQuote] = useState<Printing3DQuoteInputs>(DEFAULT_PRINTING_3D_QUOTE_INPUTS)
+  const [configOpen, setConfigOpen] = useState(false)
+  const [configReady, setConfigReady] = useState(false)
+
+  useEffect(() => {
+    setPrinterConfig(loadPrinting3DPrinterConfig())
+    setConfigReady(true)
+  }, [])
+
+  useEffect(() => {
+    if (!configReady) return
+    savePrinting3DPrinterConfig(printerConfig)
+  }, [printerConfig, configReady])
+
+  const inputs = useMemo(
+    () => mergePrinting3DInputs(printerConfig, quote),
+    [printerConfig, quote],
+  )
   const result = useMemo(() => computePrinting3D(inputs), [inputs])
 
-  const patch = (partial: Partial<Printing3DInputs>) => {
-    setInputs((prev) => ({ ...prev, ...partial }))
+  const patchQuote = (partial: Partial<Printing3DQuoteInputs>) => {
+    setQuote((prev) => ({ ...prev, ...partial }))
   }
 
   return (
@@ -149,108 +366,61 @@ export function Hub3DApp({ profileRole, adminSignOut = false }: Hub3DAppProps) {
 
       <div className="printing3d-page">
         <header className="printing3d-page__head">
-          <h1 className="printing3d-page__title">Calculadora de impresión 3D</h1>
-          <p className="printing3d-page__lead">
-            Cotizá piezas individuales o lotes completos con costos reales de material, energía,
-            máquina y mano de obra.
-          </p>
+          <div className="printing3d-page__head-row">
+            <div>
+              <h1 className="printing3d-page__title">Calculadora de impresión 3D</h1>
+              <p className="printing3d-page__lead">
+                Ingresá los datos de la pieza y obtené el precio de venta al instante.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="printing3d-config-btn"
+              onClick={() => setConfigOpen(true)}
+            >
+              Configurar impresora
+            </button>
+          </div>
         </header>
 
         <div className="printing3d-layout">
           <div className="printing3d-layout__inputs">
-            <InputSection title="A. Material (filamento)">
-              <NumberField
-                id="precio-rollo"
-                label="Precio del rollo"
-                value={inputs.precioRollo}
-                onChange={(v) => patch({ precioRollo: v })}
-                step={100}
-                suffix="$"
-              />
-              <NumberField
-                id="peso-rollo"
-                label="Peso del rollo"
-                value={inputs.pesoRolloGramos}
-                onChange={(v) => patch({ pesoRolloGramos: v })}
-                min={1}
-                step={50}
-                suffix="g"
-              />
+            <InputSection title="Cotización">
               <NumberField
                 id="peso-pieza"
                 label="Peso de la pieza"
-                value={inputs.pesoPieza}
-                onChange={(v) => patch({ pesoPieza: v })}
+                value={quote.pesoPieza}
+                onChange={(v) => patchQuote({ pesoPieza: v })}
                 step={0.1}
                 suffix="g"
               />
-              <NumberField
-                id="peso-purga"
-                label="Purga / soportes / desperdicio por cama"
-                value={inputs.pesoPurgaCama}
-                onChange={(v) => patch({ pesoPurgaCama: v })}
-                step={0.1}
-                suffix="g"
-              />
-            </InputSection>
-
-            <InputSection title="B. Máquina y energía">
-              <NumberField
-                id="valor-impresora"
-                label="Valor / costo de la impresora"
-                value={inputs.valorImpresora}
-                onChange={(v) => patch({ valorImpresora: v })}
-                step={1000}
-                suffix="$"
-              />
-              <NumberField
-                id="vida-util"
-                label="Vida útil estimada"
-                value={inputs.vidaUtilHoras}
-                onChange={(v) => patch({ vidaUtilHoras: v })}
-                min={1}
-                step={100}
-                suffix="hs"
-              />
-              <NumberField
-                id="consumo-watts"
-                label="Consumo eléctrico promedio"
-                value={inputs.consumoWatts}
-                onChange={(v) => patch({ consumoWatts: v })}
-                step={5}
-                suffix="W"
-              />
-              <NumberField
-                id="costo-kwh"
-                label="Costo del kWh"
-                value={inputs.costoKwh}
-                onChange={(v) => patch({ costoKwh: v })}
-                step={1}
-                suffix="$/kWh"
-              />
-            </InputSection>
-
-            <InputSection title="C. Tiempos y producción en lote">
-              <NumberField
-                id="horas-cama"
-                label="Tiempo de impresión de la cama"
-                value={inputs.horasCama}
-                onChange={(v) => patch({ horasCama: v })}
-                suffix="hs"
-              />
-              <NumberField
-                id="minutos-cama"
-                label="Minutos adicionales de la cama"
-                value={inputs.minutosCama}
-                onChange={(v) => patch({ minutosCama: v })}
-                step={1}
-                suffix="min"
-              />
+              <div className="printing3d-field printing3d-field--time">
+                <span className="printing3d-field__label">Tiempo de impresión de la cama</span>
+                <div className="printing3d-time-row">
+                  <NumberField
+                    id="horas-cama"
+                    label="Horas"
+                    value={quote.horasCama}
+                    onChange={(v) => patchQuote({ horasCama: v })}
+                    suffix="hs"
+                  />
+                  <NumberField
+                    id="minutos-cama"
+                    label="Minutos"
+                    value={quote.minutosCama}
+                    onChange={(v) => patchQuote({ minutosCama: v })}
+                    step={1}
+                    suffix="min"
+                  />
+                </div>
+              </div>
               <NumberField
                 id="piezas-cama"
                 label="Piezas por cama"
-                value={inputs.piezasPorCama}
-                onChange={(v) => patch({ piezasPorCama: Math.max(1, Math.floor(v)) })}
+                value={quote.piezasPorCama}
+                onChange={(v) =>
+                  patchQuote({ piezasPorCama: Math.max(1, Math.floor(v)) })
+                }
                 min={1}
                 step={1}
                 suffix="u"
@@ -258,81 +428,18 @@ export function Hub3DApp({ profileRole, adminSignOut = false }: Hub3DAppProps) {
               <NumberField
                 id="cantidad-total"
                 label="Cantidad total a cotizar"
-                value={inputs.cantidadTotalUnidades}
-                onChange={(v) => patch({ cantidadTotalUnidades: Math.max(1, Math.floor(v)) })}
+                value={quote.cantidadTotalUnidades}
+                onChange={(v) =>
+                  patchQuote({ cantidadTotalUnidades: Math.max(1, Math.floor(v)) })
+                }
                 min={1}
                 step={1}
                 suffix="u"
               />
-            </InputSection>
-
-            <InputSection title="D. Mano de obra e insumos">
-              <NumberField
-                id="costo-hora"
-                label="Costo hora de trabajo"
-                value={inputs.costoHoraTrabajo}
-                onChange={(v) => patch({ costoHoraTrabajo: v })}
-                step={100}
-                suffix="$/h"
+              <ProfitField
+                value={quote.porcentajeGanancia}
+                onChange={(v) => patchQuote({ porcentajeGanancia: v })}
               />
-              <NumberField
-                id="minutos-post"
-                label="Preparación / post-procesado por pieza"
-                value={inputs.minutosPostproceso}
-                onChange={(v) => patch({ minutosPostproceso: v })}
-                step={1}
-                suffix="min"
-              />
-              <NumberField
-                id="insumos-extra"
-                label="Insumos extra por pieza"
-                value={inputs.insumosExtraPieza}
-                onChange={(v) => patch({ insumosExtraPieza: v })}
-                step={10}
-                suffix="$"
-              />
-            </InputSection>
-
-            <InputSection title="E. Márgenes y riesgos">
-              <NumberField
-                id="porcentaje-fallos"
-                label="Porcentaje de fallos / mermas"
-                value={inputs.porcentajeFallos}
-                onChange={(v) => patch({ porcentajeFallos: v })}
-                step={0.5}
-                suffix="%"
-              />
-              <div className="printing3d-field printing3d-field--full">
-                <label className="printing3d-field__label" htmlFor="porcentaje-ganancia">
-                  Porcentaje de ganancia deseada
-                </label>
-                <div className="printing3d-slider-row">
-                  <input
-                    id="porcentaje-ganancia"
-                    className="printing3d-slider"
-                    type="range"
-                    min={0}
-                    max={95}
-                    step={1}
-                    value={Math.min(95, inputs.porcentajeGanancia)}
-                    onChange={(e) => patch({ porcentajeGanancia: Number(e.target.value) })}
-                  />
-                  <input
-                    className="nm-hub-input printing3d-slider__number"
-                    type="number"
-                    inputMode="decimal"
-                    min={0}
-                    max={99}
-                    step={1}
-                    value={inputs.porcentajeGanancia}
-                    onChange={(e) => {
-                      const parsed = Number.parseFloat(e.target.value)
-                      patch({ porcentajeGanancia: Number.isFinite(parsed) ? parsed : 0 })
-                    }}
-                  />
-                  <span className="printing3d-field__suffix">%</span>
-                </div>
-              </div>
             </InputSection>
           </div>
 
@@ -428,6 +535,13 @@ export function Hub3DApp({ profileRole, adminSignOut = false }: Hub3DAppProps) {
           </div>
         </div>
       </div>
+
+      <PrinterConfigModal
+        open={configOpen}
+        config={printerConfig}
+        onChange={setPrinterConfig}
+        onClose={() => setConfigOpen(false)}
+      />
     </div>
   )
 }
