@@ -4,6 +4,7 @@ import { CreadorMaterialImagesModal } from './components/CreadorMaterialImagesMo
 import { QuickAddMeasureModal } from './components/QuickAddMeasureModal'
 import { HubDispatchedOrdersApp } from './components/HubDispatchedOrdersApp'
 import { HubLogisticaAndreaniApp } from './components/HubLogisticaAndreaniApp'
+import { Hub3DApp } from './components/Hub3DApp'
 import { HubAdminCutAnalytics } from './components/HubAdminCutAnalytics'
 import { HubAdminDispatchAnalytics } from './components/HubAdminDispatchAnalytics'
 import { HubDispatchedStatsApp } from './components/HubDispatchedStatsApp'
@@ -185,6 +186,7 @@ export default function App() {
   const isHubDispatchedCalendar =
     path === '/pedidos-despachados' || path === '/pedidos-despachados/estadisticas'
   const isLogisticaAndreani = path === '/logistica-andreani'
+  const isHub3D = path === '/3d'
   const isHubHome = path === '/' || path === ''
 
   const [reports, setReports] = useState<NmProdReport[]>([])
@@ -1072,7 +1074,8 @@ export default function App() {
       isHubDispatchedCargar ||
       isHubDispatchedAnalytics ||
       isHubCutAnalytics ||
-      isLogisticaAndreani) &&
+      isLogisticaAndreani ||
+      isHub3D) &&
     !profileReady
   ) {
     return <HubLoadingScreen label="Cargando perfil…" />
@@ -1119,7 +1122,8 @@ export default function App() {
       isHubDispatchedCargar ||
       isHubDispatchedAnalytics ||
       isHubCutAnalytics ||
-      isLogisticaAndreani) &&
+      isLogisticaAndreani ||
+      isHub3D) &&
     profileReady &&
     !profile
   ) {
@@ -1156,6 +1160,18 @@ export default function App() {
         adminSignOut
       />
     )
+  }
+
+  if (
+    authEnabled &&
+    authReady &&
+    session &&
+    isHub3D &&
+    profileReady &&
+    profile &&
+    getHubPermissions(profile.role)?.view3DCalculator
+  ) {
+    return <Hub3DApp profileRole={profile.role} adminSignOut />
   }
 
   if (
@@ -1235,7 +1251,7 @@ export default function App() {
 
   if (
     !authEnabled &&
-    (isHubDispatchedCalendar || isHubDispatchedCargar || isHubDispatchedAnalytics || isHubCutAnalytics || isLogisticaAndreani)
+    (isHubDispatchedCalendar || isHubDispatchedCargar || isHubDispatchedAnalytics || isHubCutAnalytics || isLogisticaAndreani || isHub3D)
   ) {
     return (
       <div className="nm-hub-app">

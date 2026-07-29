@@ -16,6 +16,7 @@ export interface HubPermissions {
   viewDispatchedOrders: boolean
   editDispatchedOrders: boolean
   viewLogisticaAndreani: boolean
+  view3DCalculator: boolean
   viewDashboardSummary: boolean
 }
 
@@ -34,6 +35,7 @@ const FULL_ACCESS: HubPermissions = {
   viewDispatchedOrders: true,
   editDispatchedOrders: true,
   viewLogisticaAndreani: true,
+  view3DCalculator: true,
   viewDashboardSummary: true,
 }
 
@@ -69,6 +71,7 @@ export type HubAppPath =
   | '/pedidos-despachados/analitica'
   | '/lista-corte/analitica'
   | '/logistica-andreani'
+  | '/3d'
   | '/entrar'
 
 export function canAccessHubPath(
@@ -102,6 +105,8 @@ export function canAccessHubPath(
       return perms.viewCutList
     case '/logistica-andreani':
       return perms.viewLogisticaAndreani
+    case '/3d':
+      return perms.view3DCalculator
     default:
       return false
   }
@@ -121,6 +126,7 @@ export function normalizeHubPath(path: string): HubAppPath | string {
   if (p === '/lista-corte/analitica') return '/lista-corte/analitica'
   if (p === '/pedidos-despachados') return '/pedidos-despachados'
   if (p === '/logistica-andreani') return '/logistica-andreani'
+  if (p === '/3d') return '/3d'
   if (p === '' || p === '/') return '/'
   return p
 }
@@ -152,6 +158,9 @@ export function hubPathBlockedMessage(path: string, role: HubUserRole | null | u
   if (p === '/logistica-andreani') {
     return `El perfil «${label}» no accede a logística Andreani.`
   }
+  if (p === '/3d') {
+    return `El perfil «${label}» no accede a la calculadora 3D.`
+  }
   return 'No tenés permiso para esta pantalla.'
 }
 
@@ -170,6 +179,7 @@ export function hubDashboardLinks(day: string = todayIsoLocal()) {
     dispatchAnalytics: '/pedidos-despachados/analitica',
     cutAnalytics: '/lista-corte/analitica',
     logisticaAndreani: '/logistica-andreani',
+    printing3d: '/3d',
   } as const
 }
 
@@ -198,5 +208,6 @@ export function hubDesktopNavLinks(
     { href: links.logisticaAndreani, label: 'Andreani' },
     { href: links.dispatchAnalytics, label: 'Analítica desp.' },
     { href: links.cutAnalytics, label: 'Analítica corte' },
+    { href: links.printing3d, label: '3D' },
   ]
 }

@@ -74,6 +74,7 @@ export function AdminDashboard({ stats }: RoleDashboardProps) {
         icon="⧉"
         title="Logística Andreani"
       />
+      <DashboardCard href={links.printing3d} accent="create" icon="◈" title="3D" />
     </nav>
   )
 }

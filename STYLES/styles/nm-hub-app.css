@@ -7404,3 +7404,246 @@ body:has(.nm-hub-app--logistica-andreani) {
     font-size: 0.88rem;
   }
 }
+
+/* ── Calculadora 3D ─────────────────────────────────────────────── */
+
+.nm-hub-app--3d .printing3d-page {
+  padding: 0 1rem 2rem;
+  max-width: 72rem;
+  margin-inline: auto;
+}
+
+.printing3d-page__head {
+  margin-bottom: 1.25rem;
+}
+
+.printing3d-page__title {
+  margin: 0 0 0.35rem;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.printing3d-page__lead {
+  margin: 0;
+  font-size: 0.88rem;
+  color: rgba(248, 250, 252, 0.68);
+  line-height: 1.45;
+}
+
+.printing3d-layout {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.printing3d-section {
+  padding: 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(20, 22, 28, 0.92);
+}
+
+.printing3d-section__title {
+  margin: 0 0 0.85rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: rgba(248, 250, 252, 0.92);
+}
+
+.printing3d-section__grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.printing3d-field {
+  display: block;
+}
+
+.printing3d-field--full {
+  grid-column: 1 / -1;
+}
+
+.printing3d-field__label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba(248, 250, 252, 0.65);
+  margin-bottom: 0.3rem;
+}
+
+.printing3d-field__control {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.printing3d-field__input {
+  flex: 1;
+  min-width: 0;
+}
+
+.printing3d-field__suffix {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba(248, 250, 252, 0.5);
+  min-width: 2.5rem;
+}
+
+.printing3d-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.printing3d-slider {
+  flex: 1;
+  accent-color: #60a5fa;
+}
+
+.printing3d-slider__number {
+  width: 4.5rem;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.printing3d-layout__results {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
+
+.printing3d-output-block {
+  padding: 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(16, 18, 24, 0.95);
+}
+
+.printing3d-output-block__title {
+  margin: 0 0 0.85rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: rgba(248, 250, 252, 0.88);
+}
+
+.printing3d-result-grid {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.printing3d-result-card {
+  padding: 0.85rem 0.95rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(30, 34, 44, 0.55);
+}
+
+.printing3d-result-card--highlight {
+  border-color: rgba(96, 165, 250, 0.35);
+  background: rgba(37, 99, 235, 0.12);
+}
+
+.printing3d-result-card__label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba(248, 250, 252, 0.62);
+  margin-bottom: 0.25rem;
+}
+
+.printing3d-result-card__value {
+  display: block;
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.printing3d-result-card__sub {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.78rem;
+  color: rgba(248, 250, 252, 0.58);
+}
+
+.printing3d-breakdown {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.printing3d-breakdown__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  font-size: 0.84rem;
+  color: rgba(248, 250, 252, 0.78);
+}
+
+.printing3d-breakdown__row strong {
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.printing3d-logistics {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.printing3d-logistics__item {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  font-size: 0.84rem;
+  color: rgba(248, 250, 252, 0.75);
+}
+
+.printing3d-logistics__item strong {
+  text-align: right;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.printing3d-logistics__detail {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: rgba(248, 250, 252, 0.55);
+}
+
+.printing3d-errors {
+  padding: 1rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  background: rgba(127, 29, 29, 0.2);
+  color: #fecaca;
+}
+
+.printing3d-errors__title {
+  margin: 0 0 0.5rem;
+  font-weight: 700;
+}
+
+.printing3d-errors ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.84rem;
+}
+
+@media (min-width: 640px) {
+  .printing3d-section__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 960px) {
+  .printing3d-layout {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+    align-items: start;
+  }
+
+  .printing3d-result-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
