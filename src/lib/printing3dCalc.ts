@@ -1,7 +1,8 @@
 export interface Printing3DInputs {
   precioRollo: number
   pesoRolloGramos: number
-  pesoPieza: number
+  /** Peso total de filamento de la cama según el slicer (no por pieza). */
+  pesoFilamentoCama: number
   pesoPurgaCama: number
   valorImpresora: number
   vidaUtilHoras: number
@@ -60,7 +61,7 @@ export type Printing3DCalcOutput = Printing3DResults | Printing3DInvalidResults
 export const DEFAULT_PRINTING_3D_INPUTS: Printing3DInputs = {
   precioRollo: 15000,
   pesoRolloGramos: 1000,
-  pesoPieza: 25,
+  pesoFilamentoCama: 25,
   pesoPurgaCama: 5,
   valorImpresora: 500000,
   vidaUtilHoras: 5000,
@@ -99,7 +100,7 @@ export const DEFAULT_SALE_PRICE_ROUND_STEP: SalePriceRoundStep = 500
 
 export type Printing3DQuoteInputs = Pick<
   Printing3DInputs,
-  | 'pesoPieza'
+  | 'pesoFilamentoCama'
   | 'horasCama'
   | 'minutosCama'
   | 'piezasPorCama'
@@ -122,7 +123,7 @@ export const DEFAULT_PRINTING_3D_PRINTER_CONFIG: Printing3DPrinterConfig = {
 }
 
 export const DEFAULT_PRINTING_3D_QUOTE_INPUTS: Printing3DQuoteInputs = {
-  pesoPieza: DEFAULT_PRINTING_3D_INPUTS.pesoPieza,
+  pesoFilamentoCama: DEFAULT_PRINTING_3D_INPUTS.pesoFilamentoCama,
   horasCama: DEFAULT_PRINTING_3D_INPUTS.horasCama,
   minutosCama: DEFAULT_PRINTING_3D_INPUTS.minutosCama,
   piezasPorCama: DEFAULT_PRINTING_3D_INPUTS.piezasPorCama,
@@ -298,7 +299,11 @@ export function computePrinting3D(inputs: Printing3DInputs): Printing3DCalcOutpu
 
   const precioRollo = nonNegative(inputs.precioRollo, 'Precio del rollo', errors)
   const pesoRolloGramos = positive(inputs.pesoRolloGramos, 'Peso del rollo', errors)
-  const pesoPieza = nonNegative(inputs.pesoPieza, 'Peso de la pieza', errors)
+  const pesoFilamentoCama = nonNegative(
+    inputs.pesoFilamentoCama,
+    'Peso de filamento de la cama',
+    errors,
+  )
   const pesoPurgaCama = nonNegative(inputs.pesoPurgaCama, 'Peso de purga por cama', errors)
   const valorImpresora = nonNegative(inputs.valorImpresora, 'Valor de la impresora', errors)
   const vidaUtilHoras = positive(inputs.vidaUtilHoras, 'Vida útil de la impresora', errors)
@@ -340,7 +345,8 @@ export function computePrinting3D(inputs: Printing3DInputs): Printing3DCalcOutpu
   }
 
   const costoGramo = precioRollo / pesoRolloGramos
-  const gramosPorPieza = pesoPieza + pesoPurgaCama / piezasPorCama
+  // El slicer informa el filamento total de la cama; se reparte entre las piezas del plato.
+  const gramosPorPieza = (pesoFilamentoCama + pesoPurgaCama) / piezasPorCama
   const costoMaterialPieza = gramosPorPieza * costoGramo
 
   const horasCamaTotal = horasCama + minutosCama / 60

@@ -35,9 +35,10 @@ describe('printing3dCalc', () => {
     expect(result.rollosRequeridos).toBeCloseTo(0.03, 5)
   })
 
-  it('reparte purga y tiempo entre piezas por cama', () => {
+  it('reparte filamento total de cama, purga y tiempo entre piezas por cama', () => {
     const result = computePrinting3D({
       ...DEFAULT_PRINTING_3D_INPUTS,
+      pesoFilamentoCama: 100,
       piezasPorCama: 4,
       cantidadTotalUnidades: 10,
       pesoPurgaCama: 8,
@@ -51,6 +52,38 @@ describe('printing3dCalc', () => {
     expect(result.horasPieza).toBe(0.5)
     expect(result.camasTotales).toBe(3)
     expect(result.filamentoTotalGramos).toBe(270)
+  })
+
+  it('divide el peso total de la cama al cotizar varias piezas iguales', () => {
+    const result = computePrinting3D({
+      ...DEFAULT_PRINTING_3D_INPUTS,
+      pesoFilamentoCama: 220,
+      pesoPurgaCama: 0,
+      piezasPorCama: 2,
+      cantidadTotalUnidades: 2,
+      horasCama: 8,
+      minutosCama: 15,
+    })
+    expect(result.valid).toBe(true)
+    if (!result.valid) return
+
+    expect(result.gramosPorPieza).toBe(110)
+    expect(result.horasPieza).toBe(4.125)
+
+    const soloUna = computePrinting3D({
+      ...DEFAULT_PRINTING_3D_INPUTS,
+      pesoFilamentoCama: 110,
+      pesoPurgaCama: 0,
+      piezasPorCama: 1,
+      cantidadTotalUnidades: 1,
+      horasCama: 4,
+      minutosCama: 15,
+    })
+    expect(soloUna.valid).toBe(true)
+    if (!soloUna.valid) return
+
+    expect(soloUna.gramosPorPieza).toBe(110)
+    expect(result.costoMaterialPieza).toBeCloseTo(soloUna.costoMaterialPieza, 5)
   })
 
   it('rechaza división por cero y ganancia del 100%', () => {
@@ -88,7 +121,7 @@ describe('printing3dCalc', () => {
   it('combina config fija y cotización', () => {
     const merged = mergePrinting3DInputs(
       { ...DEFAULT_PRINTING_3D_PRINTER_CONFIG, precioRollo: 20000 },
-      { ...DEFAULT_PRINTING_3D_QUOTE_INPUTS, pesoPieza: 40 },
+      { ...DEFAULT_PRINTING_3D_QUOTE_INPUTS, pesoFilamentoCama: 40 },
     )
     const result = computePrinting3D(merged)
     expect(result.valid).toBe(true)

@@ -585,10 +585,10 @@ export function Hub3DApp({
           <div className="printing3d-layout__inputs">
             <InputSection title="Cotización">
               <NumberField
-                id="peso-pieza"
-                label="Peso de la pieza"
-                value={quote.pesoPieza}
-                onChange={(v) => patchQuote({ pesoPieza: v })}
+                id="peso-filamento-cama"
+                label="Peso total de filamento de la cama (slicer)"
+                value={quote.pesoFilamentoCama}
+                onChange={(v) => patchQuote({ pesoFilamentoCama: v })}
                 step={0.1}
                 suffix="g"
               />
