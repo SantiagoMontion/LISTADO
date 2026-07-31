@@ -2,8 +2,9 @@
 
 :root {
   --font-size: 16px;
-  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --nm-shell-max-width: 72rem;
+  --font-family: 'Plus Jakarta Sans', ui-sans-serif, sans-serif;
+  --nm-shell-max-width: 100%;
+  --nm-shell-gutter: clamp(1rem, 2.2vw, 2.5rem);
 
   /* ════════════════════════════════════════════════════════════════════
      PRIMITIVE TOKENS - Raw values without semantic meaning

@@ -218,7 +218,7 @@ function TaskThumbnails({
   compact?: boolean
 }) {
   const [urls, setUrls] = useState<Record<string, string>>({})
-  const [lightbox, setLightbox] = useState<string | null>(null)
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const pathsKey = paths.join('|')
 
   useEffect(() => {
@@ -238,9 +238,16 @@ function TaskThumbnails({
   }, [pathsKey])
 
   if (paths.length === 0) return null
+
+  const orderedUrls = paths.map((p) => urls[p]).filter(Boolean) as string[]
+  const firstPath = paths[0]
+  const firstUrl = urls[firstPath]
+  const extraCount = Math.max(0, paths.length - 1)
+
   const wrapCls = [
     rebel ? 'task-media-attachment' : 'nm-hub-task-images',
     compact ? 'task-media-attachment--compact' : '',
+    compact ? 'task-media-attachment--single' : '',
   ]
     .filter(Boolean)
     .join(' ')
@@ -252,30 +259,106 @@ function TaskThumbnails({
     .filter(Boolean)
     .join(' ')
 
+  const openGallery = (index = 0) => {
+    if (orderedUrls.length === 0) return
+    setLightboxIndex(Math.min(index, orderedUrls.length - 1))
+  }
+
+  // Compacto (tabla tareas): 1 foto + indicador de más en la misma fila.
+  if (compact) {
+    return (
+      <>
+        <div className={wrapCls}>
+          {firstUrl ? (
+            <button
+              type="button"
+              className={`${btnCls} task-thumb-hit--primary`}
+              onClick={() => openGallery(0)}
+              aria-label={extraCount > 0 ? `Ampliar imagen (1 de ${paths.length})` : 'Ampliar imagen'}
+            >
+              <img src={firstUrl} alt="" className={imgCls} />
+            </button>
+          ) : (
+            <span className="nm-hub-thumb-placeholder nm-hub-thumb-placeholder--compact" aria-hidden />
+          )}
+          {extraCount > 0 ? (
+            <button
+              type="button"
+              className="task-thumb-more"
+              onClick={() => openGallery(0)}
+              aria-label={`Ver ${extraCount} imagen${extraCount === 1 ? '' : 'es'} más`}
+              title={`${paths.length} imágenes`}
+            >
+              {urls[paths[1]] ? (
+                <img src={urls[paths[1]]} alt="" className="task-thumb-more__peek" />
+              ) : (
+                <span className="task-thumb-more__peek task-thumb-more__peek--empty" aria-hidden />
+              )}
+              <span className="task-thumb-more__badge">+{extraCount}</span>
+            </button>
+          ) : null}
+        </div>
+        {lightboxIndex !== null && orderedUrls[lightboxIndex] ? (
+          <HubImageLightbox
+            src={orderedUrls[lightboxIndex]}
+            onClose={() => setLightboxIndex(null)}
+            gallery={
+              orderedUrls.length > 1
+                ? {
+                    index: lightboxIndex,
+                    total: orderedUrls.length,
+                    onPrev: () => setLightboxIndex((i) => (i === null ? 0 : Math.max(0, i - 1))),
+                    onNext: () =>
+                      setLightboxIndex((i) =>
+                        i === null ? 0 : Math.min(orderedUrls.length - 1, i + 1),
+                      ),
+                  }
+                : undefined
+            }
+          />
+        ) : null}
+      </>
+    )
+  }
+
   return (
     <>
       <div className={wrapCls}>
-        {paths.map((p) =>
+        {paths.map((p, idx) =>
           urls[p] ? (
             <button
               key={p}
               type="button"
               className={btnCls}
-              onClick={() => setLightbox(urls[p])}
+              onClick={() => openGallery(idx)}
               aria-label="Ampliar imagen"
             >
               <img src={urls[p]} alt="" className={imgCls} />
             </button>
           ) : (
-            <span
-              key={p}
-              className={`nm-hub-thumb-placeholder${compact ? ' nm-hub-thumb-placeholder--compact' : ''}`}
-              aria-hidden
-            />
+            <span key={p} className="nm-hub-thumb-placeholder" aria-hidden />
           ),
         )}
       </div>
-      {lightbox ? <HubImageLightbox src={lightbox} onClose={() => setLightbox(null)} /> : null}
+      {lightboxIndex !== null && orderedUrls[lightboxIndex] ? (
+        <HubImageLightbox
+          src={orderedUrls[lightboxIndex]}
+          onClose={() => setLightboxIndex(null)}
+          gallery={
+            orderedUrls.length > 1
+              ? {
+                  index: lightboxIndex,
+                  total: orderedUrls.length,
+                  onPrev: () => setLightboxIndex((i) => (i === null ? 0 : Math.max(0, i - 1))),
+                  onNext: () =>
+                    setLightboxIndex((i) =>
+                      i === null ? 0 : Math.min(orderedUrls.length - 1, i + 1),
+                    ),
+                }
+              : undefined
+          }
+        />
+      ) : null}
     </>
   )
 }

@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState, type TouchEvent } from 'react'
+import { createPortal } from 'react-dom'
 
 const LIGHTBOX_MIN_SCALE = 1
 const LIGHTBOX_MAX_SCALE = 4
 const LIGHTBOX_DISMISS_PX = 110
 const LIGHTBOX_GALLERY_SWIPE_PX = 56
-const LIGHTBOX_TAP_MOVE_PX = 14
+const LIGHTBOX_TAP_MOVE_PX = 12
 
 function clampLightboxScale(s: number): number {
   return Math.min(LIGHTBOX_MAX_SCALE, Math.max(LIGHTBOX_MIN_SCALE, s))
@@ -51,9 +52,9 @@ export function HubImageLightbox({
     startOffset: { x: 0, y: 0 },
     startScale: 1,
     startDist: 0,
-    lastTap: 0,
     moved: 0,
   })
+  const ignoreClickRef = useRef(false)
 
   galleryRef.current = gallery
   onCloseRef.current = onClose
@@ -78,6 +79,18 @@ export function HubImageLightbox({
       return
     }
     onCloseRef.current()
+  }, [])
+
+  const toggleZoom = useCallback(() => {
+    setScale((s) => {
+      if (s > 1.05) {
+        setOffset({ x: 0, y: 0 })
+        scaleRef.current = 1
+        return 1
+      }
+      scaleRef.current = 2.25
+      return 2.25
+    })
   }, [])
 
   useEffect(() => {
@@ -138,6 +151,7 @@ export function HubImageLightbox({
       setScale((s) => {
         const next = clampLightboxScale(s - e.deltaY * 0.002)
         scaleRef.current = next
+        if (next <= 1.02) setOffset({ x: 0, y: 0 })
         return next
       })
     }
@@ -241,6 +255,10 @@ export function HubImageLightbox({
       ) {
         if (dx < 0) galleryRef.current.onNext?.()
         else galleryRef.current.onPrev?.()
+      } else if (t.moved <= LIGHTBOX_TAP_MOVE_PX) {
+        // Tap en imagen (touch): zoom in/out
+        ignoreClickRef.current = true
+        toggleZoom()
       }
 
       dismissYRef.current = 0
@@ -251,44 +269,24 @@ export function HubImageLightbox({
     setDragging(false)
   }
 
-  const onImgPointerDown = () => {
-    const t = touchRef.current
-    if (t.moved > LIGHTBOX_TAP_MOVE_PX) return
-    const now = Date.now()
-    if (now - t.lastTap < 320) {
-      setScale((s) => {
-        if (s > 1.05) {
-          setOffset({ x: 0, y: 0 })
-          scaleRef.current = 1
-          return 1
-        }
-        scaleRef.current = 2
-        return 2
-      })
-      t.lastTap = 0
-    } else {
-      t.lastTap = now
-    }
-  }
-
-  const backdropOpacity = Math.max(0.35, 1 - dismissY / 280)
+  const backdropOpacity = Math.max(0.55, 1 - dismissY / 280)
   const imgTransform =
     dismissY > 0
       ? `translateY(${dismissY}px) scale(${scale})`
       : `translate(${offset.x}px, ${offset.y}px) scale(${scale})`
 
-  return (
+  const node = (
     <div
-      className={`nm-hub-lightbox${dragging ? ' nm-hub-lightbox--dragging' : ''}`}
+      className={`nm-hub-lightbox${dragging ? ' nm-hub-lightbox--dragging' : ''}${scale > 1.05 ? ' nm-hub-lightbox--zoomed' : ''}`}
       role="dialog"
       aria-modal="true"
       aria-label="Vista previa de imagen"
-      style={{ background: `rgba(5, 5, 8, ${0.94 * backdropOpacity})` }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget && scale <= 1.02 && dismissY < 8) requestClose()
+      style={{ background: `rgba(2, 4, 10, ${0.96 * backdropOpacity})` }}
+      onClick={() => {
+        if (dismissY < 8) requestClose()
       }}
     >
-      <div className="nm-hub-lightbox__toolbar">
+      <div className="nm-hub-lightbox__toolbar" onClick={(e) => e.stopPropagation()}>
         <button
           type="button"
           className="nm-hub-btn nm-hub-btn-ghost nm-hub-lightbox__back"
@@ -304,39 +302,9 @@ export function HubImageLightbox({
         ) : (
           <span className="nm-hub-lightbox__counter" aria-hidden />
         )}
-        <div className="nm-hub-lightbox__zoom">
-          <button
-            type="button"
-            className="nm-hub-btn nm-hub-btn-ghost nm-hub-lightbox__tool"
-            onClick={() =>
-              setScale((s) => {
-                const next = clampLightboxScale(s + 0.35)
-                scaleRef.current = next
-                return next
-              })
-            }
-            aria-label="Acercar"
-          >
-            +
-          </button>
-          <button
-            type="button"
-            className="nm-hub-btn nm-hub-btn-ghost nm-hub-lightbox__tool"
-            onClick={() =>
-              setScale((s) => {
-                const next = clampLightboxScale(s - 0.35)
-                scaleRef.current = next
-                return next
-              })
-            }
-            aria-label="Alejar"
-          >
-            −
-          </button>
-          <button type="button" className="nm-hub-btn nm-hub-btn-ghost nm-hub-lightbox__tool" onClick={resetView} aria-label="Restablecer zoom">
-            1:1
-          </button>
-        </div>
+        <span className="nm-hub-lightbox__hint" aria-hidden>
+          Tocá la imagen para zoom
+        </span>
         <button type="button" className="nm-hub-btn nm-hub-btn-primary nm-hub-lightbox__close" onClick={requestClose}>
           Cerrar
         </button>
@@ -348,6 +316,10 @@ export function HubImageLightbox({
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
         onTouchCancel={onTouchEnd}
+        onClick={(e) => {
+          // Click en el fondo del stage (fuera de la imagen) cierra.
+          if (e.target === e.currentTarget && dismissY < 8) requestClose()
+        }}
       >
         {hasGalleryNav ? (
           <>
@@ -383,10 +355,20 @@ export function HubImageLightbox({
           className="nm-hub-lightbox__img"
           style={{ transform: imgTransform }}
           draggable={false}
-          onPointerDown={onImgPointerDown}
-          onClick={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation()
+            if (ignoreClickRef.current) {
+              ignoreClickRef.current = false
+              return
+            }
+            if (touchRef.current.moved > LIGHTBOX_TAP_MOVE_PX) return
+            toggleZoom()
+          }}
         />
       </div>
     </div>
   )
+
+  if (typeof document === 'undefined') return node
+  return createPortal(node, document.body)
 }

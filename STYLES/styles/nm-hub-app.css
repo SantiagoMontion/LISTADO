@@ -1,16 +1,18 @@
-/* NOTMID Hub — layout móvil (panel + tareas + login) */
+/* NOTMID Hub — shell full-width (panel + tareas + login) */
 .nm-hub-app {
-  --nm-hub-rail-max: 26rem;
-  --nm-hub-padding-x: 0.75rem;
+  --nm-hub-rail-max: 100%;
+  --nm-hub-padding-x: var(--nm-shell-gutter, clamp(1rem, 2.2vw, 2.5rem));
+  --nm-hub-chrome-bg: rgba(15, 17, 21, 0.92);
+  --nm-hub-chrome-border: rgba(255, 255, 255, 0.07);
   box-sizing: border-box;
-  max-width: min(100%, var(--nm-hub-rail-max));
-  margin: 0 auto;
+  width: 100%;
+  max-width: none;
+  margin: 0;
   min-height: 100dvh;
-  padding: max(0.75rem, env(safe-area-inset-top, 0px)) var(--nm-hub-padding-x)
-    max(1rem, env(safe-area-inset-bottom, 0px));
-  background: #0a0a0a;
+  padding: 0 var(--nm-hub-padding-x) max(1.25rem, env(safe-area-inset-bottom, 0px));
+  background: #0c0e12;
   color: #f1f5f9;
-  font-family: var(--font-family, 'Inter', system-ui, sans-serif);
+  font-family: var(--font-family, 'Plus Jakarta Sans', ui-sans-serif, sans-serif);
 }
 
 .nm-hub-app *,
@@ -550,9 +552,10 @@ button.nm-hub-tile {
   z-index: 10000;
   display: flex;
   flex-direction: column;
-  background: rgba(5, 5, 8, 0.94);
+  background: rgba(2, 4, 10, 0.96);
   padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0)
     env(safe-area-inset-left, 0);
+  isolation: isolate;
 }
 
 .nm-hub-lightbox__toolbar {
@@ -562,14 +565,13 @@ button.nm-hub-tile {
   gap: 0.35rem 0.5rem;
   padding: 0.5rem 0.65rem;
   flex-shrink: 0;
+  background: rgba(2, 4, 10, 0.92);
 }
 
 @media (max-width: 420px) {
   .nm-hub-lightbox__toolbar {
     grid-template-columns: auto 1fr auto;
-    grid-template-areas:
-      'back counter close'
-      'zoom zoom zoom';
+    grid-template-areas: 'back counter close';
   }
 
   .nm-hub-lightbox__back {
@@ -584,9 +586,8 @@ button.nm-hub-tile {
     grid-area: close;
   }
 
-  .nm-hub-lightbox__zoom {
-    grid-area: zoom;
-    justify-content: center;
+  .nm-hub-lightbox__hint {
+    display: none;
   }
 }
 
@@ -598,16 +599,13 @@ button.nm-hub-tile {
   line-height: 1;
 }
 
-.nm-hub-lightbox__zoom {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.nm-hub-lightbox__tool {
-  min-width: 2.25rem;
-  min-height: 2.25rem;
-  padding: 0 0.4rem;
+.nm-hub-lightbox__hint {
+  justify-self: end;
+  margin: 0 0.35rem 0 0;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: rgba(148, 163, 184, 0.85);
+  white-space: nowrap;
 }
 
 .nm-hub-lightbox__close {
@@ -636,6 +634,7 @@ button.nm-hub-tile {
   touch-action: none;
   -webkit-user-select: none;
   user-select: none;
+  cursor: zoom-out;
 }
 
 .nm-hub-lightbox--dragging .nm-hub-lightbox__img {
@@ -644,14 +643,23 @@ button.nm-hub-tile {
 
 .nm-hub-lightbox__img {
   max-width: min(100%, 96vw);
-  max-height: min(88vh, 100%);
+  max-height: min(100%, calc(100dvh - 4.5rem));
   width: auto;
   height: auto;
   object-fit: contain;
-  transform-origin: center center;
-  transition: transform 0.12s ease-out;
+  border-radius: 8px;
+  opacity: 1;
+  background: #0b0f14;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
   cursor: zoom-in;
-  will-change: transform;
+  transform-origin: center center;
+  transition: transform 0.18s ease;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+.nm-hub-lightbox--zoomed .nm-hub-lightbox__img {
+  cursor: zoom-out;
 }
 
 .nm-hub-lightbox--dragging .nm-hub-lightbox__img {
@@ -2216,24 +2224,24 @@ a.nm-hub-brand-bar__btn:hover {
 }
 
 :root {
-  --bg-main-rebel: #08090a;
-  --bg-surface-rebel: #121417;
-  --bg-surface-hover-rebel: #1c1f24;
-  --texture-rebel: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiIHZpZXdCb3g9IjAgMCA0IDQiPjxnIGZpbGwtcnVsZT0iZXZlbm9kZCI+PGcgZmlsbD0iIzI2MjYyNiIgZmlsbC1vcGFjaXR5PSIwLjA5Ij48cGF0aCBkPSJNMCAwaDF2MUgwVjB6TTIgMGgxdjFIMlYwek0wIDJoMXYxSDBWMnpNMiAyaDF2MUgyVjJ6Ii8+PC9nPjwvZz48L3N2Zz4=');
-  --text-rebel-primary: #fcfdff;
-  --text-rebel-secondary: #9099a3;
-  --text-rebel-muted: #535a62;
-  --accent-rebel-orange: #ffab40;
-  --accent-rebel-green: #4ade80;
-  --accent-rebel-blue: #46cff8;
-  --accent-rebel-purple: #d1a3ff;
+  --bg-main-rebel: #0c0e12;
+  --bg-surface-rebel: #151820;
+  --bg-surface-hover-rebel: #1c212b;
+  --texture-rebel: none;
+  --text-rebel-primary: #f4f6f8;
+  --text-rebel-secondary: #9aa3af;
+  --text-rebel-muted: #6b7380;
+  --accent-rebel-orange: #f5a524;
+  --accent-rebel-green: #3dd68c;
+  --accent-rebel-blue: #4db8ff;
+  --accent-rebel-purple: #b794f6;
   --accent-rebel-gray: #a1a9b6;
-  --radius-lg-rebel: 20px;
-  --font-rebel-heading: 'MessyMarker', 'Inter', system-ui, sans-serif;
-  --font-rebel-main: 'Stencilia', 'Inter', system-ui, sans-serif;
-  --font-rebel-count: 'RawPainted', 'Inter', system-ui, sans-serif;
+  --radius-lg-rebel: 14px;
+  --font-rebel-heading: var(--font-family, 'Plus Jakarta Sans', ui-sans-serif, sans-serif);
+  --font-rebel-main: var(--font-family, 'Plus Jakarta Sans', ui-sans-serif, sans-serif);
+  --font-rebel-count: var(--font-family, 'Plus Jakarta Sans', ui-sans-serif, sans-serif);
 
-  /* Alias compartidas (urban rebel — formularios, listados, navbar) */
+  /* Alias compartidas */
   --bg-main: var(--bg-main-rebel);
   --bg-surface: var(--bg-surface-rebel);
   --text-primary: var(--text-rebel-primary);
@@ -2241,24 +2249,24 @@ a.nm-hub-brand-bar__btn:hover {
   --accent-green: var(--accent-rebel-green);
   --accent-blue: var(--accent-rebel-blue);
 
-  /* Formulario «Nueva tarea» — profundidad y contraste de campos */
-  --bg-form-card: #121417;
-  --bg-input-field: #181a1f;
-  --bg-input-field-focus: #1a1d24;
+  /* Formulario «Nueva tarea» */
+  --bg-form-card: #151820;
+  --bg-input-field: #1a1f28;
+  --bg-input-field-focus: #1e2430;
   --border-input-base: rgba(255, 255, 255, 0.08);
   --text-label: #8b949e;
   --text-placeholder: #484f58;
-  --accent-focus: #4ade80;
+  --accent-focus: #3dd68c;
 }
 
 body:has(.nm-hub-app--dashboard),
 body:has(.nm-hub-app--tasks),
 body:has(.nm-hub-app--printed-files),
 body:has(.nm-hub-app--lista-upload),
-body:has(.nm-hub-app--cut-list) {
+body:has(.nm-hub-app--cut-list),
+body:has(.nm-hub-app) {
   background-color: var(--bg-main-rebel);
-  background-image: var(--texture-rebel);
-  background-repeat: repeat;
+  background-image: none;
 }
 
 /* ==========================================================================
@@ -2294,7 +2302,8 @@ body:has(.nm-hub-app--cut-list) {
 
 .nm-hub-app.nm-hub-app--lista-upload {
   min-height: 100dvh;
-  max-width: min(100%, var(--nm-hub-rail-max));
+  max-width: none;
+  width: 100%;
   background: transparent;
   color: var(--text-rebel-primary);
   font-family: var(--font-rebel-main);
@@ -2303,7 +2312,8 @@ body:has(.nm-hub-app--cut-list) {
 
 .nm-hub-app.nm-hub-app--cut-list {
   min-height: 100dvh;
-  max-width: min(100%, var(--nm-hub-rail-max));
+  max-width: none;
+  width: 100%;
   background: transparent;
   color: var(--text-rebel-primary);
   font-family: var(--font-rebel-main);
@@ -2318,44 +2328,50 @@ body:has(.nm-hub-app--cut-list) {
   padding-bottom: calc(7.75rem + env(safe-area-inset-bottom, 0px));
 }
 
-/* Navbar compartida: dashboard + tareas (alineación, sin barra blanca) */
+/* Navbar compartida: chrome full-bleed sticky */
 .nm-hub-app .dashboard-navbar {
   box-sizing: border-box;
-  width: 100%;
-  padding: 16px 24px;
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  width: calc(100% + (var(--nm-hub-padding-x) * 2));
+  max-width: none;
+  margin-inline: calc(-1 * var(--nm-hub-padding-x));
+  padding: 0.85rem var(--nm-hub-padding-x);
+  padding-top: calc(0.85rem + env(safe-area-inset-top, 0px));
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  background-color: var(--bg-surface);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  background: var(--nm-hub-chrome-bg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--nm-hub-chrome-border);
 }
 
-/* Banda navbar a ancho del carril (compensa padding horizontal de .nm-hub-app) */
-/* Navbar full-bleed: dashboard + tareas + archivos impresos */
-.nm-hub-app.nm-hub-app--dashboard .dashboard-navbar,
-.nm-hub-app.nm-hub-app--tasks .dashboard-navbar,
-.nm-hub-app.nm-hub-app--printed-files .dashboard-navbar,
-.nm-hub-app.nm-hub-app--lista-upload .dashboard-navbar,
-.nm-hub-app.nm-hub-app--cut-list .dashboard-navbar,
-.nm-hub-app.nm-hub-app--dispatched-orders .dashboard-navbar,
-.nm-hub-app.nm-hub-app--dispatched-stats .dashboard-navbar,
-.nm-hub-app.nm-hub-app--dispatch-analytics .dashboard-navbar,
-.nm-hub-app.nm-hub-app--cut-analytics .dashboard-navbar,
-.nm-hub-app.nm-hub-app--logistica-andreani .dashboard-navbar {
-  width: calc(100% + (var(--nm-hub-padding-x) * 2));
-  max-width: calc(100% + (var(--nm-hub-padding-x) * 2));
-  margin-inline: calc(-1 * var(--nm-hub-padding-x));
+/* Dashboard: evitar doble padding en bloques que ya usan gutter */
+.nm-hub-app.nm-hub-app--dashboard > .header-section,
+.nm-hub-app.nm-hub-app--dashboard > .status-bar-rebel,
+.nm-hub-app.nm-hub-app--dashboard > .cards-container-rebel,
+.nm-hub-app.nm-hub-app--dashboard > .nm-hub-dash-loading,
+.nm-hub-app.nm-hub-app--dashboard > .dashboard-alert,
+.nm-hub-app.nm-hub-app--dashboard > .dashboard-footnote,
+.nm-hub-app.nm-hub-app--dashboard > .nm-hub-footnote {
+  margin-inline: 0;
+  padding-inline: 0;
 }
 
-/* Safe-area pegada arriba */
+.nm-hub-app.nm-hub-app--dashboard > .status-bar-rebel {
+  margin-inline: 0;
+}
+
+/* Safe-area ya va en sticky navbar */
 .nm-hub-app.nm-hub-app--dashboard > .dashboard-navbar,
 .nm-hub-app.nm-hub-app--tasks .dashboard-navbar.nm-hub-header,
 .nm-hub-app.nm-hub-app--printed-files .dashboard-navbar.nm-hub-header,
 .nm-hub-app.nm-hub-app--lista-upload > .dashboard-navbar,
 .nm-hub-app.nm-hub-app--cut-list > .dashboard-navbar {
-  margin-top: calc(-1 * max(0.75rem, env(safe-area-inset-top, 0px)));
-  padding-top: calc(16px + max(0.75rem, env(safe-area-inset-top, 0px)));
+  margin-top: 0;
 }
 
 .nm-hub-app--dashboard .nm-hub-brand-bar.nm-hub-brand-bar--integrated-dashboard,
@@ -2365,7 +2381,7 @@ body:has(.nm-hub-app--cut-list) {
 .nm-hub-app--cut-list .nm-hub-brand-bar.nm-hub-brand-bar--integrated-dashboard {
   width: 100%;
   padding: 0;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   gap: 0.75rem;
 }
@@ -2377,8 +2393,8 @@ body:has(.nm-hub-app--cut-list) {
 .nm-hub-app--cut-list .nm-hub-brand-bar--integrated-dashboard .nm-hub-brand-bar__heading {
   flex: 1 1 auto;
   min-width: 0;
-  align-items: flex-end;
-  text-align: right;
+  align-items: flex-start;
+  text-align: left;
 }
 
 .nm-hub-app .nm-hub-brand-bar__heading--stacked {
@@ -2409,8 +2425,8 @@ body:has(.nm-hub-app--cut-list) {
 .nm-hub-app .nm-hub-brand-bar__heading.navbar-brand-group {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  text-align: right;
+  align-items: flex-start;
+  text-align: left;
 }
 
 .nm-hub-app .navbar-screen-title.navbar-brand-subtitle {
@@ -2507,16 +2523,16 @@ body:has(.nm-hub-app--cut-list) {
   margin: 0;
   font-family: var(--font-rebel-heading);
   font-weight: 800;
-  font-size: 1.1rem;
-  letter-spacing: 1px;
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
   color: var(--text-primary);
   text-decoration: none;
   line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: min(52vw, 14rem);
-  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.35);
+  max-width: min(52vw, 16rem);
+  text-shadow: none;
 }
 
 .nm-hub-app .navbar-brand.nm-hub-brand-bar__brand:hover {
@@ -2540,44 +2556,46 @@ body:has(.nm-hub-app--cut-list) {
   font-family: var(--font-rebel-main);
 }
 
-/* Saludo + badge pegatina */
+/* Saludo + badge */
 .nm-hub-app--dashboard .header-section {
-  padding: 24px 16px 16px;
+  padding: 1.5rem 0 1rem;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.45rem;
 }
 
 .nm-hub-app--dashboard .welcome-text-rebel {
-  font-size: 1.5rem;
+  font-size: clamp(1.45rem, 2.4vw, 1.85rem);
   font-weight: 700;
   font-family: var(--font-rebel-heading);
   color: var(--text-rebel-primary);
-  margin: 0 0 12px;
+  margin: 0;
   line-height: 1.2;
+  letter-spacing: -0.03em;
 }
 
 .nm-hub-app--dashboard .role-badge-sticker {
-  background-color: var(--accent-rebel-orange);
-  color: #000000;
-  padding: 4px 14px;
-  border-radius: 24px;
-  font-size: 0.78rem;
+  background-color: rgba(245, 165, 36, 0.14);
+  color: var(--accent-rebel-orange);
+  padding: 0.28rem 0.7rem;
+  border-radius: 6px;
+  border: 1px solid rgba(245, 165, 36, 0.28);
+  font-size: 0.68rem;
   font-weight: 700;
-  letter-spacing: 0.6px;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   width: fit-content;
   position: relative;
-  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.3);
+  box-shadow: none;
 }
 
 /* Barra de métricas */
 .nm-hub-app--dashboard .status-bar-rebel {
   background-color: var(--bg-surface-rebel);
-  border: 1px solid rgba(255, 255, 255, 0.015);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: var(--radius-lg-rebel);
-  padding: 14px;
-  margin: 0 16px 22px;
+  padding: 1rem 1.15rem;
+  margin: 0 0 1.25rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -2610,10 +2628,10 @@ body:has(.nm-hub-app--cut-list) {
 
 /* Lista de tarjetas */
 .nm-hub-app--dashboard .cards-container-rebel {
-  padding: 0 16px 24px;
+  padding: 0 0 2rem;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 
 .nm-hub-app--dashboard .cards-container-rebel--focus {
@@ -2621,7 +2639,7 @@ body:has(.nm-hub-app--cut-list) {
 }
 
 .nm-hub-app--dashboard .nm-hub-dash-loading {
-  margin: 0 16px 12px;
+  margin: 0 0 12px;
   font-size: 0.85rem;
   color: var(--text-rebel-secondary);
   font-family: var(--font-rebel-main);
@@ -2633,14 +2651,14 @@ body:has(.nm-hub-app--cut-list) {
 }
 
 .nm-hub-app--dashboard .dashboard-alert.nm-hub-error {
-  margin: 0 16px 12px;
+  margin: 0 0 12px;
 }
 
-/* Tarjetas rebel */
+/* Tarjetas */
 .nm-hub-app--dashboard .action-card-rebel {
   background-color: var(--bg-surface-rebel);
-  border: 1px solid rgba(255, 255, 255, 0.02);
-  border-radius: var(--radius-lg-rebel);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
   padding: 20px;
   display: flex;
   align-items: center;
@@ -2648,29 +2666,18 @@ body:has(.nm-hub-app--cut-list) {
   gap: 12px;
   cursor: pointer;
   position: relative;
-  transition: background-color 0.25s ease, border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
   text-decoration: none;
   color: inherit;
   overflow: visible;
   -webkit-tap-highlight-color: transparent;
 }
 
-.nm-hub-app--dashboard .action-card-rebel::before {
-  content: '';
-  position: absolute;
-  inset: -2px;
-  border-radius: calc(var(--radius-lg-rebel) + 2px);
-  border: 1px solid rgba(255, 255, 255, 0.015);
-  -webkit-mask-image: radial-gradient(white, transparent 95%);
-  mask-image: radial-gradient(white, transparent 95%);
-  pointer-events: none;
-}
-
 .nm-hub-app--dashboard .action-card-rebel:hover {
   background-color: var(--bg-surface-hover-rebel);
-  border-color: rgba(255, 255, 255, 0.04);
-  transform: translateY(-2px) scale(1.005);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  border-color: rgba(255, 255, 255, 0.1);
+  transform: none;
+  box-shadow: none;
 }
 
 .nm-hub-app--dashboard .action-card-rebel:focus-visible {
@@ -3200,7 +3207,13 @@ body:has(.nm-hub-app--cut-list) {
 
 .nm-hub-app--tasks .task-media-attachment--compact {
   margin-top: 0;
-  gap: 4px;
+  gap: 6px;
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.nm-hub-app--tasks .task-media-attachment--single {
+  flex-direction: row;
 }
 
 .nm-hub-app--tasks .task-thumb-rebel--compact,
@@ -3208,6 +3221,51 @@ body:has(.nm-hub-app--cut-list) {
   width: 40px;
   height: 40px;
   border-radius: 8px;
+}
+
+.nm-hub-app--tasks .task-thumb-more {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+.nm-hub-app--tasks .task-thumb-more__peek {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  filter: brightness(0.55);
+  display: block;
+}
+
+.nm-hub-app--tasks .task-thumb-more__peek--empty {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+}
+
+.nm-hub-app--tasks .task-thumb-more__badge {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #f8fafc;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
+  pointer-events: none;
 }
 
 .nm-hub-app--tasks form#nm-hub-tareas-nueva .upload-zone-rebel--dragover {
@@ -5119,14 +5177,15 @@ body:has(.nm-hub-app--cut-list) {
 .nm-hub-app--cut-list .cut-list-ordenar-bar {
   position: fixed;
   z-index: 40;
-  left: 50%;
+  left: 0;
+  right: 0;
   bottom: 0;
-  transform: translateX(-50%);
+  transform: none;
   box-sizing: border-box;
   width: 100%;
-  max-width: min(100%, var(--nm-hub-rail-max));
-  padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
-  background: linear-gradient(to top, #08090a 65%, rgba(8, 9, 10, 0));
+  max-width: none;
+  padding: 10px var(--nm-hub-padding-x) calc(10px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(to top, #0c0e12 65%, rgba(12, 14, 18, 0));
   pointer-events: none;
 }
 
@@ -6330,9 +6389,9 @@ body:has(.nm-hub-app--logistica-andreani) {
 
 .logistica-page {
   width: 100%;
-  max-width: 72rem;
-  margin: 0 auto;
-  padding: 1rem 0.85rem 1.5rem;
+  max-width: none;
+  margin: 0;
+  padding: 1rem var(--nm-hub-padding-x, 1.25rem) 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -7153,8 +7212,8 @@ body:has(.nm-hub-app--logistica-andreani) {
 
 @media (min-width: 768px) {
   body:has(.nm-hub-app) {
-    background-color: #08090a;
-    background-image: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(56, 189, 248, 0.06), transparent);
+    background-color: #0c0e12;
+    background-image: none;
   }
 
   body:has(.nm-hub-app--dashboard),
@@ -7162,20 +7221,20 @@ body:has(.nm-hub-app--logistica-andreani) {
   body:has(.nm-hub-app--printed-files),
   body:has(.nm-hub-app--lista-upload),
   body:has(.nm-hub-app--cut-list) {
-    background-image: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(56, 189, 248, 0.06), transparent);
+    background-image: none;
   }
 
   .nm-hub-app {
-    --nm-hub-rail-max: 70rem;
-    --nm-hub-padding-x: 2rem;
-    max-width: min(100%, var(--nm-hub-rail-max));
-    margin-inline: auto;
+    --nm-hub-rail-max: 100%;
+    --nm-hub-padding-x: clamp(1.25rem, 2.5vw, 2.5rem);
+    width: 100%;
+    max-width: none;
+    margin: 0;
     padding-top: 0;
     padding-inline: var(--nm-hub-padding-x);
     padding-bottom: max(2rem, env(safe-area-inset-bottom, 0px));
   }
 
-  /* En escritorio el shell es uniforme: sin full-bleed que desalinea secciones */
   .nm-hub-app .dashboard-navbar,
   .nm-hub-app.nm-hub-app--dashboard .dashboard-navbar,
   .nm-hub-app.nm-hub-app--tasks .dashboard-navbar,
@@ -7187,12 +7246,13 @@ body:has(.nm-hub-app--logistica-andreani) {
   .nm-hub-app.nm-hub-app--dispatch-analytics .dashboard-navbar,
   .nm-hub-app.nm-hub-app--cut-analytics .dashboard-navbar,
   .nm-hub-app.nm-hub-app--logistica-andreani .dashboard-navbar {
-    width: 100%;
-    max-width: 100%;
-    margin-inline: 0;
+    width: calc(100% + (var(--nm-hub-padding-x) * 2));
+    max-width: none;
+    margin-inline: calc(-1 * var(--nm-hub-padding-x));
     margin-top: 0;
-    padding: 1.15rem 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 0.9rem var(--nm-hub-padding-x);
+    padding-top: calc(0.9rem + env(safe-area-inset-top, 0px));
+    border-bottom: 1px solid var(--nm-hub-chrome-border);
   }
 
   .nm-hub-app.nm-hub-app--dashboard > .dashboard-navbar,
@@ -7201,26 +7261,31 @@ body:has(.nm-hub-app--logistica-andreani) {
   .nm-hub-app.nm-hub-app--lista-upload > .dashboard-navbar,
   .nm-hub-app.nm-hub-app--cut-list > .dashboard-navbar {
     margin-top: 0;
-    padding-top: max(1.15rem, env(safe-area-inset-top, 0px));
+    padding-top: calc(0.9rem + env(safe-area-inset-top, 0px));
   }
 
   .hub-desktop-nav {
     display: block;
-    width: 100%;
-    max-width: 100%;
-    margin: 0 0 1.25rem;
-    padding: 0.65rem 0 1rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-    background: transparent;
+    position: sticky;
+    top: 3.65rem;
+    z-index: 55;
+    width: calc(100% + (var(--nm-hub-padding-x) * 2));
+    max-width: none;
+    margin: 0 calc(-1 * var(--nm-hub-padding-x)) 0;
+    padding: 0 var(--nm-hub-padding-x);
+    border-bottom: 1px solid var(--nm-hub-chrome-border);
+    background: var(--nm-hub-chrome-bg);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
     overflow-x: auto;
     scrollbar-width: thin;
   }
 
   .hub-desktop-nav__list {
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem 0.65rem;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 0.15rem;
     margin: 0;
     padding: 0;
     list-style: none;
@@ -7230,76 +7295,78 @@ body:has(.nm-hub-app--logistica-andreani) {
   .hub-desktop-nav__link {
     display: inline-flex;
     align-items: center;
-    padding: 0.55rem 1rem;
-    border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    font-size: 0.84rem;
+    padding: 0.85rem 0.95rem;
+    border-radius: 0;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-size: 0.875rem;
     font-weight: 600;
-    letter-spacing: 0.02em;
-    color: #94a3b8;
+    letter-spacing: -0.01em;
+    color: #8b95a5;
     text-decoration: none;
     white-space: nowrap;
-    transition: color 0.15s, background 0.15s, border-color 0.15s;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
   }
 
   .hub-desktop-nav__link:hover {
-    color: #e2e8f0;
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.1);
+    color: #e8edf4;
+    background: rgba(255, 255, 255, 0.03);
+    border-color: transparent;
   }
 
   .hub-desktop-nav__link--active {
     color: #f8fafc;
-    border-color: rgba(56, 189, 248, 0.4);
-    background: rgba(56, 189, 248, 0.12);
+    border-bottom-color: var(--accent-rebel-blue);
+    background: transparent;
   }
 
   .nm-hub-app--dashboard .header-section {
-    padding: 1.75rem 0 1.25rem;
+    padding: 1.75rem 0 1.1rem;
   }
 
   .nm-hub-app--dashboard .welcome-text-rebel {
     font-size: 1.85rem;
-    margin-bottom: 0.65rem;
+    margin-bottom: 0;
   }
 
   .nm-hub-app--dashboard .status-bar-rebel {
-    margin: 0 0 1.75rem;
+    margin: 0 0 1.5rem;
     padding: 1rem 1.25rem;
   }
 
   .nm-hub-app--dashboard .cards-container-rebel {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1.15rem;
+    gap: 1rem;
     padding: 0 0 2rem;
     align-items: stretch;
   }
 
   .nm-hub-app--dashboard .action-card-rebel {
-    min-height: 6.5rem;
+    min-height: 6.25rem;
     height: 100%;
-    padding: 1.35rem 1.5rem;
-    border-radius: 14px;
+    padding: 1.25rem 1.4rem;
+    border-radius: 12px;
   }
 
   .nm-hub-app--dashboard .card-icon-wrapper-rebel {
-    width: 52px;
-    height: 52px;
-    font-size: 1.35rem;
+    width: 48px;
+    height: 48px;
+    font-size: 1.25rem;
   }
 
   .nm-hub-app--dashboard .action-card-rebel .card-title-rebel {
-    font-size: 1.12rem;
+    font-size: 1.05rem;
   }
 
   .nm-hub-app--dashboard .card-counter-rebel {
-    font-size: 1.35rem;
+    font-size: 1.25rem;
   }
 
   .nm-hub-app--dashboard .nm-hub-dash-loading,
   .nm-hub-app--dashboard .dashboard-alert.nm-hub-error {
     margin-inline: 0;
+    padding-inline: 0;
   }
 
   .nm-hub-app--printed-files {
@@ -7329,6 +7396,7 @@ body:has(.nm-hub-app--logistica-andreani) {
   .nm-hub-app.nm-hub-app--lista-upload .lista-upload-container {
     max-width: none;
     margin-inline: 0;
+    padding-inline: 0;
   }
 
   .nm-hub-app.nm-hub-app--tasks .task-card-rebel.nm-hub-task-item {
@@ -7336,40 +7404,41 @@ body:has(.nm-hub-app--logistica-andreani) {
   }
 
   .nm-hub-app.nm-hub-app--logistica-andreani {
-    max-width: min(100%, var(--nm-hub-rail-max));
+    max-width: none;
+    width: 100%;
     padding-inline: var(--nm-hub-padding-x);
   }
 
   .nm-hub-app.nm-hub-app--logistica-andreani .logistica-page {
     padding-inline: 0;
-    max-width: 100%;
+    max-width: none;
   }
 }
 
 @media (min-width: 1100px) {
   .nm-hub-app {
-    --nm-hub-rail-max: 76rem;
-    --nm-hub-padding-x: 2.25rem;
+    --nm-hub-rail-max: 100%;
+    --nm-hub-padding-x: clamp(1.5rem, 3vw, 3rem);
   }
 
   .nm-hub-app--dashboard .cards-container-rebel {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 1.35rem;
+    gap: 1.15rem;
   }
 
   .nm-hub-app--dashboard .action-card-rebel {
-    min-height: 7.25rem;
-    padding: 1.5rem 1.65rem;
+    min-height: 6.75rem;
+    padding: 1.35rem 1.5rem;
   }
 
   .nm-hub-app--dashboard .card-icon-wrapper-rebel {
-    width: 56px;
-    height: 56px;
-    font-size: 1.45rem;
+    width: 52px;
+    height: 52px;
+    font-size: 1.35rem;
   }
 
   .nm-hub-app--dashboard .action-card-rebel .card-title-rebel {
-    font-size: 1.18rem;
+    font-size: 1.1rem;
   }
 
   .nm-hub-app--printed-files {
@@ -7396,11 +7465,12 @@ body:has(.nm-hub-app--logistica-andreani) {
 
 @media (min-width: 1280px) {
   .nm-hub-app--dashboard .cards-container-rebel {
-    gap: 1.5rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1.15rem;
   }
 
   .hub-desktop-nav__link {
-    padding: 0.6rem 1.1rem;
+    padding: 0.85rem 1.05rem;
     font-size: 0.88rem;
   }
 }
@@ -7408,9 +7478,10 @@ body:has(.nm-hub-app--logistica-andreani) {
 /* ── Calculadora 3D ─────────────────────────────────────────────── */
 
 .nm-hub-app--3d .printing3d-page {
-  padding: 0 1rem 2rem;
-  max-width: 72rem;
-  margin-inline: auto;
+  padding: 0 var(--nm-hub-padding-x, 1.25rem) 2rem;
+  max-width: none;
+  margin-inline: 0;
+  width: 100%;
 }
 
 .printing3d-page__head {
