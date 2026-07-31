@@ -3064,8 +3064,6 @@ body:has(.nm-hub-app) {
 
 .nm-hub-app--tasks .hub-tasks-table__tracking {
   white-space: nowrap;
-  width: 7.5rem;
-  min-width: 7.5rem;
 }
 
 .nm-hub-app--tasks .hub-tasks-tracking-cell {
@@ -3414,7 +3412,7 @@ body:has(.nm-hub-app) {
 }
 
 .nm-hub-app--tasks .hub-tasks-table__row td {
-  padding: 10px 12px;
+  padding: 8px 10px;
   border-bottom: 1px solid rgba(15, 23, 42, 0.06);
   vertical-align: middle;
   color: #0f172a;
@@ -3450,13 +3448,28 @@ body:has(.nm-hub-app) {
   opacity: 0.72;
 }
 
+.nm-hub-app--tasks .hub-tasks-table__col-tipo,
+.nm-hub-app--tasks .hub-tasks-table__tipo {
+  width: 7%;
+  min-width: 5.5rem;
+}
+
+.nm-hub-app--tasks .hub-tasks-table__col-title,
 .nm-hub-app--tasks .hub-tasks-table__title {
+  width: 14%;
+  max-width: 11rem;
   font-weight: 650;
-  min-width: 0;
   font-family: var(--font-family, 'Plus Jakarta Sans', ui-sans-serif, sans-serif);
+  overflow: hidden;
+}
+
+.nm-hub-app--tasks .hub-tasks-table__title-link,
+.nm-hub-app--tasks .hub-tasks-table__title-text {
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: 100%;
 }
 
 .nm-hub-app--tasks .hub-tasks-table__title-link {
@@ -3480,8 +3493,10 @@ body:has(.nm-hub-app) {
   border-bottom: 1px dashed rgba(100, 116, 139, 0.45);
 }
 
+.nm-hub-app--tasks .hub-tasks-table__col-detail,
 .nm-hub-app--tasks .hub-tasks-table__detail-toggle {
-  width: 110px;
+  width: 7%;
+  min-width: 5rem;
 }
 
 .nm-hub-app--tasks .hub-tasks-table__detail-btn {
@@ -3552,43 +3567,46 @@ body:has(.nm-hub-app) {
 }
 
 .nm-hub-app--tasks .hub-tasks-table__col-actions {
-  width: 7.75rem;
-  min-width: 7.75rem;
-  max-width: 7.75rem;
+  width: 11%;
+  min-width: 7.25rem;
   text-align: right;
   white-space: nowrap;
 }
 
 .nm-hub-app--tasks .hub-tasks-table__col-status,
 .nm-hub-app--tasks .hub-tasks-table__status {
-  width: 7.75rem;
-  min-width: 7.75rem;
+  width: 13%;
+  min-width: 8.25rem;
 }
 
 .nm-hub-app--tasks .hub-tasks-table__col-payment,
 .nm-hub-app--tasks .hub-tasks-table__payment {
-  width: 6.5rem;
-  min-width: 6.5rem;
+  width: 10%;
+  min-width: 6.75rem;
 }
 
 .nm-hub-app--tasks .hub-tasks-table__col-created,
 .nm-hub-app--tasks .hub-tasks-table__created {
-  width: 5.5rem;
-  min-width: 5.5rem;
+  width: 5%;
+  min-width: 3.25rem;
+  white-space: nowrap;
 }
 
-.nm-hub-app--tasks .hub-tasks-table__col-images {
-  width: 4.5rem;
-  min-width: 4.5rem;
+.nm-hub-app--tasks .hub-tasks-table__col-images,
+.nm-hub-app--tasks .hub-tasks-table__images {
+  width: 6%;
+  min-width: 3.25rem;
 }
 
-.nm-hub-app--tasks .hub-tasks-table__col-tracking {
-  width: 7.5rem;
-  min-width: 7.5rem;
+.nm-hub-app--tasks .hub-tasks-table__col-tracking,
+.nm-hub-app--tasks .hub-tasks-table__tracking {
+  width: 9%;
+  min-width: 5.75rem;
+  white-space: nowrap;
 }
 
 .nm-hub-app--tasks .btn-task-notes.hub-tasks-table__action-btn {
-  min-width: 4.6rem;
+  min-width: 4.4rem;
   justify-content: center;
 }
 
@@ -3628,9 +3646,11 @@ body:has(.nm-hub-app) {
 
 .nm-hub-app--tasks .hub-tasks-pill-select {
   position: relative;
-  display: inline-flex;
+  display: block;
   vertical-align: middle;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .nm-hub-app--tasks .hub-tasks-status-select,
@@ -3638,28 +3658,40 @@ body:has(.nm-hub-app) {
   appearance: none;
   -webkit-appearance: none;
   margin: 0;
-  padding: 6px 26px 6px 9px;
+  padding: 5px 22px 5px 8px;
   border-radius: 8px;
   border: 1px solid rgba(15, 23, 42, 0.14);
   background-color: #ffffff;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M6 9l6 6 6-6' stroke='%64748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 8px center;
+  background-position: right 7px center;
   color: #0f172a;
   font: inherit;
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 650;
-  min-width: 6.75rem;
+  min-width: 0;
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   cursor: pointer;
   text-align: left;
   line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .nm-hub-app--tasks .hub-tasks-status-select:disabled,
 .nm-hub-app--tasks .hub-tasks-pill-select__trigger:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+.nm-hub-app--tasks .hub-tasks-pill-select__label {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .hub-tasks-pill-select__menu {

@@ -110,7 +110,7 @@ function yearMonthFromCreatedAt(iso: string): string {
 function formatTaskCreatedAt(iso: string): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return '—'
-  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
 function normalizeExternalUrl(raw: string): string | null {
@@ -1482,9 +1482,15 @@ export function HubTasksApp({
             <table className="hub-tasks-table">
               <thead>
                 <tr>
-                  <th scope="col">Tipo</th>
-                  <th scope="col">Título</th>
-                  <th scope="col">Detalle</th>
+                  <th scope="col" className="hub-tasks-table__col-tipo">
+                    Tipo
+                  </th>
+                  <th scope="col" className="hub-tasks-table__col-title">
+                    Título
+                  </th>
+                  <th scope="col" className="hub-tasks-table__col-detail">
+                    Detalle
+                  </th>
                   <th scope="col" className="hub-tasks-table__col-status">
                     Estado
                   </th>
@@ -1517,7 +1523,7 @@ export function HubTasksApp({
                   return (
                     <Fragment key={t.id}>
                       <tr className={rowClass}>
-                        <td>
+                        <td className="hub-tasks-table__tipo">
                           {t.task_type ? (
                             <span className={`task-type-badge task-type-badge--${t.task_type}`}>
                               {TASK_TYPE_LABEL[t.task_type]}
@@ -1546,7 +1552,9 @@ export function HubTasksApp({
                                   : 'hub-tasks-table__title-text'
                               }
                               title={
-                                orderNumber ? 'No se encontró la orden en Shopify' : undefined
+                                orderNumber
+                                  ? 'No se encontró la orden en Shopify'
+                                  : t.title
                               }
                             >
                               {t.title}
