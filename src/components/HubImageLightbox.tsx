@@ -36,6 +36,21 @@ function measureFitBox(): { w: number; h: number } {
   }
 }
 
+/** Tamaño visible real de la foto dentro del tope (sin letterbox clickeable). */
+function fitDisplaySize(
+  naturalW: number,
+  naturalH: number,
+  maxW: number,
+  maxH: number,
+): { w: number; h: number } {
+  if (naturalW <= 0 || naturalH <= 0) return { w: maxW, h: maxH }
+  const scale = Math.min(maxW / naturalW, maxH / naturalH, 1)
+  return {
+    w: Math.max(1, Math.round(naturalW * scale)),
+    h: Math.max(1, Math.round(naturalH * scale)),
+  }
+}
+
 export type HubImageLightboxGallery = {
   index: number
   total: number
@@ -57,6 +72,7 @@ export function HubImageLightbox({
   const [dismissY, setDismissY] = useState(0)
   const [dragging, setDragging] = useState(false)
   const [fitBox, setFitBox] = useState(measureFitBox)
+  const [naturalSize, setNaturalSize] = useState({ w: 0, h: 0 })
 
   const historyPushedRef = useRef(false)
   const dismissYRef = useRef(0)
@@ -64,6 +80,7 @@ export function HubImageLightbox({
   const galleryRef = useRef(gallery)
   const onCloseRef = useRef(onClose)
   const stageRef = useRef<HTMLDivElement>(null)
+  const imgRef = useRef<HTMLImageElement>(null)
   const touchRef = useRef({
     mode: 'none' as 'none' | 'pan' | 'pinch' | 'swipe',
     startY: 0,
@@ -114,7 +131,21 @@ export function HubImageLightbox({
 
   useEffect(() => {
     resetView()
+    setNaturalSize({ w: 0, h: 0 })
   }, [src, resetView])
+
+  const syncNaturalSize = useCallback((img: HTMLImageElement | null) => {
+    if (!img) return
+    const w = img.naturalWidth
+    const h = img.naturalHeight
+    if (w > 0 && h > 0) {
+      setNaturalSize((prev) => (prev.w === w && prev.h === h ? prev : { w, h }))
+    }
+  }, [])
+
+  useEffect(() => {
+    syncNaturalSize(imgRef.current)
+  }, [src, syncNaturalSize])
 
   useEffect(() => {
     const update = () => {
@@ -291,8 +322,16 @@ export function HubImageLightbox({
         if (dx < 0) galleryRef.current.onNext?.()
         else galleryRef.current.onPrev?.()
       } else if (t.moved <= LIGHTBOX_TAP_MOVE_PX) {
-        ignoreClickRef.current = true
-        toggleZoom()
+        const tapTarget = end?.target
+        const onPhoto =
+          tapTarget instanceof Element &&
+          Boolean(tapTarget.closest('.nm-hub-lightbox__img, .nm-hub-lightbox__nav, .nm-hub-lightbox__counter'))
+        if (onPhoto && tapTarget instanceof Element && tapTarget.closest('.nm-hub-lightbox__img')) {
+          ignoreClickRef.current = true
+          toggleZoom()
+        } else if (!onPhoto) {
+          requestClose()
+        }
       }
 
       dismissYRef.current = 0
@@ -308,6 +347,7 @@ export function HubImageLightbox({
     dismissY > 0
       ? `translateY(${dismissY}px) scale(${scale})`
       : `translate(${offset.x}px, ${offset.y}px) scale(${scale})`
+  const displaySize = fitDisplaySize(naturalSize.w, naturalSize.h, fitBox.w, fitBox.h)
 
   const node = (
     <div
@@ -333,8 +373,13 @@ export function HubImageLightbox({
       >
         <div
           className="nm-hub-lightbox__frame"
-          style={{ width: fitBox.w, height: fitBox.h }}
+          style={{
+            width: displaySize.w,
+            height: displaySize.h,
+            visibility: naturalSize.w > 0 ? 'visible' : 'hidden',
+          }}
           onClick={(e) => {
+            // Click en el marco vacío cierra.
             if (e.target === e.currentTarget && dismissY < 8) requestClose()
           }}
         >
@@ -370,11 +415,13 @@ export function HubImageLightbox({
             </>
           ) : null}
           <img
+            ref={imgRef}
             src={src}
             alt=""
             className="nm-hub-lightbox__img"
             style={{ transform: imgTransform }}
             draggable={false}
+            onLoad={(e) => syncNaturalSize(e.currentTarget)}
             onClick={(e) => {
               e.stopPropagation()
               if (ignoreClickRef.current) {
