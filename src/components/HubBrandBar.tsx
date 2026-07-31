@@ -1,7 +1,23 @@
 import type { ReactNode } from 'react'
 import { onHubLinkClick } from '../lib/hubNavigate'
 import { HubAdminSignOutButton } from './HubAdminSignOutButton'
-import notmidLogoUrl from '../assets/brand/notmid-logo.svg'
+
+/** Wordmark inline — evita clipping de <img> + viewBox corto. */
+function NotBrainLogoMark() {
+  return (
+    <svg
+      className="nm-hub-brand-logo"
+      viewBox="0 0 1320 160"
+      role="img"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <text x="8" y="126" className="nm-hub-brand-logo__text">
+        NOTBRAIN
+      </text>
+    </svg>
+  )
+}
 
 /** Marca + inicio (/): misma barra en hub, login y lista de corte. */
 export type HubBrandSubtitleTone = 'default' | 'accent' | 'pending' | 'completed' | 'muted'
@@ -18,7 +34,7 @@ export function HubBrandBar({
   context?: string
   /** Línea bajo el logo (solo con integratedDashboard). */
   integratedSubtitle?: string
-  /** Acentos del subtítulo: verde crear, azul pendientes, gris completadas, muted (p. ej. impresos). */
+  /** Acentos del subtítulo: verde crear, azul pendientes, gris completadas, muted. */
   integratedSubtitleTone?: HubBrandSubtitleTone
   /** Si es false, el bloque de marca no usa h1 (p. ej. cuando la pantalla ya tiene su propio h1). */
   asPageHeading?: boolean
@@ -54,12 +70,7 @@ export function HubBrandBar({
           title="Inicio"
           onClick={(e) => onHubLinkClick(e, '/')}
         >
-          <img
-            src={notmidLogoUrl}
-            alt="NOT BRAIN"
-            className="nm-hub-brand-logo"
-            draggable={false}
-          />
+          <NotBrainLogoMark />
         </a>
         {headingStacked ? <span className={subtitleClasses}>{integratedSubtitle}</span> : null}
         {!headingStacked && context ? <span className="nm-hub-brand-bar__context">{context}</span> : null}

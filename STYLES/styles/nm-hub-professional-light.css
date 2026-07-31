@@ -48,6 +48,14 @@ body:has(.nm-hub-app) {
 
 .nm-hub-app .nm-hub-brand-logo {
   filter: none;
+  max-width: none !important;
+  overflow: visible !important;
+}
+
+.nm-hub-app .navbar-screen-title,
+.nm-hub-app .navbar-brand-subtitle,
+.nm-hub-app .nm-hub-brand-bar__context {
+  color: #5b6573 !important;
 }
 
 .nm-hub-app .nm-hub-brand-bar__btn,
@@ -462,6 +470,25 @@ body:has(.nm-hub-app) {
 .nm-hub-app--cut-list .cut-list-item {
   background: #ffffff !important;
   border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+/* Despachos — refuerzo light */
+.nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-hero,
+.nm-hub-app.nm-hub-app--dispatched-orders .date-pager-faja-compacta {
+  background: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  color: #0f172a !important;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-edit__input {
+  background: #f8fafc !important;
+  color: #0f9f6e !important;
+  border-color: rgba(15, 159, 110, 0.35) !important;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-orders .date-text-accent-number,
+.nm-hub-app.nm-hub-app--dispatched-orders .pager-tactic-btn {
+  color: #0f172a !important;
 }
 
 @media (min-width: 768px) {

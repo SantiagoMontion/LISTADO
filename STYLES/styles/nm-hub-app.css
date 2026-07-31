@@ -993,9 +993,10 @@ a.nm-hub-brand-bar__btn:hover {
   margin: 0;
   display: inline-flex;
   align-items: center;
-  color: #0f172a;
+  color: var(--text-rebel-primary, #0f172a);
   text-decoration: none;
   line-height: 0;
+  overflow: visible;
 }
 
 .nm-hub-brand-bar__brand:hover {
@@ -1010,13 +1011,20 @@ a.nm-hub-brand-bar__btn:hover {
 
 .nm-hub-brand-logo {
   display: block;
-  height: 1.4rem;
+  height: 1.45rem;
   width: auto;
   max-width: none;
-  flex-shrink: 0;
-  object-fit: contain;
+  overflow: visible;
   user-select: none;
   -webkit-user-drag: none;
+}
+
+.nm-hub-brand-logo__text {
+  fill: currentColor;
+  font-family: var(--font-family, 'Plus Jakarta Sans', ui-sans-serif, sans-serif);
+  font-size: 128px;
+  font-weight: 800;
+  letter-spacing: -0.035em;
 }
 
 .nm-hub-brand-bar__context {
@@ -1420,9 +1428,9 @@ a.nm-hub-brand-bar__btn:hover {
   font-weight: 600;
 }
 
-/* Pedidos despachados (/pedidos-despachados) — light professional */
+/* Pedidos despachados (/pedidos-despachados) */
 .nm-hub-app.nm-hub-app--dispatched-orders .dashboard-navbar.dashboard-navbar-clean {
-  background-color: rgba(255, 255, 255, 0.92);
+  background-color: var(--nm-hub-chrome-bg, rgba(255, 255, 255, 0.92));
 }
 
 .nm-hub-app.nm-hub-app--dispatched-orders .nm-hub-dispatched-feedback {
@@ -1435,14 +1443,14 @@ a.nm-hub-brand-bar__btn:hover {
 
 .nm-hub-app.nm-hub-app--dispatched-orders .date-pager-faja-compacta {
   background-color: #ffffff;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 14px;
   padding: 10px 16px;
   display: flex;
   align-items: center;
   width: 100%;
   box-sizing: border-box;
-  margin: 1rem 0 1.25rem;
+  margin-bottom: 16px;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
@@ -1466,7 +1474,7 @@ a.nm-hub-brand-bar__btn:hover {
   border-radius: 10px;
   border: 1px solid rgba(15, 23, 42, 0.12);
   background: #f8fafc;
-  color: #0f172a;
+  color: var(--text-rebel-primary, #0f172a);
   font-size: 1.1rem;
   cursor: pointer;
   display: inline-flex;
@@ -1476,8 +1484,8 @@ a.nm-hub-brand-bar__btn:hover {
 }
 
 .nm-hub-app.nm-hub-app--dispatched-orders .pager-tactic-btn:hover:not(:disabled) {
-  background: #eef2ff;
-  border-color: rgba(21, 101, 216, 0.35);
+  background: #eef2f7;
+  border-color: rgba(15, 23, 42, 0.18);
 }
 
 .nm-hub-app.nm-hub-app--dispatched-orders .pager-tactic-btn:focus-visible {
@@ -1503,14 +1511,14 @@ a.nm-hub-brand-bar__btn:hover {
 .nm-hub-app.nm-hub-app--dispatched-orders .date-text-accent-number {
   font-size: 1.35rem;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--text-rebel-primary, #0f172a);
   line-height: 1.1;
   font-family: var(--font-rebel-count, inherit);
 }
 
 .nm-hub-app.nm-hub-app--dispatched-orders .nm-hub-printed-date-native.nm-hub-date-native {
   font-size: 0.72rem;
-  color: #64748b;
+  color: var(--text-rebel-muted, #64748b);
   background: transparent;
   border: none;
   text-align: center;
@@ -1519,22 +1527,20 @@ a.nm-hub-brand-bar__btn:hover {
 }
 
 .nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-hero {
-  margin: 0 auto;
-  width: 100%;
-  max-width: 28rem;
-  padding: 1.75rem 1.5rem 1.75rem;
+  margin-top: 0.5rem;
+  padding: 1.5rem 1.25rem 1.75rem;
   border-radius: 14px;
   background: #ffffff;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 0.5rem;
-  overflow: visible;
-  min-height: 0;
-  height: auto;
+  gap: 0.35rem;
+  max-width: 28rem;
+  margin-inline: auto;
+  width: 100%;
 }
 
 .nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-hero__label {
@@ -1543,12 +1549,12 @@ a.nm-hub-brand-bar__btn:hover {
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #64748b;
+  color: var(--text-rebel-muted, #64748b);
 }
 
 .nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-hero__count {
   margin: 0.15rem 0 0;
-  font-size: clamp(3.5rem, 16vw, 5.25rem);
+  font-size: clamp(3.5rem, 16vw, 5rem);
   font-weight: 800;
   line-height: 0.95;
   font-family: var(--font-rebel-count, inherit);
@@ -1557,17 +1563,18 @@ a.nm-hub-brand-bar__btn:hover {
 }
 
 .nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-hero__actions {
-  margin-top: 1.25rem;
+  margin-top: 1.1rem;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
+  width: 100%;
 }
 
 .nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-add-btn {
   width: 52px;
   height: 52px;
-  border-radius: 14px;
+  border-radius: 12px;
   font-size: 1.75rem;
   font-weight: 700;
   line-height: 1;
@@ -1599,14 +1606,16 @@ a.nm-hub-brand-bar__btn:hover {
 
 .nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-edit {
   width: 100%;
-  max-width: 100%;
+  max-width: none;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 0.85rem;
-  margin-top: 0.5rem;
+  gap: 0.65rem;
+  margin-top: 0.15rem;
+  padding: 0;
   background: transparent;
-  overflow: visible;
+  border: none;
+  box-shadow: none;
 }
 
 .nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-edit__label {
@@ -1615,7 +1624,7 @@ a.nm-hub-brand-bar__btn:hover {
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: #64748b;
+  color: var(--text-rebel-muted, #64748b);
   text-align: center;
 }
 
@@ -1629,46 +1638,31 @@ a.nm-hub-brand-bar__btn:hover {
   font-variant-numeric: tabular-nums;
   padding: 0.65rem 0.75rem;
   border-radius: 12px;
-  color: #0f172a;
+  color: var(--accent-rebel-green, #0f9f6e);
   background: #f8fafc;
-  border: 1px solid rgba(15, 23, 42, 0.14);
+  border: 1px solid rgba(15, 159, 110, 0.35);
 }
 
 .nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-edit__input:focus {
   outline: none;
-  border-color: rgba(21, 101, 216, 0.55);
-  box-shadow: 0 0 0 3px rgba(21, 101, 216, 0.15);
+  border-color: rgba(15, 159, 110, 0.65);
+  box-shadow: 0 0 0 3px rgba(15, 159, 110, 0.15);
   background: #ffffff;
 }
 
 .nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-edit__actions {
   display: flex;
-  gap: 0.65rem;
+  gap: 0.5rem;
   justify-content: center;
   flex-wrap: wrap;
-  padding-bottom: 0.15rem;
 }
 
 .nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-edit__save,
 .nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-edit__cancel {
-  min-width: 7.5rem;
-  font-size: 0.88rem;
-  padding: 0.65rem 1.1rem;
-  border-radius: 10px;
-}
-
-.nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-edit__save.nm-prod-btn-primary,
-.nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-edit__save {
-  background: #1565d8;
-  border: 1px solid #1565d8;
-  color: #ffffff;
-}
-
-.nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-edit__cancel.nm-prod-btn,
-.nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-edit__cancel {
-  background: #ffffff;
-  border: 1px solid rgba(15, 23, 42, 0.14);
-  color: #0f172a;
+  min-width: 7rem;
+  font-size: 0.85rem;
+  padding: 0.55rem 1rem;
+  border-radius: 12px;
 }
 
 .nm-hub-app--dispatched-orders .nm-hub-brand-bar__trailing-group,
@@ -1687,7 +1681,7 @@ a.nm-hub-brand-bar__btn:hover {
 
 /* Estadísticas despachos (/pedidos-despachados/estadisticas) */
 .nm-hub-app.nm-hub-app--dispatched-stats .dashboard-navbar.dashboard-navbar-clean {
-  background-color: rgba(255, 255, 255, 0.92);
+  background-color: #121417;
 }
 
 .nm-hub-app.nm-hub-app--dispatched-stats .hub-dispatched-stats-feedback {
@@ -2584,9 +2578,10 @@ body:has(.nm-hub-app) {
 }
 
 .nm-hub-app .nm-hub-brand-logo {
-  height: 1.45rem;
+  height: 1.5rem;
   width: auto;
   max-width: none;
+  overflow: visible;
 }
 
 .nm-hub-app--dashboard .nm-hub-brand-bar__context {
@@ -2858,6 +2853,10 @@ body:has(.nm-hub-app) {
 }
 
 .nm-hub-app .nm-hub-brand-bar--with-trailing .nm-hub-brand-bar__heading--stacked .navbar-brand.nm-hub-brand-bar__brand {
+  max-width: none;
+}
+
+.nm-hub-app .nm-hub-brand-bar--with-trailing .nm-hub-brand-logo {
   max-width: none;
 }
 
