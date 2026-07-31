@@ -141,6 +141,34 @@ body:has(.nm-hub-app) {
   color: #0f172a !important;
 }
 
+.nm-hub-app form#nm-hub-tareas-nueva .btn-submit-task {
+  background: #1565d8 !important;
+  color: #ffffff !important;
+}
+
+.nm-hub-app form#nm-hub-tareas-nueva .nm-hub-image-picker.upload-zone-rebel {
+  background: #f2f2f7 !important;
+  border-color: rgba(15, 23, 42, 0.18) !important;
+}
+
+.nm-hub-app form#nm-hub-tareas-nueva .field-label {
+  color: #6e6e73 !important;
+}
+
+.nm-hub-app form#nm-hub-tareas-nueva .upload-zone-title {
+  color: #1d1d1f !important;
+}
+
+.nm-hub-app form#nm-hub-tareas-nueva .upload-zone-hint {
+  color: #8e8e93 !important;
+}
+
+.nm-hub-app form#nm-hub-tareas-nueva .upload-action-btn {
+  background: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  color: #1565d8 !important;
+}
+
 .nm-hub-app .field-label,
 .nm-hub-app .nm-hub-label,
 .nm-hub-app .nm-hub-muted,

@@ -476,6 +476,37 @@ export function HubTasksApp({
     setFiles((prev) => [...prev, ...images])
   }, [])
 
+  const appendImagesFromClipboard = useCallback(
+    (data: DataTransfer | null | undefined) => {
+      if (!data) return false
+      const images: File[] = []
+      const items = data.items
+      if (items) {
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i]
+          if (!item || !item.type.startsWith('image/')) continue
+          const raw = item.getAsFile()
+          if (!raw) continue
+          const ext = raw.type.split('/')[1]?.replace('jpeg', 'jpg') || 'png'
+          const name =
+            raw.name && raw.name !== 'image.png' && raw.name !== 'image.jpg'
+              ? raw.name
+              : `pegado-${Date.now()}-${images.length + 1}.${ext}`
+          images.push(raw.name === name ? raw : new File([raw], name, { type: raw.type }))
+        }
+      }
+      if (images.length === 0 && data.files?.length) {
+        for (const f of Array.from(data.files)) {
+          if (f.type.startsWith('image/')) images.push(f)
+        }
+      }
+      if (images.length === 0) return false
+      appendImageFiles(images)
+      return true
+    },
+    [appendImageFiles],
+  )
+
   const appendTaskFilesFromInput = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
       appendImageFiles(e.target.files)
@@ -483,6 +514,26 @@ export function HubTasksApp({
     },
     [appendImageFiles],
   )
+
+  useEffect(() => {
+    if (panel !== 'create' || readOnly) return
+    const onPaste = (e: ClipboardEvent) => {
+      const target = e.target as HTMLElement | null
+      const inTextField =
+        Boolean(target) &&
+        (target!.tagName === 'INPUT' ||
+          target!.tagName === 'TEXTAREA' ||
+          target!.isContentEditable)
+      const text = e.clipboardData?.getData('text/plain')?.trim() ?? ''
+      // Si está escribiendo texto en un campo, no interceptar.
+      if (inTextField && text) return
+      if (appendImagesFromClipboard(e.clipboardData)) {
+        e.preventDefault()
+      }
+    }
+    window.addEventListener('paste', onPaste)
+    return () => window.removeEventListener('paste', onPaste)
+  }, [panel, readOnly, appendImagesFromClipboard])
 
   useEffect(() => {
     const urls = files.map((f) => URL.createObjectURL(f))
@@ -1102,12 +1153,6 @@ export function HubTasksApp({
     }
   }
 
-  const goListPanel = useCallback(() => {
-    resetCreateForm()
-    replaceListPanelUrl()
-    setPanel('list')
-  }, [resetCreateForm])
-
   return (
     <div className="nm-hub-app nm-hub-app--tasks">
       <header className="nm-hub-header dashboard-navbar">
@@ -1124,21 +1169,13 @@ export function HubTasksApp({
 
       {!readOnly && panel === 'create' ? (
         <form id="nm-hub-tareas-nueva" className="nm-hub-card nm-hub-card--task-create" onSubmit={(e) => void onCreate(e)}>
-          <header className="hub-page-head hub-page-head--with-action">
-            <div className="hub-page-head__main">
-              <button type="button" className="hub-page-back" onClick={goListPanel}>
-                ‹ Tareas
-              </button>
-              <h1 className="hub-page-head__title">Nueva tarea</h1>
-              <p className="hub-page-head__lead">
-                Elegí el tipo y cargá los datos del pedido o cambio.
-              </p>
-            </div>
+          <header className="hub-page-head hub-page-head--create">
+            <h1 className="hub-page-head__title">Nueva tarea</h1>
           </header>
           <div className="form-container-clean">
           <div className="field-group">
             <span className="field-label" id="nm-hub-t-type-label">
-              Tipo de tarea
+              Tipo
             </span>
             <div
               className={`task-create-preset-row${taskCreateType ? ' task-create-preset-row--has-selection' : ''}`}
@@ -1154,7 +1191,6 @@ export function HubTasksApp({
                   disabled={busy}
                   aria-pressed={taskCreateType === type}
                 >
-                  {taskCreateType === type ? '✓ ' : ''}
                   {TASK_TYPE_LABEL[type]}
                 </button>
               ))}
@@ -1221,7 +1257,7 @@ export function HubTasksApp({
           {taskTypeUsesClientFields(taskCreateType) && title.trim() ? (
             <div className="field-group task-create-client-choice">
               <span className="field-label" id="nm-hub-t-client-data-label">
-                ¿Cargar datos del cliente?
+                Datos del cliente
               </span>
               <div
                 className="task-create-client-choice__row"
@@ -1334,7 +1370,7 @@ export function HubTasksApp({
 
           <div className="nm-hub-image-block">
             <span className="field-label" id="nm-hub-t-files-legend">
-              Imágenes <span className="nm-hub-label-optional">(opcional)</span>
+              Imágenes
             </span>
             <input
               ref={taskGalleryInputRef}
@@ -1359,7 +1395,14 @@ export function HubTasksApp({
             <div
               className={`nm-hub-image-picker upload-zone-rebel${imageDragOver ? ' upload-zone-rebel--dragover' : ''}`}
               role="group"
+              tabIndex={0}
               aria-labelledby="nm-hub-t-files-legend nm-hub-t-files-title"
+              onPaste={(e) => {
+                if (appendImagesFromClipboard(e.clipboardData)) {
+                  e.preventDefault()
+                  e.stopPropagation()
+                }
+              }}
               onDragEnter={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
@@ -1385,9 +1428,11 @@ export function HubTasksApp({
               }}
             >
               <p className="nm-hub-image-picker-title upload-zone-title" id="nm-hub-t-files-title">
-                Cargar imagen
+                Agregar fotos
               </p>
-              <p className="upload-zone-hint">Arrastrá imágenes acá, o elegí galería / cámara</p>
+              <p className="upload-zone-hint">
+                Pegá con Ctrl+V, arrastrá acá, o usá galería / cámara
+              </p>
               <div className="nm-hub-image-picker-split upload-buttons-row">
                 <button
                   type="button"
