@@ -274,7 +274,7 @@ function MainSummary({ result, sale, quantity }: MainSummaryProps) {
         <div className="printing3d-summary__hero">
           <span className="printing3d-summary__hero-label">Precio</span>
           <strong className="printing3d-summary__hero-value">
-            {formatWholeMoney(sale.precioVentaUnitario)}
+            {formatWholeMoney(sale.precioVentaUnitario)} c/u
           </strong>
           {showTotal ? (
             <span className="printing3d-summary__hero-total">
