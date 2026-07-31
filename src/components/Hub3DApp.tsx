@@ -214,7 +214,7 @@ function BedPrintTimeSelect({ horasCama, minutosCama, onChange }: BedPrintTimeSe
 interface SummaryStatProps {
   label: string
   value: string
-  hint: string
+  hint?: string
   totalLabel?: string
 }
 
@@ -223,7 +223,7 @@ function SummaryStat({ label, value, hint, totalLabel }: SummaryStatProps) {
     <div className="printing3d-summary-stat">
       <span className="printing3d-summary-stat__label">{label}</span>
       <strong className="printing3d-summary-stat__value">{value}</strong>
-      <span className="printing3d-summary-stat__hint">{hint}</span>
+      {hint ? <span className="printing3d-summary-stat__hint">{hint}</span> : null}
       {totalLabel ? <span className="printing3d-summary-stat__total">{totalLabel}</span> : null}
     </div>
   )
@@ -252,7 +252,7 @@ interface MainSummaryProps {
 function MainSummary({ result, sale, quantity }: MainSummaryProps) {
   const showTotal = quantity > 1
   const totalLabel = (total: number, format: (value: number) => string = formatWholeMoney) =>
-    `Pedido (${quantity} u.): ${format(total)}`
+    `Total ${format(total)}`
 
   return (
     <section className="printing3d-output-block printing3d-summary">
@@ -262,13 +262,12 @@ function MainSummary({ result, sale, quantity }: MainSummaryProps) {
           <SummaryStat
             label="Costo"
             value={formatMoney(result.costoUnitarioFinal)}
-            hint="/ u."
             totalLabel={showTotal ? totalLabel(result.costoTotalProduccion, formatMoney) : undefined}
           />
           <SummaryStat
             label="Ganancia"
             value={formatWholeMoney(sale.gananciaNetaUnitaria)}
-            hint={`/ u. · ${formatNumber(sale.margenRealPorcentaje, 1)}%`}
+            hint={`${formatNumber(sale.margenRealPorcentaje, 1)}%`}
             totalLabel={showTotal ? totalLabel(sale.gananciaNetaTotal) : undefined}
           />
         </div>
@@ -277,7 +276,6 @@ function MainSummary({ result, sale, quantity }: MainSummaryProps) {
           <strong className="printing3d-summary__hero-value">
             {formatWholeMoney(sale.precioVentaUnitario)}
           </strong>
-          <span className="printing3d-summary__hero-hint">/ u.</span>
           {showTotal ? (
             <span className="printing3d-summary__hero-total">
               {totalLabel(sale.precioVentaTotal)}
