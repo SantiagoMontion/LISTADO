@@ -74,6 +74,7 @@ body:has(.nm-hub-app) {
 .hub-desktop-nav {
   background: rgba(255, 255, 255, 0.92) !important;
   border-bottom: 1px solid rgba(15, 23, 42, 0.08) !important;
+  overflow: visible !important;
 }
 
 .hub-desktop-nav__link {

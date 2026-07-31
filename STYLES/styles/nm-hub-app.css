@@ -7310,7 +7310,7 @@ body:has(.nm-hub-app--logistica-andreani) {
     display: block;
     position: sticky;
     top: 3.65rem;
-    z-index: 55;
+    z-index: 80;
     width: calc(100% + (var(--nm-hub-padding-x) * 2));
     max-width: none;
     margin: 0 calc(-1 * var(--nm-hub-padding-x)) 0;
@@ -7319,19 +7319,18 @@ body:has(.nm-hub-app--logistica-andreani) {
     background: var(--nm-hub-chrome-bg);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
-    overflow-x: auto;
-    scrollbar-width: thin;
+    /* overflow:auto recorta los dropdowns — debe ser visible */
+    overflow: visible;
   }
 
   .hub-desktop-nav__list {
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     align-items: stretch;
     gap: 0.15rem;
     margin: 0;
     padding: 0;
     list-style: none;
-    min-width: min-content;
   }
 
   .hub-desktop-nav__link {
@@ -7371,6 +7370,10 @@ body:has(.nm-hub-app--logistica-andreani) {
     list-style: none;
   }
 
+  .hub-desktop-nav__item--menu.is-open {
+    z-index: 90;
+  }
+
   .hub-desktop-nav__caret {
     font-size: 0.65rem;
     opacity: 0.7;
@@ -7379,17 +7382,17 @@ body:has(.nm-hub-app--logistica-andreani) {
 
   .hub-desktop-nav__submenu {
     position: absolute;
-    top: calc(100% - 2px);
+    top: calc(100% + 2px);
     left: 0;
-    z-index: 70;
-    min-width: 12.5rem;
+    z-index: 100;
+    min-width: 13rem;
     margin: 0;
     padding: 0.4rem;
     list-style: none;
     background: #ffffff;
-    border: 1px solid rgba(15, 23, 42, 0.1);
+    border: 1px solid rgba(15, 23, 42, 0.12);
     border-radius: 10px;
-    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.14);
   }
 
   .hub-desktop-nav__sublink {
