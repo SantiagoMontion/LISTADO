@@ -746,12 +746,16 @@ body:has(.nm-hub-app) {
 
 /* Logistics / analytics / 3D leftover dark shells */
 .nm-hub-app.nm-hub-app--logistica-andreani,
-.nm-hub-app.nm-hub-app--logistica-andreani .dashboard-navbar.dashboard-navbar-clean,
+.nm-hub-app.nm-hub-app--logistica-andreani .dashboard-navbar.dashboard-navbar-clean {
+  background: transparent !important;
+  color: #0f172a !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+.nm-hub-app .logistica-metric,
+.nm-hub-app .logistica-panel,
 .nm-hub-app .logistica-console,
 .nm-hub-app .logistica-console__body,
-.nm-hub-app .logistica-workspace,
-.nm-hub-app .logistica-step,
-.nm-hub-app .logistica-metrics > *,
 .nm-hub-app .logistica-held-table,
 .nm-hub-app .printing3d-config-modal,
 .nm-hub-app .nm-hub-dispatched-feedback,
@@ -762,16 +766,77 @@ body:has(.nm-hub-app) {
   border-color: rgba(15, 23, 42, 0.1) !important;
 }
 
+.nm-hub-app .logistica-workspace {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.nm-hub-app .logistica-page__title,
+.nm-hub-app .logistica-panel__title {
+  color: #0f172a !important;
+}
+
+.nm-hub-app .logistica-page__lead,
 .nm-hub-app .logistica-page__subtitle,
-.nm-hub-app .printing3d-config-status,
-.nm-hub-app .logistica-held-table__error {
+.nm-hub-app .logistica-empty,
+.nm-hub-app .printing3d-config-status {
   color: #5b6573 !important;
 }
 
-.nm-hub-app .logistica-held-table__link {
-  background: #f8fafc !important;
-  color: #0f172a !important;
-  border-color: rgba(15, 23, 42, 0.12) !important;
+.nm-hub-app .logistica-held-table__error {
+  color: #c93400 !important;
+}
+
+.nm-hub-app .logistica-held-table__link,
+.nm-hub-app .logistica-link {
+  background: transparent !important;
+  color: #1565d8 !important;
+  border: 0 !important;
+}
+
+.nm-hub-app .logistica-btn--primary,
+.nm-hub-app .logistica-btn-primary {
+  background: #1565d8 !important;
+  border-color: #1565d8 !important;
+  color: #ffffff !important;
+  border-radius: 14px !important;
+}
+
+.nm-hub-app .logistica-btn--secondary,
+.nm-hub-app .logistica-page__refresh {
+  background: #f2f2f7 !important;
+  border-color: transparent !important;
+  color: #1d1d1f !important;
+  border-radius: 14px !important;
+}
+
+.nm-hub-app .logistica-held-card {
+  background: #fafafa !important;
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  color: #1d1d1f !important;
+}
+
+.nm-hub-app .logistica-warn-card {
+  background: #fffaf3 !important;
+  border-color: rgba(255, 149, 0, 0.28) !important;
+}
+
+.nm-hub-app .logistica-export-preview__list {
+  background: #fafafa !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+.nm-hub-app .logistica-metric__value--sky {
+  color: #1565d8 !important;
+}
+
+.nm-hub-app .logistica-metric__value--violet {
+  color: #5e5ce6 !important;
+}
+
+.nm-hub-app .logistica-metric__value--rose {
+  color: #c93400 !important;
 }
 
 /* Search bars often dark */

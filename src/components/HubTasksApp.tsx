@@ -402,6 +402,7 @@ export function HubTasksApp({
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [expandedDetailIds, setExpandedDetailIds] = useState<Set<string>>(() => new Set())
+  const [expandedMobileCardIds, setExpandedMobileCardIds] = useState<Set<string>>(() => new Set())
   const [taskQuery, setTaskQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState<HubTaskCreateType | 'all'>('all')
   const [completionFilter, setCompletionFilter] = useState<TaskCompletionFilter>('all')
@@ -776,6 +777,15 @@ export function HubTasksApp({
 
   const toggleDetail = useCallback((taskId: string) => {
     setExpandedDetailIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(taskId)) next.delete(taskId)
+      else next.add(taskId)
+      return next
+    })
+  }, [])
+
+  const toggleMobileCard = useCallback((taskId: string) => {
+    setExpandedMobileCardIds((prev) => {
       const next = new Set(prev)
       if (next.has(taskId)) next.delete(taskId)
       else next.add(taskId)
@@ -1659,23 +1669,43 @@ export function HubTasksApp({
               <tbody>
                 {filteredSorted.map((t) => {
                   const expanded = expandedDetailIds.has(t.id)
+                  const mobileOpen = expandedMobileCardIds.has(t.id)
                   const workflow = t.workflow_status ?? 'sin_ingresar'
                   const payment = t.payment_status ?? 'sin_pagar'
                   const completed = isHubTaskCompleted(t)
                   const orderNumber = parseShopifyOrderNumberFromTitle(t.title)
                   const shopifyUrl = orderNumber ? (shopifyUrlsByOrder[orderNumber] ?? null) : null
-                  const rowClass = `hub-tasks-table__row${completed ? ' hub-tasks-table__row--completed' : ' hub-tasks-table__row--pending'}`
+                  const rowClass = `hub-tasks-table__row${completed ? ' hub-tasks-table__row--completed' : ' hub-tasks-table__row--pending'}${mobileOpen ? ' hub-tasks-table__row--mobile-open' : ''}`
                   return (
                     <Fragment key={t.id}>
                       <tr className={rowClass}>
                         <td className="hub-tasks-table__tipo">
-                          {t.task_type ? (
-                            <span className={`task-type-badge task-type-badge--${t.task_type}`}>
-                              {TASK_TYPE_LABEL[t.task_type]}
-                            </span>
-                          ) : (
-                            '—'
-                          )}
+                          <div className="hub-tasks-table__tipo-row">
+                            {t.task_type ? (
+                              <span className={`task-type-badge task-type-badge--${t.task_type}`}>
+                                {TASK_TYPE_LABEL[t.task_type]}
+                              </span>
+                            ) : (
+                              <span className="hub-tasks-table__tipo-empty">—</span>
+                            )}
+                            <button
+                              type="button"
+                              className="hub-tasks-table__mobile-chevron"
+                              onClick={() => toggleMobileCard(t.id)}
+                              aria-expanded={mobileOpen}
+                              aria-label={mobileOpen ? `Cerrar ${t.title}` : `Abrir ${t.title}`}
+                            >
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <path
+                                  d="M6 9l6 6 6-6"
+                                  stroke="currentColor"
+                                  strokeWidth="2.25"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                              </svg>
+                            </button>
+                          </div>
                         </td>
                         <td className="hub-tasks-table__title">
                           {shopifyUrl ? (
@@ -1686,24 +1716,36 @@ export function HubTasksApp({
                               rel="noopener noreferrer"
                               aria-label={`Abrir orden Shopify ${orderNumber ?? t.title}`}
                               title={`Abrir en Shopify (#${orderNumber})`}
+                              onClick={(e) => {
+                                if (!mobileOpen && window.matchMedia('(max-width: 1023.98px)').matches) {
+                                  e.preventDefault()
+                                  toggleMobileCard(t.id)
+                                }
+                              }}
                             >
                               {t.title}
                             </a>
                           ) : (
-                            <span
+                            <button
+                              type="button"
                               className={
                                 orderNumber
-                                  ? 'hub-tasks-table__title-text hub-tasks-table__title-text--unresolved'
-                                  : 'hub-tasks-table__title-text'
+                                  ? 'hub-tasks-table__title-text hub-tasks-table__title-text--unresolved hub-tasks-table__title-hit'
+                                  : 'hub-tasks-table__title-text hub-tasks-table__title-hit'
                               }
                               title={
                                 orderNumber
                                   ? 'No se encontró la orden en Shopify'
                                   : t.title
                               }
+                              onClick={() => {
+                                if (!mobileOpen && window.matchMedia('(max-width: 1023.98px)').matches) {
+                                  toggleMobileCard(t.id)
+                                }
+                              }}
                             >
                               {t.title}
-                            </span>
+                            </button>
                           )}
                         </td>
                         <td className="hub-tasks-table__detail-toggle">

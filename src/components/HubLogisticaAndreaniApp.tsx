@@ -248,19 +248,20 @@ export function HubLogisticaAndreaniApp({
       <HubDesktopNav role={profileRole} />
 
       <div className="logistica-page">
-        <section className="logistica-page__head">
-          <div>
-            <h1 className="logistica-page__title">Andreani — etiquetas y envíos</h1>
+        <header className="logistica-page__head">
+          <div className="logistica-page__head-main">
+            <h1 className="logistica-page__title">Andreani</h1>
+            <p className="logistica-page__lead">Etiquetas y envíos</p>
           </div>
           <button
             type="button"
-            className="logistica-page__refresh"
+            className="logistica-btn logistica-btn--secondary logistica-page__refresh"
             onClick={() => void refreshStatus()}
             disabled={loadingStatus}
           >
             {loadingStatus ? 'Actualizando…' : 'Actualizar'}
           </button>
-        </section>
+        </header>
 
         {configHint && (
           <div className="logistica-alert logistica-alert--warn" role="alert">
@@ -269,7 +270,7 @@ export function HubLogisticaAndreaniApp({
         )}
         {apiOnline === false && !configHint && !statusError && (
           <div className="logistica-alert logistica-alert--warn" role="alert">
-            Motor Andreani no responde. Revisá Railway y la variable VITE_ANDREANI_API_URL en Vercel.
+            Motor Andreani no responde. Revisá Railway y VITE_ANDREANI_API_URL.
           </div>
         )}
         {statusError && (
@@ -278,219 +279,221 @@ export function HubLogisticaAndreaniApp({
           </div>
         )}
 
-        <section className="logistica-metrics" aria-label="Resumen de envíos">
+        <section className="logistica-metrics" aria-label="Resumen">
           <article className="logistica-metric">
-            <p className="logistica-metric__label">Listos para crear etiqueta</p>
+            <p className="logistica-metric__label">Listos</p>
             <p className="logistica-metric__value logistica-metric__value--sky">
               {metrics.pending_export}
             </p>
-            <p className="logistica-metric__desc">Pagados, sin tag ETIQUETA, listos para Excel</p>
           </article>
           <article className="logistica-metric">
             <p className="logistica-metric__label">Sin seguimiento</p>
             <p className="logistica-metric__value logistica-metric__value--violet">
               {metrics.missing_tracking}
             </p>
-            <p className="logistica-metric__desc">
-              Preparados en Shopify pero sin número de envío Andreani cargado
-            </p>
           </article>
           <article className="logistica-metric">
-            <p className="logistica-metric__label">Con error</p>
+            <p className="logistica-metric__label">Errores</p>
             <p className="logistica-metric__value logistica-metric__value--rose">
               {metrics.errors}
             </p>
-            <p className="logistica-metric__desc">Dirección o CP inválidos — no entran al Excel</p>
           </article>
         </section>
 
         <section className="logistica-workspace">
-          <div className="logistica-workspace__steps">
-            <article className="logistica-panel">
+          <article className="logistica-panel logistica-panel--export">
+            <div className="logistica-panel__head">
               <h2 className="logistica-panel__title">Exportar etiquetas</h2>
-              <p className="logistica-panel__text">Generá el excel para subir a Andreani</p>
-
               {pendingOrders.length > 0 ? (
-                <div className="logistica-export-preview">
-                  <p className="logistica-export-preview__title">
-                    Listos para crear etiqueta ({pendingOrders.length})
-                  </p>
-                  <ul className="logistica-export-preview__list">
-                    {pendingPageOrders.map((row) => (
-                      <li key={row.order_id} className="logistica-export-preview__item">
-                        <span className="logistica-export-preview__order">{row.order_name}</span>
-                        <a
-                          href={row.shopify_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="logistica-export-preview__link"
-                        >
-                          Ver en Shopify
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                  {pendingTotalPages > 1 ? (
-                    <div className="logistica-export-preview__pagination">
-                      <button
-                        type="button"
-                        className="logistica-export-preview__page-btn"
-                        onClick={() => setPendingPage((page) => Math.max(1, page - 1))}
-                        disabled={pendingPage <= 1}
-                      >
-                        Anterior
-                      </button>
-                      <span className="logistica-export-preview__page-info">
-                        Página {pendingPage} de {pendingTotalPages}
-                      </span>
-                      <button
-                        type="button"
-                        className="logistica-export-preview__page-btn"
-                        onClick={() =>
-                          setPendingPage((page) => Math.min(pendingTotalPages, page + 1))
-                        }
-                        disabled={pendingPage >= pendingTotalPages}
-                      >
-                        Siguiente
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
-              ) : (
-                <p className="logistica-export-preview__empty">No hay pedidos listos para exportar.</p>
-              )}
+                <span className="logistica-panel__count">{pendingOrders.length}</span>
+              ) : null}
+            </div>
 
-              <button
-                type="button"
-                className="logistica-btn-primary logistica-panel__cta"
-                onClick={startExport}
-                disabled={exportRunning || apiOnline === false || Boolean(configHint)}
-              >
-                {exportRunning ? 'Generando…' : 'Generar carga masiva'}
-              </button>
-
-              {exportRunning ? (
-                <div className="logistica-panel-progress" aria-label="Progreso de exportación">
-                  <div className="logistica-progress__bar">
-                    <div
-                      className="logistica-progress__fill"
-                      style={{ width: `${exportProgress}%` }}
-                    />
+            {pendingOrders.length > 0 ? (
+              <div className="logistica-export-preview">
+                <ul className="logistica-export-preview__list">
+                  {pendingPageOrders.map((row) => (
+                    <li key={row.order_id} className="logistica-export-preview__item">
+                      <span className="logistica-export-preview__order">{row.order_name}</span>
+                      <a
+                        href={row.shopify_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="logistica-link"
+                      >
+                        Shopify
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+                {pendingTotalPages > 1 ? (
+                  <div className="logistica-export-preview__pagination">
+                    <button
+                      type="button"
+                      className="logistica-btn logistica-btn--ghost"
+                      onClick={() => setPendingPage((page) => Math.max(1, page - 1))}
+                      disabled={pendingPage <= 1}
+                    >
+                      Anterior
+                    </button>
+                    <span className="logistica-export-preview__page-info">
+                      {pendingPage} / {pendingTotalPages}
+                    </span>
+                    <button
+                      type="button"
+                      className="logistica-btn logistica-btn--ghost"
+                      onClick={() =>
+                        setPendingPage((page) => Math.min(pendingTotalPages, page + 1))
+                      }
+                      disabled={pendingPage >= pendingTotalPages}
+                    >
+                      Siguiente
+                    </button>
                   </div>
-                </div>
-              ) : null}
-
-              {exportFinished && exportLogs.length > 0 ? (
-                <details className="logistica-logs-toggle">
-                  <summary>Ver logs</summary>
-                  <div className="logistica-console__body">{renderLogLines(exportLogs)}</div>
-                </details>
-              ) : null}
-            </article>
-
-            <article className="logistica-panel logistica-warnings-panel">
-              <div className="logistica-held__head">
-                <h2 className="logistica-panel__title">Etiquetas con warning</h2>
-                <p className="logistica-panel__text">
-                  Entran al Excel pero conviene revisar: dirección parseada, observaciones largas, etc.
-                </p>
+                ) : null}
               </div>
+            ) : (
+              <p className="logistica-empty">Sin pedidos</p>
+            )}
 
-              {warningOrders.length === 0 ? (
-                <p className="logistica-held__empty">No hay pedidos con advertencias.</p>
-              ) : (
-                <>
-                  <div className="logistica-held-cards">
-                    {warningOrders.map((row) => (
-                      <article key={row.order_id} className="logistica-held-card logistica-warn-card">
-                        <div className="logistica-held-card__order">{row.order_name}</div>
-                        <div className="logistica-held-card__customer">{row.customer || '—'}</div>
-                        <ul className="logistica-warn-card__list">
-                          {(row.warnings?.length ? row.warnings : [row.warning]).map((item) => (
-                            <li key={item} className="logistica-warn-card__reason">
-                              {item}
-                            </li>
-                          ))}
-                        </ul>
+            <button
+              type="button"
+              className="logistica-btn logistica-btn--primary logistica-panel__cta"
+              onClick={startExport}
+              disabled={exportRunning || apiOnline === false || Boolean(configHint)}
+            >
+              {exportRunning ? 'Generando…' : 'Generar carga masiva'}
+            </button>
+
+            {exportRunning ? (
+              <div className="logistica-panel-progress" aria-label="Progreso de exportación">
+                <div className="logistica-progress__bar">
+                  <div
+                    className="logistica-progress__fill"
+                    style={{ width: `${exportProgress}%` }}
+                  />
+                </div>
+              </div>
+            ) : null}
+
+            {exportFinished && exportLogs.length > 0 ? (
+              <details className="logistica-logs-toggle">
+                <summary>Ver logs</summary>
+                <div className="logistica-console__body">{renderLogLines(exportLogs)}</div>
+              </details>
+            ) : null}
+          </article>
+
+          <article className="logistica-panel logistica-panel--warnings">
+            <div className="logistica-panel__head">
+              <h2 className="logistica-panel__title">Advertencias</h2>
+              {warningOrders.length > 0 ? (
+                <span className="logistica-panel__count logistica-panel__count--warn">
+                  {warningOrders.length}
+                </span>
+              ) : null}
+            </div>
+
+            {warningOrders.length === 0 ? (
+              <p className="logistica-empty">Ninguna</p>
+            ) : (
+              <>
+                <div className="logistica-held-cards">
+                  {warningOrders.map((row) => (
+                    <article key={row.order_id} className="logistica-held-card logistica-warn-card">
+                      <div className="logistica-held-card__top">
+                        <span className="logistica-held-card__order">{row.order_name}</span>
                         <a
                           href={row.shopify_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="logistica-held-card__link"
+                          className="logistica-link"
                         >
-                          Ver en Shopify
+                          Shopify
                         </a>
-                      </article>
-                    ))}
-                  </div>
+                      </div>
+                      <div className="logistica-held-card__customer">{row.customer || '—'}</div>
+                      <ul className="logistica-warn-card__list">
+                        {(row.warnings?.length ? row.warnings : [row.warning]).map((item) => (
+                          <li key={item} className="logistica-warn-card__reason">
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </article>
+                  ))}
+                </div>
 
-                  <table className="logistica-held-table logistica-warn-table">
-                    <thead>
-                      <tr>
-                        <th>Pedido</th>
-                        <th>Cliente</th>
-                        <th>Warning</th>
-                        <th>Acción</th>
+                <table className="logistica-held-table logistica-warn-table">
+                  <thead>
+                    <tr>
+                      <th>Pedido</th>
+                      <th>Cliente</th>
+                      <th>Detalle</th>
+                      <th />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {warningOrders.map((row) => (
+                      <tr key={row.order_id}>
+                        <td className="logistica-held-table__order">{row.order_name}</td>
+                        <td>{row.customer || '—'}</td>
+                        <td className="logistica-warn-table__reason">
+                          <ul className="logistica-warn-table__list">
+                            {(row.warnings?.length ? row.warnings : [row.warning]).map((item) => (
+                              <li key={item}>{item}</li>
+                            ))}
+                          </ul>
+                        </td>
+                        <td>
+                          <a
+                            href={row.shopify_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="logistica-link"
+                          >
+                            Shopify
+                          </a>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {warningOrders.map((row) => (
-                        <tr key={row.order_id}>
-                          <td className="logistica-held-table__order">{row.order_name}</td>
-                          <td>{row.customer || '—'}</td>
-                          <td className="logistica-warn-table__reason">
-                            <ul className="logistica-warn-table__list">
-                              {(row.warnings?.length ? row.warnings : [row.warning]).map((item) => (
-                                <li key={item}>{item}</li>
-                              ))}
-                            </ul>
-                          </td>
-                          <td>
-                            <a
-                              href={row.shopify_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="logistica-held-table__link"
-                            >
-                              Ver en Shopify
-                            </a>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </>
-              )}
-            </article>
-          </div>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            )}
+          </article>
         </section>
 
-        <section className="logistica-panel logistica-held">
-          <div className="logistica-held__head">
-            <h2 className="logistica-panel__title">Etiquetas con error</h2>
-            <p className="logistica-panel__text">
-              No entraron al Excel. Corregí en Shopify y volvé a exportar.
-            </p>
+        <section className="logistica-panel logistica-panel--errors">
+          <div className="logistica-panel__head">
+            <h2 className="logistica-panel__title">Errores</h2>
+            {heldOrders.length > 0 ? (
+              <span className="logistica-panel__count logistica-panel__count--error">
+                {heldOrders.length}
+              </span>
+            ) : null}
           </div>
 
           {heldOrders.length === 0 ? (
-            <p className="logistica-held__empty">No hay pedidos con errores de validación.</p>
+            <p className="logistica-empty">Ninguno</p>
           ) : (
             <>
               <div className="logistica-held-cards">
                 {heldOrders.map((row) => (
                   <article key={row.order_id} className="logistica-held-card">
-                    <div className="logistica-held-card__order">{row.order_name}</div>
+                    <div className="logistica-held-card__top">
+                      <span className="logistica-held-card__order">{row.order_name}</span>
+                      <a
+                        href={row.shopify_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="logistica-link"
+                      >
+                        Shopify
+                      </a>
+                    </div>
                     <div className="logistica-held-card__customer">{row.customer || '—'}</div>
                     <div className="logistica-held-card__error">{row.error}</div>
-                    <a
-                      href={row.shopify_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="logistica-held-card__link"
-                    >
-                      Editar en Shopify
-                    </a>
                   </article>
                 ))}
               </div>
@@ -500,8 +503,8 @@ export function HubLogisticaAndreaniApp({
                   <tr>
                     <th>Pedido</th>
                     <th>Cliente</th>
-                    <th>Error</th>
-                    <th>Acción</th>
+                    <th>Detalle</th>
+                    <th />
                   </tr>
                 </thead>
                 <tbody>
@@ -515,9 +518,9 @@ export function HubLogisticaAndreaniApp({
                           href={row.shopify_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="logistica-held-table__link"
+                          className="logistica-link"
                         >
-                          Editar en Shopify
+                          Shopify
                         </a>
                       </td>
                     </tr>

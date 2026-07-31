@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
 import { onHubLinkClick } from '../lib/hubNavigate'
 import notmidLogo from '../notmidnewlogo.svg'
-import { HubAdminSignOutButton } from './HubAdminSignOutButton'
 
 function NotBrainLogoMark() {
   return (
@@ -24,7 +23,7 @@ export function HubBrandBar({
   integratedSubtitleTone = 'default',
   asPageHeading = true,
   trailing,
-  adminSignOut = false,
+  adminSignOut: _adminSignOut = false,
   integratedDashboard = false,
 }: {
   context?: string
@@ -35,10 +34,11 @@ export function HubBrandBar({
   /** Si es false, el bloque de marca no usa h1 (p. ej. cuando la pantalla ya tiene su propio h1). */
   asPageHeading?: boolean
   trailing?: ReactNode
+  /** @deprecated Ya no se muestra Salir en la navbar. */
   adminSignOut?: boolean
   integratedDashboard?: boolean
 }) {
-  const hasTrailing = Boolean(trailing) || adminSignOut
+  const hasTrailing = Boolean(trailing)
   const TitleTag: 'h1' | 'div' = asPageHeading ? 'h1' : 'div'
   const headingStacked = Boolean(integratedDashboard && integratedSubtitle)
   const subtitleClasses = [
@@ -71,12 +71,7 @@ export function HubBrandBar({
         {headingStacked ? <span className={subtitleClasses}>{integratedSubtitle}</span> : null}
         {!headingStacked && context ? <span className="nm-hub-brand-bar__context">{context}</span> : null}
       </TitleTag>
-      {hasTrailing ? (
-        <div className="nm-hub-brand-bar__trailing">
-          {trailing}
-          {adminSignOut ? <HubAdminSignOutButton /> : null}
-        </div>
-      ) : null}
+      {hasTrailing ? <div className="nm-hub-brand-bar__trailing">{trailing}</div> : null}
     </div>
   )
 }
