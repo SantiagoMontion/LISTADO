@@ -1430,9 +1430,6 @@ export function HubTasksApp({
               <p className="nm-hub-image-picker-title upload-zone-title" id="nm-hub-t-files-title">
                 Agregar fotos
               </p>
-              <p className="upload-zone-hint">
-                Pegá con Ctrl+V, arrastrá acá, o usá galería / cámara
-              </p>
               <div className="nm-hub-image-picker-split upload-buttons-row">
                 <button
                   type="button"
