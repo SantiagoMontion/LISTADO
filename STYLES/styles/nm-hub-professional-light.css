@@ -434,11 +434,56 @@ body:has(.nm-hub-app) {
 
 /* ── Modals / panels / lightbox ─────────────────────────────────── */
 
+.hub-mayorista-client-modal {
+  background: #ffffff !important;
+  color: #1d1d1f !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+.hub-mayorista-client-modal__title,
+.hub-mayorista-client-modal__btn-cancel {
+  color: #1d1d1f !important;
+}
+
+.hub-mayorista-client-modal__subtitle,
+.hub-mayorista-client-modal__label {
+  color: #6e6e73 !important;
+}
+
+.hub-mayorista-client-modal__input {
+  background: #f2f2f7 !important;
+  color: #1d1d1f !important;
+  border-color: transparent !important;
+}
+
+.hub-mayorista-client-modal__input:focus {
+  background: #ffffff !important;
+  border-color: rgba(21, 101, 216, 0.45) !important;
+  box-shadow: 0 0 0 3px rgba(21, 101, 216, 0.16) !important;
+}
+
+.hub-mayorista-client-modal__btn-submit {
+  background: #1565d8 !important;
+  color: #ffffff !important;
+}
+
+.hub-mayorista-client-modal__btn-delete {
+  color: #d70015 !important;
+}
+
+.hub-mayorista-client-modal__actions {
+  background: #fafafa !important;
+}
+
+.hub-mayorista-client-modal__close {
+  background: #e8e8ed !important;
+  color: #3a3a3c !important;
+}
+
 .nm-hub-app .nm-hub-modal,
 .nm-hub-app .nm-hub-dialog,
 .nm-hub-modal,
-.hub-mayorista-client-modal,
-.nm-hub-app [role='dialog']:not(.nm-hub-lightbox) {
+.nm-hub-app [role='dialog']:not(.nm-hub-lightbox):not(.hub-mayorista-client-modal) {
   background: #ffffff !important;
   color: #0f172a !important;
   border-color: rgba(15, 23, 42, 0.1) !important;

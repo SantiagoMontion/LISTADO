@@ -59,11 +59,11 @@ export function HubMayoristaClientModal({
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape' && !busy && !saving && !deleting) onClose()
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [open, onClose])
+  }, [open, onClose, busy, saving, deleting])
 
   const applyClientToForm = (client: NmHubMayoristaClient) => {
     setSelectedClientId(client.id)
@@ -150,149 +150,171 @@ export function HubMayoristaClientModal({
 
   return (
     <div
-      className="upload-images-modal-backdrop quick-add-modal-backdrop"
+      className="hub-mayorista-client-backdrop"
       role="presentation"
-      onClick={(e) => {
+      onMouseDown={(e) => {
         if (e.target === e.currentTarget && !disabled) onClose()
       }}
     >
       <form
-        className="modal-rebel-box quick-add-measure-modal hub-mayorista-client-modal"
+        className="hub-mayorista-client-modal"
         aria-labelledby={titleId}
         aria-modal="true"
         role="dialog"
         onSubmit={(e) => void onSubmit(e)}
-        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
       >
-        <h3 className="modal-rebel-title" id={titleId}>
-          {isEditing ? 'Modificar cliente mayorista' : 'Nuevo cliente mayorista'}
-        </h3>
-
-        <div className="modal-input-section">
-          <label className="modal-section-label" htmlFor={`${titleId}-pick`}>
-            Cliente
-          </label>
-          <select
-            id={`${titleId}-pick`}
-            className="modal-numeric-input"
-            value={selectedClientId}
-            onChange={(e) => onSelectClient(e.target.value)}
-            disabled={disabled || loadingClients}
+        <header className="hub-mayorista-client-modal__head">
+          <div className="hub-mayorista-client-modal__titles">
+            <h2 className="hub-mayorista-client-modal__title" id={titleId}>
+              {isEditing ? 'Editar cliente' : 'Nuevo cliente'}
+            </h2>
+            <p className="hub-mayorista-client-modal__subtitle">Mayorista</p>
+          </div>
+          <button
+            type="button"
+            className="hub-mayorista-client-modal__close"
+            onClick={onClose}
+            disabled={disabled}
+            aria-label="Cerrar"
           >
-            <option value="">— Nuevo cliente —</option>
-            {clients.map((client) => (
-              <option key={client.id} value={client.id}>
-                {client.full_name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="modal-input-section">
-          <label className="modal-section-label" htmlFor={`${titleId}-name`}>
-            Nombre completo
-          </label>
-          <input
-            id={`${titleId}-name`}
-            className="modal-numeric-input"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            autoComplete="name"
-            disabled={disabled}
-            required
-          />
-        </div>
-
-        <div className="modal-input-section">
-          <label className="modal-section-label" htmlFor={`${titleId}-dni`}>
-            DNI
-          </label>
-          <input
-            id={`${titleId}-dni`}
-            className="modal-numeric-input"
-            value={dni}
-            onChange={(e) => setDni(e.target.value)}
-            inputMode="numeric"
-            disabled={disabled}
-            required
-          />
-        </div>
-
-        <div className="modal-input-section">
-          <label className="modal-section-label" htmlFor={`${titleId}-phone`}>
-            Teléfono
-          </label>
-          <input
-            id={`${titleId}-phone`}
-            className="modal-numeric-input"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            onBlur={() => setPhone(normalizeMayoristaPhone(phone))}
-            inputMode="tel"
-            disabled={disabled}
-            required
-          />
-        </div>
-
-        <div className="modal-input-section">
-          <label className="modal-section-label" htmlFor={`${titleId}-email`}>
-            Email
-          </label>
-          <input
-            id={`${titleId}-email`}
-            className="modal-numeric-input"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-            disabled={disabled}
-            required
-          />
-        </div>
-
-        <div className="modal-input-section">
-          <label className="modal-section-label" htmlFor={`${titleId}-address`}>
-            Dirección de domicilio
-          </label>
-          <input
-            id={`${titleId}-address`}
-            className="modal-numeric-input"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            autoComplete="street-address"
-            disabled={disabled}
-            required
-          />
-        </div>
-
-        {displayError ? (
-          <p className="nm-hub-error" role="alert">
-            {displayError}
-          </p>
-        ) : null}
-
-        <div className="modal-actions-footer">
-          <button type="button" className="btn-modal-cancel" disabled={disabled} onClick={onClose}>
-            Cancelar
+            ✕
           </button>
+        </header>
+
+        <div className="hub-mayorista-client-modal__body">
+          <div className="hub-mayorista-client-modal__field">
+            <label className="hub-mayorista-client-modal__label" htmlFor={`${titleId}-pick`}>
+              Cliente
+            </label>
+            <select
+              id={`${titleId}-pick`}
+              className="hub-mayorista-client-modal__input"
+              value={selectedClientId}
+              onChange={(e) => onSelectClient(e.target.value)}
+              disabled={disabled || loadingClients}
+            >
+              <option value="">Nuevo cliente</option>
+              {clients.map((client) => (
+                <option key={client.id} value={client.id}>
+                  {client.full_name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="hub-mayorista-client-modal__field">
+            <label className="hub-mayorista-client-modal__label" htmlFor={`${titleId}-name`}>
+              Nombre completo
+            </label>
+            <input
+              id={`${titleId}-name`}
+              className="hub-mayorista-client-modal__input"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              autoComplete="name"
+              disabled={disabled}
+              placeholder="Nombre y apellido"
+            />
+          </div>
+
+          <div className="hub-mayorista-client-modal__row">
+            <div className="hub-mayorista-client-modal__field">
+              <label className="hub-mayorista-client-modal__label" htmlFor={`${titleId}-dni`}>
+                DNI
+              </label>
+              <input
+                id={`${titleId}-dni`}
+                className="hub-mayorista-client-modal__input"
+                value={dni}
+                onChange={(e) => setDni(e.target.value)}
+                inputMode="numeric"
+                disabled={disabled}
+                placeholder="Sin puntos"
+              />
+            </div>
+            <div className="hub-mayorista-client-modal__field">
+              <label className="hub-mayorista-client-modal__label" htmlFor={`${titleId}-phone`}>
+                Teléfono
+              </label>
+              <input
+                id={`${titleId}-phone`}
+                className="hub-mayorista-client-modal__input"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                onBlur={() => setPhone(normalizeMayoristaPhone(phone))}
+                inputMode="tel"
+                disabled={disabled}
+                placeholder="11 2345 6789"
+              />
+            </div>
+          </div>
+
+          <div className="hub-mayorista-client-modal__field">
+            <label className="hub-mayorista-client-modal__label" htmlFor={`${titleId}-email`}>
+              Email
+            </label>
+            <input
+              id={`${titleId}-email`}
+              className="hub-mayorista-client-modal__input"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              disabled={disabled}
+              placeholder="correo@ejemplo.com"
+            />
+          </div>
+
+          <div className="hub-mayorista-client-modal__field">
+            <label className="hub-mayorista-client-modal__label" htmlFor={`${titleId}-address`}>
+              Dirección
+            </label>
+            <input
+              id={`${titleId}-address`}
+              className="hub-mayorista-client-modal__input"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              autoComplete="street-address"
+              disabled={disabled}
+              placeholder="Calle, número, localidad"
+            />
+          </div>
+
+          {displayError ? (
+            <p className="hub-mayorista-client-modal__error" role="alert">
+              {displayError}
+            </p>
+          ) : null}
+        </div>
+
+        <footer className="hub-mayorista-client-modal__actions">
           {isEditing ? (
             <button
               type="button"
-              className="btn-modal-cancel hub-mayorista-client-modal__delete"
+              className="hub-mayorista-client-modal__btn-delete"
               disabled={disabled}
               onClick={() => void onDelete()}
             >
-              {deleting
-                ? 'Eliminando…'
-                : confirmDelete
-                  ? 'Confirmar eliminar'
-                  : 'Eliminar cliente'}
+              {deleting ? 'Eliminando…' : confirmDelete ? 'Confirmar' : 'Eliminar'}
             </button>
-          ) : null}
-          <button type="submit" className="btn-modal-add" disabled={disabled}>
-            {saving ? 'Guardando…' : isEditing ? 'Guardar cambios' : 'Crear cliente'}
-          </button>
-        </div>
+          ) : (
+            <span className="hub-mayorista-client-modal__actions-spacer" aria-hidden />
+          )}
+          <div className="hub-mayorista-client-modal__actions-end">
+            <button
+              type="button"
+              className="hub-mayorista-client-modal__btn-cancel"
+              disabled={disabled}
+              onClick={onClose}
+            >
+              Cancelar
+            </button>
+            <button type="submit" className="hub-mayorista-client-modal__btn-submit" disabled={disabled}>
+              {saving ? 'Guardando…' : isEditing ? 'Guardar' : 'Crear'}
+            </button>
+          </div>
+        </footer>
       </form>
     </div>
   )
