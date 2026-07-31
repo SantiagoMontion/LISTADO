@@ -3702,7 +3702,7 @@ select.hub-mayorista-client-modal__input {
   transition: background-color 0.15s ease, opacity 0.15s ease, color 0.15s ease;
 }
 
-\.hub-mayorista-client-modal__btn-cancel {
+.hub-mayorista-client-modal__btn-cancel {
   padding: 10px 14px;
   border: none;
   border-radius: 14px;
@@ -3714,7 +3714,7 @@ select.hub-mayorista-client-modal__input {
   background: rgba(15, 23, 42, 0.05);
 }
 
-\.hub-mayorista-client-modal__btn-delete {
+.hub-mayorista-client-modal__btn-delete {
   padding: 10px 12px;
   border: none;
   border-radius: 14px;
@@ -3726,7 +3726,7 @@ select.hub-mayorista-client-modal__input {
   background: rgba(215, 0, 21, 0.08);
 }
 
-\.hub-mayorista-client-modal__btn-submit {
+.hub-mayorista-client-modal__btn-submit {
   padding: 10px 18px;
   border: none;
   border-radius: 14px;
@@ -3798,7 +3798,7 @@ select.hub-mayorista-client-modal__input {
   margin-top: 0.55rem;
 }
 
-\.hub-mayorista-client-confirm__accept {
+.hub-mayorista-client-confirm__accept {
   margin: 0;
   padding: 10px 18px;
   border: none;
@@ -4107,7 +4107,7 @@ select.hub-mayorista-client-modal__input {
   justify-content: center;
 }
 
-\.nm-hub-app--tasks .hub-tasks-edit-btn {
+.nm-hub-app--tasks .hub-tasks-edit-btn {
   margin: 0;
   min-height: 32px;
   padding: 0 10px;
@@ -4743,7 +4743,7 @@ select.hub-mayorista-client-modal__input {
   color: inherit;
 }
 
-\.nm-hub-app--tasks form#nm-hub-tareas-nueva .btn-submit-task {
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .btn-submit-task {
   width: 100%;
   background-color: #1565d8;
   color: #ffffff;
@@ -5160,7 +5160,7 @@ select.hub-mayorista-client-modal__input {
   outline-offset: 2px;
 }
 
-\.nm-hub-app--tasks .btn-delete-task {
+.nm-hub-app--tasks .btn-delete-task {
   background: rgba(239, 68, 68, 0.08);
   border: 1px solid rgba(239, 68, 68, 0.35);
   color: rgba(252, 165, 165, 0.95);
@@ -5185,7 +5185,7 @@ select.hub-mayorista-client-modal__input {
   cursor: not-allowed;
 }
 
-\.nm-hub-app--tasks .btn-task-notes {
+.nm-hub-app--tasks .btn-task-notes {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -5556,7 +5556,7 @@ select.hub-mayorista-client-modal__input {
   gap: 8px;
 }
 
-\.nm-hub-task-notes-compose__attach,
+.nm-hub-task-notes-compose__attach,
 .nm-hub-task-notes-compose__preview-remove {
   margin: 0;
   padding: 7px 12px;
@@ -5671,7 +5671,7 @@ select.hub-mayorista-client-modal__input {
   margin-top: 2px;
 }
 
-\.nm-hub-task-notes-compose__cancel {
+.nm-hub-task-notes-compose__cancel {
   margin: 0;
   padding: 10px 14px;
   border: none;
@@ -5694,7 +5694,7 @@ select.hub-mayorista-client-modal__input {
   cursor: not-allowed;
 }
 
-\.nm-hub-task-notes-compose__submit {
+.nm-hub-task-notes-compose__submit {
   margin: 0;
   padding: 10px 18px;
   border: none;
@@ -6840,7 +6840,7 @@ select.hub-mayorista-client-modal__input {
   color: #0d47a1;
 }
 
-\.hub-page-primary-action {
+.hub-page-primary-action {
   flex: 0 0 auto;
   margin-top: 0.15rem;
   padding: 0.65rem 1.05rem;
