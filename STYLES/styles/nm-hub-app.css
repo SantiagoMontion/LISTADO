@@ -2,6 +2,7 @@
 .nm-hub-app {
   --nm-hub-rail-max: 100%;
   --nm-hub-padding-x: var(--nm-shell-gutter, clamp(1rem, 2.2vw, 2.5rem));
+  --nm-hub-page-top-gap: clamp(1.5rem, 3.2vw, 2.25rem);
   --nm-hub-chrome-bg: rgba(255, 255, 255, 0.92);
   --nm-hub-chrome-border: rgba(15, 23, 42, 0.08);
   box-sizing: border-box;
@@ -4267,7 +4268,7 @@ body:has(.nm-hub-app) {
 
 .nm-hub-app--tasks .nm-hub-section.nm-hub-section--task-list {
   margin-top: 0;
-  padding-top: 0.25rem;
+  padding-top: 0;
 }
 
 .nm-hub-app--tasks .nm-hub-section--task-list > .hub-page-head {
@@ -5963,12 +5964,13 @@ body:has(.nm-hub-app) {
    -------------------------------------------------------------------------- */
 
 .hub-page-head {
+  margin-top: 0;
   margin-bottom: 1.25rem;
 }
 
 .hub-page-head--with-action {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 1rem 1.25rem;
   flex-wrap: wrap;
@@ -6119,7 +6121,7 @@ body:has(.nm-hub-app) {
 }
 
 .nm-hub-app--lista-upload .lista-upload-container {
-  padding: 1.25rem 0 2rem;
+  padding: 0 0 2rem;
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -6788,7 +6790,7 @@ body:has(.nm-hub-app--logistica-andreani) {
   width: 100%;
   max-width: none;
   margin: 0;
-  padding: 1rem var(--nm-hub-padding-x, 1.25rem) 1.5rem;
+  padding: 0 var(--nm-hub-padding-x, 1.25rem) 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -7607,7 +7609,18 @@ body:has(.nm-hub-app--logistica-andreani) {
   display: none;
 }
 
+@media (max-width: 767.98px) {
+  .nm-hub-app > .nm-hub-header,
+  .nm-hub-app > .dashboard-navbar {
+    margin-bottom: var(--nm-hub-page-top-gap);
+  }
+}
+
 @media (min-width: 768px) {
+  .nm-hub-app > .nm-hub-header,
+  .nm-hub-app > .dashboard-navbar {
+    margin-bottom: 0;
+  }
   body:has(.nm-hub-app) {
     background-color: var(--bg-main-rebel);
     background-image: none;
@@ -7669,7 +7682,7 @@ body:has(.nm-hub-app--logistica-andreani) {
     z-index: 80;
     width: calc(100% + (var(--nm-hub-padding-x) * 2));
     max-width: none;
-    margin: 0 calc(-1 * var(--nm-hub-padding-x)) 0;
+    margin: 0 calc(-1 * var(--nm-hub-padding-x)) var(--nm-hub-page-top-gap);
     padding: 0 var(--nm-hub-padding-x);
     border-bottom: 1px solid var(--nm-hub-chrome-border);
     background: var(--nm-hub-chrome-bg);
@@ -7933,7 +7946,7 @@ body:has(.nm-hub-app--logistica-andreani) {
 }
 
 .nm-hub-app--3d .printing3d-page {
-  padding: 1.25rem 0 2.5rem;
+  padding: 0 0 2.5rem;
   max-width: none;
   margin-inline: 0;
   width: 100%;

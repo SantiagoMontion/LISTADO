@@ -1368,9 +1368,6 @@ export function HubTasksApp({
               <h1 id="hub-tasks-title" className="hub-page-head__title">
                 Tareas
               </h1>
-              <p className="hub-page-head__lead">
-                Pedidos mayoristas, cambios y devoluciones del mes.
-              </p>
             </div>
             {!readOnly ? (
               <button
