@@ -1,21 +1,17 @@
 import type { ReactNode } from 'react'
 import { onHubLinkClick } from '../lib/hubNavigate'
+import notmidLogo from '../notmidnewlogo.svg'
 import { HubAdminSignOutButton } from './HubAdminSignOutButton'
 
-/** Wordmark inline — evita clipping de <img> + viewBox corto. */
 function NotBrainLogoMark() {
   return (
-    <svg
+    <img
       className="nm-hub-brand-logo"
-      viewBox="0 0 1320 160"
-      role="img"
+      src={notmidLogo}
+      alt=""
       aria-hidden="true"
-      focusable="false"
-    >
-      <text x="8" y="126" className="nm-hub-brand-logo__text">
-        NOTBRAIN
-      </text>
-    </svg>
+      draggable={false}
+    />
   )
 }
 
@@ -66,7 +62,7 @@ export function HubBrandBar({
         <a
           href="/"
           className={`nm-hub-brand-bar__brand${integratedDashboard ? ' navbar-brand' : ''}`}
-          aria-label="NOT BRAIN — Inicio"
+          aria-label="NOT-APP — Inicio"
           title="Inicio"
           onClick={(e) => onHubLinkClick(e, '/')}
         >
