@@ -213,6 +213,61 @@ export async function updateHubTaskTrackingUrl(
   return parsed
 }
 
+/** Actualiza título, detalle y seguimiento de una tarea. */
+export async function updateHubTask(
+  taskId: string,
+  input: {
+    title: string
+    body: string | null
+    trackingUrl: string | null
+  },
+): Promise<NmHubTask> {
+  const sb = requireClient()
+  const title = input.title.trim()
+  if (!title) throw new Error('El título no puede estar vacío.')
+  const { data, error } = await sb.rpc('nm_hub_update_task', {
+    p_task_id: taskId,
+    p_title: title,
+    p_body: input.body?.trim() || null,
+    p_tracking_url: input.trackingUrl?.trim() || null,
+  })
+  if (error) throw error
+  const parsed = parseRpcTaskRow(data)
+  if (!parsed) throw new Error('No se pudo guardar la tarea.')
+  return parsed
+}
+
+/** Reemplaza image_paths y borra del storage las rutas eliminadas. */
+export async function replaceHubTaskImages(
+  taskId: string,
+  nextPaths: string[],
+  previousPaths: string[] = [],
+): Promise<NmHubTask> {
+  const sb = requireClient()
+  const next = [...nextPaths]
+  const removed = previousPaths.filter((p) => !next.includes(p))
+  if (removed.length > 0) {
+    const { error: remErr } = await sb.storage.from(BUCKET).remove(removed)
+    if (remErr) throw remErr
+  }
+  const { data, error } = await sb.rpc('nm_hub_set_task_image_paths', {
+    p_task_id: taskId,
+    p_image_paths: next,
+  })
+  if (error) throw error
+  const parsed = parseRpcTaskRow(data)
+  if (!parsed) throw new Error('No se pudieron actualizar las imágenes.')
+  return parsed
+}
+
+export function validateHubTaskImageFile(file: File): string | null {
+  if (!file.type.startsWith('image/')) return 'El archivo debe ser una imagen.'
+  if (file.size > HUB_TASK_NOTE_IMAGE_MAX_BYTES) {
+    return 'La imagen no puede superar 20 MB.'
+  }
+  return null
+}
+
 /** Hay al menos una tarea pendiente (sin ejecutar) con for_date anterior al día mostrado. */
 export async function fetchHasPendingHubTasksBefore(forDate: string): Promise<boolean> {
   const sb = requireClient()

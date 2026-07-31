@@ -3567,8 +3567,8 @@ body:has(.nm-hub-app) {
 }
 
 .nm-hub-app--tasks .hub-tasks-table__col-actions {
-  width: 11%;
-  min-width: 7.25rem;
+  width: 14%;
+  min-width: 9.5rem;
   text-align: right;
   white-space: nowrap;
 }
@@ -3608,6 +3608,129 @@ body:has(.nm-hub-app) {
 .nm-hub-app--tasks .btn-task-notes.hub-tasks-table__action-btn {
   min-width: 4.4rem;
   justify-content: center;
+}
+
+.nm-hub-app--tasks .hub-tasks-edit-btn {
+  margin: 0;
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(21, 101, 216, 0.35);
+  background: rgba(21, 101, 216, 0.08);
+  color: #1565d8;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.nm-hub-app--tasks .hub-tasks-edit-btn:hover:not(:disabled) {
+  background: rgba(21, 101, 216, 0.14);
+}
+
+.nm-hub-app--tasks .hub-tasks-edit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hub-tasks-edit-modal {
+  width: min(520px, calc(100vw - 32px));
+  max-height: min(88vh, 720px);
+  overflow-y: auto;
+}
+
+.hub-tasks-edit-modal__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.95rem;
+}
+
+.hub-tasks-edit-images {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.hub-tasks-edit-images__item {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.35rem;
+  width: 88px;
+}
+
+.hub-tasks-edit-images__thumb,
+.hub-tasks-edit-images__placeholder {
+  width: 88px;
+  height: 88px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: #f1f5f9;
+}
+
+.hub-tasks-edit-images__remove,
+.hub-tasks-edit-images__pending button {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #dc2626;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 650;
+  cursor: pointer;
+  text-align: left;
+}
+
+.hub-tasks-edit-images__empty {
+  margin: 0 0 0.35rem;
+  font-size: 0.85rem;
+}
+
+.hub-tasks-edit-images__add {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 8px;
+  border: 1px dashed rgba(15, 23, 42, 0.2);
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 0.82rem;
+  font-weight: 650;
+  cursor: pointer;
+  width: fit-content;
+}
+
+.hub-tasks-edit-images__add input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.hub-tasks-edit-images__pending {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.hub-tasks-edit-images__pending li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.82rem;
+  color: #334155;
 }
 
 .nm-hub-app--tasks .hub-tasks-shopify-btn {

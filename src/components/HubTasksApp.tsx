@@ -8,9 +8,12 @@ import {
   fetchHubTaskNoteCounts,
   fetchAllHubTasks,
   signedImageUrl,
+  updateHubTask,
   updateHubTaskWorkflowStatus,
   updateHubTaskPaymentStatus,
   updateHubTaskTrackingUrl,
+  replaceHubTaskImages,
+  validateHubTaskImageFile,
 } from '../lib/hubTasksApi'
 import { formatSupabaseOrError } from '../lib/errors'
 import {
@@ -399,6 +402,13 @@ export function HubTasksApp({
   const [noteCounts, setNoteCounts] = useState<Record<string, number>>({})
   const [trackingEditTask, setTrackingEditTask] = useState<NmHubTask | null>(null)
   const [trackingDraft, setTrackingDraft] = useState('')
+  const [editTask, setEditTask] = useState<NmHubTask | null>(null)
+  const [editTitle, setEditTitle] = useState('')
+  const [editBody, setEditBody] = useState('')
+  const [editTracking, setEditTracking] = useState('')
+  const [editKeptPaths, setEditKeptPaths] = useState<string[]>([])
+  const [editNewFiles, setEditNewFiles] = useState<File[]>([])
+  const [editImageUrls, setEditImageUrls] = useState<Record<string, string>>({})
   /** nº orden → URL directa Shopify (misma que logística Andreani). */
   const [shopifyUrlsByOrder, setShopifyUrlsByOrder] = useState<Record<string, string>>({})
 
@@ -753,6 +763,105 @@ export function HubTasksApp({
     setTrackingDraft(t.tracking_url ?? '')
     setError(null)
   }, [])
+
+  const closeEditTask = useCallback(() => {
+    setEditTask(null)
+    setEditTitle('')
+    setEditBody('')
+    setEditTracking('')
+    setEditKeptPaths([])
+    setEditNewFiles([])
+    setEditImageUrls({})
+  }, [])
+
+  const openEditTask = useCallback((t: NmHubTask) => {
+    setEditTask(t)
+    setEditTitle(t.title)
+    setEditBody(t.body ?? '')
+    setEditTracking(t.tracking_url ?? '')
+    setEditKeptPaths([...(t.image_paths ?? [])])
+    setEditNewFiles([])
+    setEditImageUrls({})
+    setError(null)
+  }, [])
+
+  useEffect(() => {
+    if (!editTask || editKeptPaths.length === 0) {
+      setEditImageUrls({})
+      return
+    }
+    let cancelled = false
+    const run = async () => {
+      const next: Record<string, string> = {}
+      for (const p of editKeptPaths) {
+        const u = await signedImageUrl(p)
+        if (u) next[p] = u
+      }
+      if (!cancelled) setEditImageUrls(next)
+    }
+    void run()
+    return () => {
+      cancelled = true
+    }
+  }, [editTask, editKeptPaths])
+
+  const onSaveEditTask = async () => {
+    if (readOnly || !editTask) return
+    const titleTrim = editTitle.trim()
+    if (!titleTrim) {
+      setError('El título no puede estar vacío.')
+      return
+    }
+    const hadTracking = Boolean(editTask.tracking_url?.trim())
+    let trackingNormalized: string | null = null
+    if (hadTracking) {
+      trackingNormalized = normalizeExternalUrl(editTracking)
+      if (editTracking.trim() && !trackingNormalized) {
+        setError('Pegá un link de seguimiento válido, o vaciá el campo para quitarlo.')
+        return
+      }
+    } else {
+      trackingNormalized = editTask.tracking_url ?? null
+    }
+    for (const file of editNewFiles) {
+      const imgErr = validateHubTaskImageFile(file)
+      if (imgErr) {
+        setError(imgErr)
+        return
+      }
+    }
+
+    setBusy(true)
+    setError(null)
+    markLocalHubMutation()
+    try {
+      let updated = await updateHubTask(editTask.id, {
+        title: titleTrim,
+        body: editBody.trim() || null,
+        trackingUrl: trackingNormalized,
+      })
+
+      const originalPaths = editTask.image_paths ?? []
+      const kept = editKeptPaths
+      const removed = originalPaths.filter((p) => !kept.includes(p))
+
+      if (removed.length > 0) {
+        updated = await replaceHubTaskImages(editTask.id, kept, originalPaths)
+      }
+      if (editNewFiles.length > 0) {
+        const uploaded = await appendTaskImages(editTask.id, editNewFiles, kept)
+        updated = { ...updated, image_paths: [...kept, ...uploaded] }
+      }
+
+      patchTaskLocal(updated)
+      closeEditTask()
+    } catch (err: unknown) {
+      setError(formatSupabaseOrError(err))
+      await loadSilent()
+    } finally {
+      setBusy(false)
+    }
+  }
 
   const onSaveTrackingUrl = async () => {
     if (readOnly || !trackingEditTask) return
@@ -1616,17 +1725,16 @@ export function HubTasksApp({
                                   >
                                     Seguimiento
                                   </a>
-                                ) : null}
-                                {!readOnly ? (
+                                ) : !readOnly ? (
                                   <button
                                     type="button"
                                     className="hub-tasks-tracking-edit"
                                     disabled={busy}
                                     onClick={() => openTrackingEditor(t)}
                                   >
-                                    {href ? 'Editar' : 'Cargar link'}
+                                    Cargar link
                                   </button>
-                                ) : href ? null : (
+                                ) : (
                                   '—'
                                 )}
                               </div>
@@ -1635,6 +1743,16 @@ export function HubTasksApp({
                         </td>
                         <td className="hub-tasks-table__col-actions">
                           <div className="hub-tasks-table__row-actions">
+                            {!readOnly ? (
+                              <button
+                                type="button"
+                                className="hub-tasks-edit-btn hub-tasks-table__action-btn"
+                                disabled={busy}
+                                onClick={() => openEditTask(t)}
+                              >
+                                Editar
+                              </button>
+                            ) : null}
                             <button
                               type="button"
                               className="btn-task-notes hub-tasks-table__action-btn"
@@ -1825,6 +1943,176 @@ export function HubTasksApp({
         </div>
       ) : null}
 
+      {editTask ? (
+        <div
+          className="nm-prod-modal-backdrop"
+          role="presentation"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !busy) closeEditTask()
+          }}
+        >
+          <section
+            className="nm-prod-modal hub-tasks-edit-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="hub-edit-task-title"
+          >
+            <h3 className="nm-prod-modal-title" id="hub-edit-task-title">
+              Editar tarea
+            </h3>
+
+            <div className="hub-tasks-edit-modal__fields">
+              <div className="field-group">
+                <label className="field-label" htmlFor="hub-edit-title">
+                  Título
+                </label>
+                <input
+                  id="hub-edit-title"
+                  className="nm-hub-input field-input"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  disabled={busy}
+                  required
+                />
+              </div>
+
+              <div className="field-group">
+                <label className="field-label" htmlFor="hub-edit-body">
+                  Detalle
+                </label>
+                <textarea
+                  id="hub-edit-body"
+                  className="nm-hub-textarea field-textarea"
+                  rows={5}
+                  value={editBody}
+                  onChange={(e) => setEditBody(e.target.value)}
+                  disabled={busy}
+                />
+              </div>
+
+              {editTask.tracking_url ? (
+                <div className="field-group">
+                  <label className="field-label" htmlFor="hub-edit-tracking">
+                    Seguimiento
+                  </label>
+                  <input
+                    id="hub-edit-tracking"
+                    className="nm-hub-input field-input"
+                    type="text"
+                    inputMode="url"
+                    placeholder="https://www.andreani.com/?numero=..."
+                    value={editTracking}
+                    onChange={(e) => setEditTracking(e.target.value)}
+                    disabled={busy}
+                  />
+                  {trackingHref(editTracking) ? (
+                    <p className="hub-tasks-tracking-preview">
+                      Link:{' '}
+                      <a
+                        href={trackingHref(editTracking) ?? undefined}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {trackingHref(editTracking)}
+                      </a>
+                    </p>
+                  ) : editTracking.trim() ? (
+                    <p className="hub-tasks-tracking-preview hub-tasks-tracking-preview--warn">
+                      No se detectó un link válido. Vaciá el campo para quitar el seguimiento.
+                    </p>
+                  ) : (
+                    <p className="hub-tasks-tracking-preview">
+                      Campo vacío: se quitará el link al guardar.
+                    </p>
+                  )}
+                </div>
+              ) : null}
+
+              <div className="field-group">
+                <span className="field-label">Imágenes</span>
+                {editKeptPaths.length > 0 ? (
+                  <ul className="hub-tasks-edit-images">
+                    {editKeptPaths.map((path) => (
+                      <li key={path} className="hub-tasks-edit-images__item">
+                        {editImageUrls[path] ? (
+                          <img
+                            src={editImageUrls[path]}
+                            alt=""
+                            className="hub-tasks-edit-images__thumb"
+                          />
+                        ) : (
+                          <span className="hub-tasks-edit-images__placeholder" aria-hidden />
+                        )}
+                        <button
+                          type="button"
+                          className="hub-tasks-edit-images__remove"
+                          disabled={busy}
+                          onClick={() =>
+                            setEditKeptPaths((prev) => prev.filter((p) => p !== path))
+                          }
+                        >
+                          Quitar
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="nm-hub-muted hub-tasks-edit-images__empty">Sin imágenes.</p>
+                )}
+                <label className="hub-tasks-edit-images__add">
+                  <span>Agregar imagen</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    disabled={busy}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                      const list = e.target.files
+                      if (!list?.length) return
+                      const next = Array.from(list)
+                      setEditNewFiles((prev) => [...prev, ...next])
+                      e.target.value = ''
+                    }}
+                  />
+                </label>
+                {editNewFiles.length > 0 ? (
+                  <ul className="hub-tasks-edit-images__pending">
+                    {editNewFiles.map((file, idx) => (
+                      <li key={`${file.name}-${idx}`}>
+                        <span>{file.name}</span>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() =>
+                            setEditNewFiles((prev) => prev.filter((_, i) => i !== idx))
+                          }
+                        >
+                          Quitar
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="nm-prod-row" style={{ marginTop: '1rem' }}>
+              <button type="button" className="nm-prod-btn" disabled={busy} onClick={closeEditTask}>
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="nm-prod-btn nm-prod-btn-primary"
+                disabled={busy || !editTitle.trim()}
+                onClick={() => void onSaveEditTask()}
+              >
+                {busy ? 'Guardando…' : 'Guardar'}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
       {trackingEditTask ? (
         <div
           className="nm-prod-modal-backdrop"
@@ -1838,10 +2126,10 @@ export function HubTasksApp({
         >
           <section className="nm-prod-modal" role="dialog" aria-modal="true" aria-labelledby="hub-tracking-title">
             <h3 className="nm-prod-modal-title" id="hub-tracking-title">
-              Link de seguimiento
+              Cargar link de seguimiento
             </h3>
             <p className="nm-prod-modal-text">
-              Pegá el link de seguimiento de «{trackingEditTask.title}» (ej. Andreani). Se puede cargar en cualquier estado.
+              Pegá el link de seguimiento de «{trackingEditTask.title}» (ej. Andreani).
             </p>
             <label className="nm-hub-sr-only" htmlFor="hub-tracking-url">
               URL de seguimiento
