@@ -1328,9 +1328,6 @@ export default function App() {
             <h1 id="lista-upload-title" className="hub-page-head__title">
               Subir lista de corte
             </h1>
-            <p className="hub-page-head__lead">
-              Pegá el reporte de producción y confirmá para cargarlo al día correspondiente.
-            </p>
           </header>
 
           <div className="lista-upload-card">
