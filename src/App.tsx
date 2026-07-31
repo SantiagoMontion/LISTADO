@@ -1749,7 +1749,7 @@ export default function App() {
               disabled={allPendingTasksLoading}
               onChange={(e) => setMergeAllListsChecked(e.target.checked)}
             />
-            <span>Sumar todas las listas</span>
+            <span className="cut-list-ordenar-merge-text">Sumar todas las listas</span>
           </label>
         </div>
       ) : null}
