@@ -32,6 +32,7 @@ import { HubBrandBar } from './HubBrandBar'
 import { HubDesktopNav } from './HubDesktopNav'
 import { HubImageLightbox } from './HubImageLightbox'
 import { HubTaskNotesPanel } from './HubTaskNotesPanel'
+import { HubTasksPillSelect, type HubTasksPillOption } from './HubTasksPillSelect'
 import { HubPushNotificationSetup } from './HubPushNotificationSetup'
 import { HUB_NAV_EVENT } from '../lib/hubNavigate'
 import { canDeleteHubTasks } from '../lib/hubRoles'
@@ -57,22 +58,16 @@ const TASK_TYPE_LABEL: Record<HubTaskCreateType, string> = {
   devolucion: 'Devolución',
 }
 
-const WORKFLOW_STATUS_OPTIONS: {
-  value: HubTaskWorkflowStatus
-  label: string
-}[] = [
-  { value: 'sin_ingresar', label: 'Sin ingresar' },
-  { value: 'fabricacion', label: 'Fabricación' },
-  { value: 'listo', label: 'Listo' },
-  { value: 'enviado', label: 'Enviado' },
+const WORKFLOW_STATUS_OPTIONS: HubTasksPillOption<HubTaskWorkflowStatus>[] = [
+  { value: 'sin_ingresar', label: 'Sin ingresar', toneClass: 'hub-tasks-status-select--sin_ingresar' },
+  { value: 'fabricacion', label: 'Fabricación', toneClass: 'hub-tasks-status-select--fabricacion' },
+  { value: 'listo', label: 'Listo', toneClass: 'hub-tasks-status-select--listo' },
+  { value: 'enviado', label: 'Enviado', toneClass: 'hub-tasks-status-select--enviado' },
 ]
 
-const PAYMENT_STATUS_OPTIONS: {
-  value: HubTaskPaymentStatus
-  label: string
-}[] = [
-  { value: 'sin_pagar', label: 'Sin pagar' },
-  { value: 'pago', label: 'Pago' },
+const PAYMENT_STATUS_OPTIONS: HubTasksPillOption<HubTaskPaymentStatus>[] = [
+  { value: 'sin_pagar', label: 'Sin pagar', toneClass: 'hub-tasks-payment-select--sin_pagar' },
+  { value: 'pago', label: 'Pago', toneClass: 'hub-tasks-payment-select--pago' },
 ]
 
 const TASK_CREATE_TYPES: HubTaskCreateType[] = [
@@ -1419,12 +1414,22 @@ export function HubTasksApp({
                   <th scope="col">Tipo</th>
                   <th scope="col">Título</th>
                   <th scope="col">Detalle</th>
-                  <th scope="col">Estado</th>
-                  <th scope="col">Pago</th>
-                  <th scope="col">Creada</th>
-                  <th scope="col">Imagen</th>
-                  <th scope="col">Seguimiento</th>
-                  <th scope="col" className="hub-tasks-table__col-delete">
+                  <th scope="col" className="hub-tasks-table__col-status">
+                    Estado
+                  </th>
+                  <th scope="col" className="hub-tasks-table__col-payment">
+                    Pago
+                  </th>
+                  <th scope="col" className="hub-tasks-table__col-created">
+                    Creada
+                  </th>
+                  <th scope="col" className="hub-tasks-table__col-images">
+                    Imagen
+                  </th>
+                  <th scope="col" className="hub-tasks-table__col-tracking">
+                    Seguimiento
+                  </th>
+                  <th scope="col" className="hub-tasks-table__col-actions">
                     <span className="nm-hub-sr-only">Acciones</span>
                   </th>
                 </tr>
@@ -1491,39 +1496,23 @@ export function HubTasksApp({
                             '—'
                           )}
                         </td>
-                        <td>
-                          <select
-                            className={`hub-tasks-status-select hub-tasks-status-select--${workflow}`}
+                        <td className="hub-tasks-table__status">
+                          <HubTasksPillSelect
                             value={workflow}
+                            options={WORKFLOW_STATUS_OPTIONS}
                             disabled={busy || readOnly}
                             aria-label={`Estado de ${t.title}`}
-                            onChange={(e) =>
-                              void onWorkflowChange(t, e.target.value as HubTaskWorkflowStatus)
-                            }
-                          >
-                            {WORKFLOW_STATUS_OPTIONS.map((opt) => (
-                              <option key={opt.value} value={opt.value}>
-                                {opt.label}
-                              </option>
-                            ))}
-                          </select>
+                            onChange={(status) => void onWorkflowChange(t, status)}
+                          />
                         </td>
-                        <td>
-                          <select
-                            className={`hub-tasks-status-select hub-tasks-payment-select--${payment}`}
+                        <td className="hub-tasks-table__payment">
+                          <HubTasksPillSelect
                             value={payment}
+                            options={PAYMENT_STATUS_OPTIONS}
                             disabled={busy || readOnly}
                             aria-label={`Pago de ${t.title}`}
-                            onChange={(e) =>
-                              void onPaymentChange(t, e.target.value as HubTaskPaymentStatus)
-                            }
-                          >
-                            {PAYMENT_STATUS_OPTIONS.map((opt) => (
-                              <option key={opt.value} value={opt.value}>
-                                {opt.label}
-                              </option>
-                            ))}
-                          </select>
+                            onChange={(status) => void onPaymentChange(t, status)}
+                          />
                         </td>
                         <td className="hub-tasks-table__created">{formatTaskCreatedAt(t.created_at)}</td>
                         <td className="hub-tasks-table__images">
@@ -1546,7 +1535,7 @@ export function HubTasksApp({
                                     rel="noopener noreferrer"
                                     title={href}
                                   >
-                                    Ver seguimiento
+                                    Seguimiento
                                   </a>
                                 ) : null}
                                 {!readOnly ? (
@@ -1565,12 +1554,17 @@ export function HubTasksApp({
                             )
                           })()}
                         </td>
-                        <td className="hub-tasks-table__col-delete">
+                        <td className="hub-tasks-table__col-actions">
                           <div className="hub-tasks-table__row-actions">
                             <button
                               type="button"
                               className="btn-task-notes hub-tasks-table__action-btn"
                               onClick={() => setNotesTask(t)}
+                              aria-label={
+                                noteCounts[t.id]
+                                  ? `Notas, ${noteCounts[t.id]}`
+                                  : 'Notas'
+                              }
                             >
                               Notas
                               {noteCounts[t.id] ? (
