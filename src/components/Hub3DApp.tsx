@@ -246,29 +246,19 @@ function ResultAccordion({ title, children }: ResultAccordionProps) {
 interface MainSummaryProps {
   result: Printing3DResults
   sale: Printing3DRoundedSale
-  quantity: number
 }
 
-function MainSummary({ result, sale, quantity }: MainSummaryProps) {
-  const showTotal = quantity > 1
-  const totalLabel = (total: number, format: (value: number) => string = formatWholeMoney) =>
-    `Total ${format(total)}`
-
+function MainSummary({ result, sale }: MainSummaryProps) {
   return (
     <section className="printing3d-output-block printing3d-summary">
       <h2 className="printing3d-output-block__title">Resumen</h2>
       <div className="printing3d-summary__layout">
         <div className="printing3d-summary__side">
-          <SummaryStat
-            label="Costo"
-            value={formatMoney(result.costoUnitarioFinal)}
-            totalLabel={showTotal ? totalLabel(result.costoTotalProduccion, formatMoney) : undefined}
-          />
+          <SummaryStat label="Costo" value={formatMoney(result.costoUnitarioFinal)} />
           <SummaryStat
             label="Ganancia"
             value={formatWholeMoney(sale.gananciaNetaUnitaria)}
             hint={`${formatNumber(sale.margenRealPorcentaje, 1)}%`}
-            totalLabel={showTotal ? totalLabel(sale.gananciaNetaTotal) : undefined}
           />
         </div>
         <div className="printing3d-summary__hero">
@@ -276,11 +266,6 @@ function MainSummary({ result, sale, quantity }: MainSummaryProps) {
           <strong className="printing3d-summary__hero-value">
             {formatWholeMoney(sale.precioVentaUnitario)} c/u
           </strong>
-          {showTotal ? (
-            <span className="printing3d-summary__hero-total">
-              {totalLabel(sale.precioVentaTotal)}
-            </span>
-          ) : null}
         </div>
       </div>
     </section>
@@ -516,20 +501,16 @@ export function Hub3DApp({
   }, [printerConfig, configured, profileId])
 
   const inputs = useMemo(
-    () => mergePrinting3DInputs(printerConfig, quote),
+    () => mergePrinting3DInputs(printerConfig, { ...quote, cantidadTotalUnidades: 1 }),
     [printerConfig, quote],
   )
   const result = useMemo(() => computePrinting3D(inputs), [inputs])
   const roundedSale = useMemo(
     () =>
       result.valid
-        ? applySalePriceRounding(
-            result,
-            quote.cantidadTotalUnidades,
-            DEFAULT_SALE_PRICE_ROUND_STEP,
-          )
+        ? applySalePriceRounding(result, 1, DEFAULT_SALE_PRICE_ROUND_STEP)
         : null,
-    [result, quote.cantidadTotalUnidades],
+    [result],
   )
 
   const patchQuote = (partial: Partial<Printing3DQuoteInputs>) => {
@@ -592,17 +573,6 @@ export function Hub3DApp({
                 suffix="u"
               />
               <NumberField
-                id="cantidad-total"
-                label="Cantidad"
-                value={quote.cantidadTotalUnidades}
-                onChange={(v) =>
-                  patchQuote({ cantidadTotalUnidades: Math.max(1, Math.floor(v)) })
-                }
-                min={1}
-                step={1}
-                suffix="u"
-              />
-              <NumberField
                 id="insumos-extra"
                 label="Extra"
                 value={quote.insumosExtraPieza}
@@ -632,7 +602,6 @@ export function Hub3DApp({
                 <MainSummary
                   result={result}
                   sale={roundedSale!}
-                  quantity={quote.cantidadTotalUnidades}
                 />
 
                 <ResultAccordion title="Desglose">
