@@ -1281,10 +1281,8 @@ export default function App() {
         <HubBrandBar
           integratedDashboard={isListaUpload || isCutList}
           adminSignOut={Boolean(profile)}
-          integratedSubtitle={
-            isListaUpload ? 'Subir lista de corte' : isCutList ? 'Lista de corte' : undefined
-          }
-          integratedSubtitleTone={isListaUpload || isCutList ? 'default' : undefined}
+          integratedSubtitle={isCutList ? 'Lista de corte' : undefined}
+          integratedSubtitleTone={isCutList ? 'default' : undefined}
           trailing={
             isCutList && canEditTasks ? (
               <button
@@ -1325,39 +1323,52 @@ export default function App() {
       )}
 
       {canImportReports && (
-        <section className="lista-upload-container" aria-labelledby="nm-prod-import-label">
-          <label id="nm-prod-import-label" className="field-label-rebel" htmlFor="nm-prod-paste">
-            Pegar reporte
-          </label>
-          <textarea
-            id="nm-prod-paste"
-            className="report-textarea-rebel"
-            value={paste}
-            onChange={(e) => {
-              setPaste(e.target.value)
-              if (success) setSuccess(null)
-            }}
-            placeholder="### REPORTE DE PRODUCCIÓN - 25/03/2026 ###&#10;--------------------------------&#10;LISTA CLASSIC&#10;--------------------------------&#10;90x40 - 15&#10;--------------------------------&#10;BORDES RECTOS&#10;--------------------------------&#10;90x40 Classic - 2&#10;--------------------------------&#10;LISTA FALTAS&#10;--------------------------------&#10;90x40 Classic - 2&#10;50x40 Pro - 1"
-            spellCheck={false}
-          />
-          <button
-            type="button"
-            className="btn-primary-upload"
-            disabled={!configured || loading || !paste.trim()}
-            onClick={() => void onImport()}
-          >
-            {loading ? 'Guardando…' : 'Subir lista'}
-          </button>
-          {success ? (
-            <p className="lista-upload-success" role="status">
-              {success}
+        <section className="lista-upload-container" aria-labelledby="lista-upload-title">
+          <header className="hub-page-head">
+            <h1 id="lista-upload-title" className="hub-page-head__title">
+              Subir lista de corte
+            </h1>
+            <p className="hub-page-head__lead">
+              Pegá el reporte de producción y confirmá para cargarlo al día correspondiente.
             </p>
-          ) : null}
-          {error && isListaUpload ? (
-            <p className="nm-hub-error lista-upload-error" role="alert">
-              {error}
-            </p>
-          ) : null}
+          </header>
+
+          <div className="lista-upload-card">
+            <label className="lista-upload-card__label" htmlFor="nm-prod-paste">
+              Reporte
+            </label>
+            <textarea
+              id="nm-prod-paste"
+              className="report-textarea-rebel"
+              value={paste}
+              onChange={(e) => {
+                setPaste(e.target.value)
+                if (success) setSuccess(null)
+              }}
+              placeholder={
+                'Ejemplo:\n### REPORTE DE PRODUCCIÓN - 25/03/2026 ###\nLISTA CLASSIC\n90x40 - 15\nBORDES RECTOS\n90x40 Classic - 2'
+              }
+              spellCheck={false}
+            />
+            <button
+              type="button"
+              className="btn-primary-upload"
+              disabled={!configured || loading || !paste.trim()}
+              onClick={() => void onImport()}
+            >
+              {loading ? 'Guardando…' : 'Subir lista'}
+            </button>
+            {success ? (
+              <p className="lista-upload-success" role="status">
+                {success}
+              </p>
+            ) : null}
+            {error && isListaUpload ? (
+              <p className="nm-hub-error lista-upload-error" role="alert">
+                {error}
+              </p>
+            ) : null}
+          </div>
         </section>
       )}
 

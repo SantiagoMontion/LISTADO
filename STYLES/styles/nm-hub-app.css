@@ -5791,103 +5791,154 @@ body:has(.nm-hub-app) {
 }
 
 /* --------------------------------------------------------------------------
-   Subir lista (/creador) — contenedor compacto + campos rebel
+   Page head compartido + Subir lista (/creador)
    -------------------------------------------------------------------------- */
 
+.hub-page-head {
+  margin-bottom: 1.25rem;
+}
+
+.hub-page-head__title {
+  margin: 0 0 0.35rem;
+  font-size: clamp(1.35rem, 2.4vw, 1.7rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #0f172a;
+  font-family: var(--font-family, 'Plus Jakarta Sans', ui-sans-serif, sans-serif);
+}
+
+.hub-page-head__lead {
+  margin: 0;
+  max-width: 38rem;
+  font-size: 0.92rem;
+  color: #5b6573;
+  line-height: 1.45;
+}
+
 .nm-hub-app--lista-upload .lista-upload-container {
-  padding: 12px 16px;
+  padding: 1.25rem 0 2rem;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 0;
   width: 100%;
+  max-width: 52rem;
   box-sizing: border-box;
+}
+
+.nm-hub-app--lista-upload .lista-upload-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1.2rem 1.25rem 1.35rem;
+  border-radius: 14px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.nm-hub-app--lista-upload .lista-upload-card__label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .nm-hub-app--lista-upload .field-label-rebel {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 700;
-  color: var(--text-label);
-  letter-spacing: 0.8px;
+  color: #64748b;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  margin-bottom: 6px;
+  margin-bottom: 0;
 }
 
 .nm-hub-app--lista-upload .report-textarea-rebel {
-  background-color: var(--bg-input-field) !important;
-  border: 1px solid var(--border-input-base) !important;
+  background-color: #f8fafc !important;
+  border: 1px solid rgba(15, 23, 42, 0.14) !important;
   border-radius: 12px;
-  padding: 16px;
-  color: #fcfdff;
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 0.9rem;
-  line-height: 1.5;
+  padding: 0.95rem 1rem;
+  color: #0f172a !important;
+  font-family: var(--font-family, 'Plus Jakarta Sans', ui-sans-serif, sans-serif) !important;
+  font-size: 0.92rem;
+  font-weight: 500;
+  line-height: 1.55;
   width: 100%;
-  min-height: 200px;
+  min-height: 16rem;
   box-sizing: border-box;
   resize: vertical;
-  transition: all 0.2s ease;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background-color 0.15s ease;
 }
 
 .nm-hub-app--lista-upload .report-textarea-rebel::placeholder {
-  color: var(--text-placeholder);
+  color: #94a3b8 !important;
   opacity: 1;
+  font-family: inherit;
+  font-weight: 500;
 }
 
 .nm-hub-app--lista-upload .report-textarea-rebel:focus {
   outline: none !important;
-  background-color: var(--bg-input-field-focus) !important;
-  border-color: var(--accent-focus) !important;
-  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.15) !important;
+  background-color: #ffffff !important;
+  border-color: rgba(21, 101, 216, 0.55) !important;
+  box-shadow: 0 0 0 3px rgba(21, 101, 216, 0.15) !important;
 }
 
 .nm-hub-app--lista-upload .btn-primary-upload {
-  background-color: #4ade80 !important;
-  color: #08090a !important;
-  font-weight: 800;
-  font-size: 1rem;
-  padding: 16px;
-  border: none;
-  border-radius: 14px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  background-color: #1565d8 !important;
+  color: #ffffff !important;
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 0.85rem 1.1rem;
+  border: 1px solid #1565d8;
+  border-radius: 10px;
+  text-transform: none;
+  letter-spacing: -0.01em;
   cursor: pointer;
   width: 100%;
+  max-width: 16rem;
+  align-self: flex-start;
   font-family: inherit;
-  box-shadow: 0 4px 12px rgba(74, 222, 128, 0.15);
-  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(21, 101, 216, 0.2);
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .nm-hub-app--lista-upload .btn-primary-upload:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(74, 222, 128, 0.25);
+  background-color: #0d47a1 !important;
+  border-color: #0d47a1;
+  transform: none;
+  box-shadow: 0 1px 2px rgba(21, 101, 216, 0.25);
 }
 
 .nm-hub-app--lista-upload .btn-primary-upload:disabled {
-  opacity: 0.52;
+  opacity: 0.5;
   cursor: not-allowed;
   transform: none;
 }
 
 .nm-hub-app--lista-upload .btn-secondary-media {
-  background-color: rgba(255, 255, 255, 0.02) !important;
-  border: 1px solid rgba(255, 255, 255, 0.06) !important;
-  color: #9099a3 !important;
+  background-color: #ffffff !important;
+  border: 1px solid rgba(15, 23, 42, 0.14) !important;
+  color: #0f172a !important;
   font-weight: 700;
-  font-size: 1rem;
-  padding: 16px;
-  border-radius: 14px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  font-size: 0.95rem;
+  padding: 0.85rem 1.1rem;
+  border-radius: 10px;
+  text-transform: none;
+  letter-spacing: -0.01em;
   cursor: pointer;
-  width: 100%;
+  width: auto;
   font-family: inherit;
-  transition: all 0.2s ease;
+  transition: background 0.15s ease;
 }
 
 .nm-hub-app--lista-upload .btn-secondary-media:hover:not(:disabled) {
-  background-color: rgba(255, 255, 255, 0.05) !important;
-  border-color: rgba(255, 255, 255, 0.15) !important;
-  color: #fcfdff !important;
+  background-color: #f8fafc !important;
+  border-color: rgba(15, 23, 42, 0.2) !important;
+  color: #0f172a !important;
 }
 
 .nm-hub-app--lista-upload .btn-secondary-media:disabled {
@@ -5898,7 +5949,8 @@ body:has(.nm-hub-app) {
 .nm-hub-app--lista-upload .lista-upload-success {
   margin: 0;
   font-size: 0.88rem;
-  color: var(--accent-rebel-green);
+  font-weight: 600;
+  color: #0f9f6e;
 }
 
 .nm-hub-app--lista-upload .lista-upload-error {
@@ -5906,11 +5958,11 @@ body:has(.nm-hub-app) {
 }
 
 .nm-hub-app--lista-upload .nm-prod-banner {
-  margin: 12px 16px 0;
+  margin: 12px 0 0;
   border-radius: 12px;
-  background: rgba(255, 171, 64, 0.1);
-  border: 1px solid rgba(255, 171, 64, 0.35);
-  color: #ffab40;
+  background: rgba(194, 120, 3, 0.1);
+  border: 1px solid rgba(194, 120, 3, 0.3);
+  color: #92400e;
   font-size: 0.85rem;
 }
 
