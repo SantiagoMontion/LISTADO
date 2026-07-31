@@ -973,10 +973,6 @@ export function HubTasksApp({
     }
   }
 
-  const integratedSubtitle = panel === 'create' ? 'Nueva tarea' : 'Completadas'
-
-  const integratedSubtitleTone = panel === 'create' ? 'accent' : 'completed'
-
   const showCreateNavBtn = !readOnly && panel === 'list'
 
   return (
@@ -985,8 +981,6 @@ export function HubTasksApp({
         <HubBrandBar
           integratedDashboard
           adminSignOut={isAdmin}
-          integratedSubtitle={integratedSubtitle}
-          integratedSubtitleTone={integratedSubtitleTone}
           trailing={
             showCreateNavBtn ? (
               <button
@@ -1013,6 +1007,12 @@ export function HubTasksApp({
 
       {!readOnly && panel === 'create' ? (
         <form id="nm-hub-tareas-nueva" className="nm-hub-card nm-hub-card--task-create" onSubmit={(e) => void onCreate(e)}>
+          <header className="hub-page-head">
+            <h1 className="hub-page-head__title">Nueva tarea</h1>
+            <p className="hub-page-head__lead">
+              Elegí el tipo y cargá los datos del pedido o cambio.
+            </p>
+          </header>
           <div className="form-container-clean">
           <div className="field-group">
             <span className="field-label" id="nm-hub-t-type-label">
@@ -1358,7 +1358,15 @@ export function HubTasksApp({
       />
 
       {panel === 'list' ? (
-        <section id="nm-hub-tareas-lista" className="nm-hub-section nm-hub-section--task-list" aria-label="Tareas">
+        <section id="nm-hub-tareas-lista" className="nm-hub-section nm-hub-section--task-list" aria-labelledby="hub-tasks-title">
+          <header className="hub-page-head">
+            <h1 id="hub-tasks-title" className="hub-page-head__title">
+              Tareas
+            </h1>
+            <p className="hub-page-head__lead">
+              Pedidos mayoristas, cambios y devoluciones. Las completadas (enviado y pago) se muestran atenuadas.
+            </p>
+          </header>
           <div className="hub-tasks-month-bar" aria-label="Mes">
             <button
               type="button"
@@ -1387,7 +1395,7 @@ export function HubTasksApp({
                 id="nm-hub-task-q"
                 type="search"
                 className="nm-hub-input field-input nm-hub-task-search"
-                placeholder="Buscar"
+                placeholder="Buscar por título, tipo o detalle…"
                 value={taskQuery}
                 onChange={(e) => setTaskQuery(e.target.value)}
                 autoComplete="off"
@@ -1413,12 +1421,11 @@ export function HubTasksApp({
                   <th scope="col">Detalle</th>
                   <th scope="col">Estado</th>
                   <th scope="col">Pago</th>
-                  <th scope="col">Ver en Shopify</th>
                   <th scope="col">Creada</th>
                   <th scope="col">Imagen</th>
                   <th scope="col">Seguimiento</th>
                   <th scope="col" className="hub-tasks-table__col-delete">
-                    <span className="nm-hub-sr-only">Eliminar</span>
+                    <span className="nm-hub-sr-only">Acciones</span>
                   </th>
                 </tr>
               </thead>
@@ -1443,7 +1450,33 @@ export function HubTasksApp({
                             '—'
                           )}
                         </td>
-                        <td className="hub-tasks-table__title">{t.title}</td>
+                        <td className="hub-tasks-table__title">
+                          {shopifyUrl ? (
+                            <a
+                              className="hub-tasks-table__title-link"
+                              href={shopifyUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              aria-label={`Abrir orden Shopify ${orderNumber ?? t.title}`}
+                              title={`Abrir en Shopify (#${orderNumber})`}
+                            >
+                              {t.title}
+                            </a>
+                          ) : (
+                            <span
+                              className={
+                                orderNumber
+                                  ? 'hub-tasks-table__title-text hub-tasks-table__title-text--unresolved'
+                                  : 'hub-tasks-table__title-text'
+                              }
+                              title={
+                                orderNumber ? 'No se encontró la orden en Shopify' : undefined
+                              }
+                            >
+                              {t.title}
+                            </span>
+                          )}
+                        </td>
                         <td className="hub-tasks-table__detail-toggle">
                           {t.body ? (
                             <button
@@ -1491,31 +1524,6 @@ export function HubTasksApp({
                               </option>
                             ))}
                           </select>
-                        </td>
-                        <td className="hub-tasks-table__shopify">
-                          {shopifyUrl ? (
-                            <a
-                              className="hub-tasks-shopify-btn"
-                              href={shopifyUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              aria-label={`Ver orden Shopify de ${t.title}`}
-                            >
-                              Ver en Shopify
-                            </a>
-                          ) : (
-                            <span
-                              className="hub-tasks-shopify-btn hub-tasks-shopify-btn--disabled"
-                              aria-disabled="true"
-                              title={
-                                orderNumber
-                                  ? 'No se encontró la orden en Shopify'
-                                  : 'Sin nº de orden en el título'
-                              }
-                            >
-                              Ver en Shopify
-                            </span>
-                          )}
                         </td>
                         <td className="hub-tasks-table__created">{formatTaskCreatedAt(t.created_at)}</td>
                         <td className="hub-tasks-table__images">
@@ -1607,7 +1615,7 @@ export function HubTasksApp({
                         <tr
                           className={`hub-tasks-table__detail-row${completed ? ' hub-tasks-table__detail-row--completed' : ''}`}
                         >
-                          <td colSpan={10}>
+                          <td colSpan={9}>
                             <div className="hub-tasks-table__detail-body">{t.body}</div>
                             {(t.image_paths?.length ?? 0) > 0 ? (
                               <TaskThumbnails paths={t.image_paths ?? []} rebel />

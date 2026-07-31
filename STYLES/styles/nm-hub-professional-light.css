@@ -240,50 +240,107 @@ body:has(.nm-hub-app) {
   border-bottom-color: rgba(15, 23, 42, 0.1) !important;
 }
 
-.nm-hub-app--tasks .hub-tasks-table__row td {
+.nm-hub-app--tasks .hub-tasks-table__row--pending td {
   color: #0f172a !important;
   border-bottom-color: rgba(15, 23, 42, 0.06) !important;
   background: #ffffff !important;
 }
 
 .nm-hub-app--tasks .hub-tasks-table__row--completed td {
+  background: #eef2f7 !important;
+  color: #94a3b8 !important;
+  opacity: 0.72 !important;
+  border-bottom-color: rgba(15, 23, 42, 0.05) !important;
+}
+
+.nm-hub-app--tasks .hub-tasks-table__row--pending:hover td {
   background: #f8fafc !important;
-  color: #64748b !important;
-  opacity: 1 !important;
 }
 
-.nm-hub-app--tasks .hub-tasks-table__row:hover td {
-  background: #f1f5f9 !important;
+.nm-hub-app--tasks .hub-tasks-table__row--completed:hover td {
+  background: #e8eef5 !important;
 }
 
-.nm-hub-app--tasks .hub-tasks-status-select,
 .nm-hub-app--tasks .hub-tasks-table__detail-btn,
-.nm-hub-app--tasks .hub-tasks-shopify-btn,
-.nm-hub-app--tasks .hub-tasks-tracking-link,
-.nm-hub-app--tasks .hub-tasks-tracking-edit,
-.nm-hub-app--tasks .btn-task-notes {
-  background: #ffffff !important;
-  color: #0f172a !important;
-  border-color: rgba(15, 23, 42, 0.14) !important;
+.nm-hub-app--tasks .hub-tasks-tracking-edit {
+  background: transparent !important;
+  border-color: transparent !important;
+}
+
+.nm-hub-app--tasks .hub-tasks-table__detail-btn {
+  color: #1565d8 !important;
 }
 
 .nm-hub-app--tasks .hub-tasks-tracking-link {
+  background: transparent !important;
+  border-color: transparent !important;
   color: #1565d8 !important;
-  border-color: rgba(21, 101, 216, 0.35) !important;
 }
 
-.nm-hub-app--tasks .hub-tasks-month-title,
-.nm-hub-app--tasks .hub-tasks-table__title {
+.nm-hub-app--tasks .hub-tasks-tracking-edit {
+  color: #64748b !important;
+}
+
+.nm-hub-app--tasks .btn-task-notes {
+  background: #ffffff !important;
   color: #0f172a !important;
+  border-color: rgba(15, 23, 42, 0.12) !important;
+}
+
+.nm-hub-app--tasks .hub-tasks-month-title {
+  color: #0f172a !important;
+}
+
+.nm-hub-app--tasks .hub-tasks-table__title,
+.nm-hub-app--tasks .hub-tasks-table__title-text {
+  color: #0f172a !important;
+}
+
+.nm-hub-app--tasks .hub-tasks-table__title-link {
+  color: #1565d8 !important;
+}
+
+.nm-hub-app--tasks .hub-tasks-table__row--completed .hub-tasks-table__title,
+.nm-hub-app--tasks .hub-tasks-table__row--completed .hub-tasks-table__title-text {
+  color: #94a3b8 !important;
+}
+
+.nm-hub-app--tasks .hub-tasks-table__row--completed .hub-tasks-table__title-link {
+  color: #64748b !important;
+  border-bottom-color: rgba(100, 116, 139, 0.35);
 }
 
 .nm-hub-app--tasks .hub-tasks-month-bar {
   background: transparent !important;
 }
 
-.nm-hub-app--tasks .task-type-badge {
-  background: #f1f5f9 !important;
-  border-color: rgba(15, 23, 42, 0.1) !important;
+.nm-hub-app--tasks .hub-tasks-table__row--completed .task-type-badge,
+.nm-hub-app--tasks .hub-tasks-table__row--completed .hub-tasks-status-select,
+.nm-hub-app--tasks .hub-tasks-table__row--completed .hub-tasks-table__title-link,
+.nm-hub-app--tasks .hub-tasks-table__row--completed .hub-tasks-table__detail-btn,
+.nm-hub-app--tasks .hub-tasks-table__row--completed .hub-tasks-tracking-link,
+.nm-hub-app--tasks .hub-tasks-table__row--completed .hub-tasks-tracking-edit,
+.nm-hub-app--tasks .hub-tasks-table__row--completed .btn-task-notes,
+.nm-hub-app--tasks .hub-tasks-table__row--completed .btn-delete-task {
+  filter: saturate(0.4) !important;
+  opacity: 0.8 !important;
+}
+
+.nm-hub-app--tasks .hub-tasks-table__detail-row--completed td {
+  opacity: 0.72 !important;
+  background: #eef2f7 !important;
+}
+
+/* Status / payment keep typed colors from nm-hub-app.css */
+.nm-hub-app--tasks .hub-tasks-status-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M6 9l6 6 6-6' stroke='%64748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 8px center !important;
+}
+
+.nm-hub-app--tasks input.nm-hub-task-search,
+.nm-hub-app--tasks .nm-hub-task-search {
+  font-family: var(--font-family, 'Plus Jakarta Sans', ui-sans-serif, sans-serif) !important;
 }
 
 /* ── Cut list / printed / logistics ─────────────────────────────── */
@@ -440,16 +497,6 @@ body:has(.nm-hub-app) {
   background: #f8fafc !important;
   color: #0f172a !important;
   border-color: rgba(15, 23, 42, 0.12) !important;
-}
-
-.nm-hub-app--tasks .hub-tasks-table__row--completed .task-type-badge,
-.nm-hub-app--tasks .hub-tasks-table__row--completed .hub-tasks-status-select,
-.nm-hub-app--tasks .hub-tasks-table__row--completed .hub-tasks-shopify-btn,
-.nm-hub-app--tasks .hub-tasks-table__row--completed .hub-tasks-table__detail-btn,
-.nm-hub-app--tasks .hub-tasks-table__row--completed .btn-task-notes,
-.nm-hub-app--tasks .hub-tasks-table__row--completed .btn-delete-task {
-  filter: none !important;
-  opacity: 0.85 !important;
 }
 
 /* Search bars often dark */
