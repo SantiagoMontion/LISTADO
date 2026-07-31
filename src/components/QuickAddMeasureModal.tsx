@@ -38,6 +38,10 @@ export function mapQuickAddOption(option: QuickAddMaterialOption): {
   }
 }
 
+export function sanitizeQuickDimensionPart(value: string): string {
+  return value.replace(/\D/g, '').slice(0, 4)
+}
+
 export function sanitizeQuickDimensionInput(value: string): string {
   let out = ''
   for (const ch of value) {
@@ -58,6 +62,10 @@ export function parseQuickDimensions(raw: string): string | null {
   const height = Number(m[2])
   if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return null
   return `${width}x${height}`
+}
+
+export function composeQuickDimensions(widthRaw: string, heightRaw: string): string | null {
+  return parseQuickDimensions(`${widthRaw.trim()}x${heightRaw.trim()}`)
 }
 
 export function parseQuickQuantity(raw: string): number | null {
@@ -90,10 +98,12 @@ export function QuickAddMeasureModal({
   onConfirm,
 }: QuickAddMeasureModalProps) {
   const titleId = useId()
-  const inputId = useId()
+  const widthInputId = useId()
+  const heightInputId = useId()
   const qtyInputId = useId()
   const [selectedType, setSelectedType] = useState<QuickAddMaterialOption | null>(null)
-  const [dimensionInput, setDimensionInput] = useState('')
+  const [widthInput, setWidthInput] = useState('')
+  const [heightInput, setHeightInput] = useState('')
   const [quantityInput, setQuantityInput] = useState('')
   const [mayoristaLineMaterial, setMayoristaLineMaterial] =
     useState<MayoristaLineMaterialOption | null>(null)
@@ -103,14 +113,15 @@ export function QuickAddMeasureModal({
   useEffect(() => {
     if (!open) return
     setSelectedType(null)
-    setDimensionInput('')
+    setWidthInput('')
+    setHeightInput('')
     setQuantityInput('')
     setMayoristaLineMaterial(null)
   }, [open])
 
   if (!open) return null
 
-  const measure = parseQuickDimensions(dimensionInput)
+  const measure = composeQuickDimensions(widthInput, heightInput)
   const parsedQty = isMayorista ? parseQuickQuantity(quantityInput) : 1
   const dimensions =
     isMayorista && measure && mayoristaLineMaterial
@@ -164,23 +175,49 @@ export function QuickAddMeasureModal({
         </div>
 
         <div className="modal-input-section">
-          <label className="modal-section-label" htmlFor={inputId}>
-            Medida (ancho x alto)
-          </label>
-          <input
-            id={inputId}
-            type="text"
-            inputMode="text"
-            className="modal-numeric-input"
-            placeholder="Ej: 90x40"
-            value={dimensionInput}
-            disabled={loading}
-            autoFocus
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-            onChange={(e) => setDimensionInput(sanitizeQuickDimensionInput(e.target.value))}
-          />
+          <span className="modal-section-label" id={`${widthInputId}-label`}>
+            Medida (ancho × alto)
+          </span>
+          <div
+            className="modal-measure-row"
+            role="group"
+            aria-labelledby={`${widthInputId}-label`}
+          >
+            <input
+              id={widthInputId}
+              type="text"
+              inputMode="numeric"
+              className="modal-numeric-input"
+              placeholder="Ancho"
+              value={widthInput}
+              disabled={loading}
+              autoFocus
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              autoComplete="off"
+              aria-label="Ancho"
+              onChange={(e) => setWidthInput(sanitizeQuickDimensionPart(e.target.value))}
+            />
+            <span className="modal-measure-sep" aria-hidden="true">
+              ×
+            </span>
+            <input
+              id={heightInputId}
+              type="text"
+              inputMode="numeric"
+              className="modal-numeric-input"
+              placeholder="Alto"
+              value={heightInput}
+              disabled={loading}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              autoComplete="off"
+              aria-label="Alto"
+              onChange={(e) => setHeightInput(sanitizeQuickDimensionPart(e.target.value))}
+            />
+          </div>
         </div>
 
         {isMayorista ? (

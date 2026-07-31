@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
   mapQuickAddOption,
+  composeQuickDimensions,
   parseQuickDimensions,
   parseQuickQuantity,
   sanitizeQuickDimensionInput,
+  sanitizeQuickDimensionPart,
   sanitizeQuickQuantityInput,
 } from './QuickAddMeasureModal'
 
@@ -12,6 +14,17 @@ describe('QuickAddMeasureModal helpers', () => {
     expect(sanitizeQuickDimensionInput('90x40 Classic')).toBe('90x40')
     expect(sanitizeQuickDimensionInput('50×44')).toBe('50x44')
     expect(sanitizeQuickDimensionInput('12xx34')).toBe('12x34')
+  })
+
+  it('composeQuickDimensions joins ancho and alto', () => {
+    expect(composeQuickDimensions('90', '40')).toBe('90x40')
+    expect(composeQuickDimensions('90', '')).toBe(null)
+    expect(composeQuickDimensions('', '40')).toBe(null)
+  })
+
+  it('sanitizeQuickDimensionPart keeps digits only', () => {
+    expect(sanitizeQuickDimensionPart('90x')).toBe('90')
+    expect(sanitizeQuickDimensionPart('12ab34')).toBe('1234')
   })
 
   it('parseQuickDimensions accepts valid measure', () => {

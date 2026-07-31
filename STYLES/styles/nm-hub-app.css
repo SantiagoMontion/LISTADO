@@ -6583,6 +6583,27 @@ select.hub-mayorista-client-modal__input {
   transition: all 0.2s ease;
 }
 
+.quick-add-measure-modal .modal-measure-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.quick-add-measure-modal .modal-measure-row .modal-numeric-input {
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+}
+
+.quick-add-measure-modal .modal-measure-sep {
+  flex-shrink: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #6e6e73;
+  line-height: 1;
+}
+
 .quick-add-measure-modal .modal-numeric-input:focus {
   outline: none !important;
   background-color: #ffffff !important;
