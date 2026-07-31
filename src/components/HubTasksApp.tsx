@@ -1795,9 +1795,7 @@ export function HubTasksApp({
                         <td className="hub-tasks-table__images">
                           {completed && (t.image_paths?.length ?? 0) > 0 ? (
                             <TaskThumbnails paths={t.image_paths ?? []} rebel compact />
-                          ) : (
-                            '—'
-                          )}
+                          ) : null}
                         </td>
                         <td className="hub-tasks-table__tracking">
                           {(() => {
