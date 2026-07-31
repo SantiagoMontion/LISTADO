@@ -281,34 +281,11 @@ export function HubImageLightbox({
       role="dialog"
       aria-modal="true"
       aria-label="Vista previa de imagen"
-      style={{ background: `rgba(2, 4, 10, ${0.96 * backdropOpacity})` }}
+      style={{ background: `rgba(15, 23, 42, ${0.82 * backdropOpacity})` }}
       onClick={() => {
         if (dismissY < 8) requestClose()
       }}
     >
-      <div className="nm-hub-lightbox__toolbar" onClick={(e) => e.stopPropagation()}>
-        <button
-          type="button"
-          className="nm-hub-btn nm-hub-btn-ghost nm-hub-lightbox__back"
-          onClick={requestClose}
-          aria-label="Volver"
-        >
-          ←
-        </button>
-        {hasGalleryNav ? (
-          <p className="nm-hub-lightbox__counter" aria-live="polite">
-            {(gallery?.index ?? 0) + 1} / {gallery?.total}
-          </p>
-        ) : (
-          <span className="nm-hub-lightbox__counter" aria-hidden />
-        )}
-        <span className="nm-hub-lightbox__hint" aria-hidden>
-          Tocá la imagen para zoom
-        </span>
-        <button type="button" className="nm-hub-btn nm-hub-btn-primary nm-hub-lightbox__close" onClick={requestClose}>
-          Cerrar
-        </button>
-      </div>
       <div
         ref={stageRef}
         className="nm-hub-lightbox__stage"
@@ -317,54 +294,64 @@ export function HubImageLightbox({
         onTouchEnd={onTouchEnd}
         onTouchCancel={onTouchEnd}
         onClick={(e) => {
-          // Click en el fondo del stage (fuera de la imagen) cierra.
           if (e.target === e.currentTarget && dismissY < 8) requestClose()
         }}
       >
-        {hasGalleryNav ? (
-          <>
-            <button
-              type="button"
-              className="nm-hub-lightbox__nav nm-hub-lightbox__nav--prev"
-              aria-label="Imagen anterior"
-              disabled={!canPrev}
-              onClick={(e) => {
-                e.stopPropagation()
-                gallery?.onPrev?.()
-              }}
-            >
-              ‹
-            </button>
-            <button
-              type="button"
-              className="nm-hub-lightbox__nav nm-hub-lightbox__nav--next"
-              aria-label="Imagen siguiente"
-              disabled={!canNext}
-              onClick={(e) => {
-                e.stopPropagation()
-                gallery?.onNext?.()
-              }}
-            >
-              ›
-            </button>
-          </>
-        ) : null}
-        <img
-          src={src}
-          alt=""
-          className="nm-hub-lightbox__img"
-          style={{ transform: imgTransform }}
-          draggable={false}
+        <div
+          className="nm-hub-lightbox__frame"
           onClick={(e) => {
-            e.stopPropagation()
-            if (ignoreClickRef.current) {
-              ignoreClickRef.current = false
-              return
-            }
-            if (touchRef.current.moved > LIGHTBOX_TAP_MOVE_PX) return
-            toggleZoom()
+            // Click en el marco (fuera de la foto) cierra.
+            if (e.target === e.currentTarget && dismissY < 8) requestClose()
           }}
-        />
+        >
+          {hasGalleryNav ? (
+            <>
+              <button
+                type="button"
+                className="nm-hub-lightbox__nav nm-hub-lightbox__nav--prev"
+                aria-label="Imagen anterior"
+                disabled={!canPrev}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  gallery?.onPrev?.()
+                }}
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                className="nm-hub-lightbox__nav nm-hub-lightbox__nav--next"
+                aria-label="Imagen siguiente"
+                disabled={!canNext}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  gallery?.onNext?.()
+                }}
+              >
+                ›
+              </button>
+              <p className="nm-hub-lightbox__counter" aria-live="polite">
+                {(gallery?.index ?? 0) + 1} / {gallery?.total}
+              </p>
+            </>
+          ) : null}
+          <img
+            src={src}
+            alt=""
+            className="nm-hub-lightbox__img"
+            style={{ transform: imgTransform }}
+            draggable={false}
+            onClick={(e) => {
+              e.stopPropagation()
+              if (ignoreClickRef.current) {
+                ignoreClickRef.current = false
+                return
+              }
+              if (touchRef.current.moved > LIGHTBOX_TAP_MOVE_PX) return
+              toggleZoom()
+            }}
+          />
+        </div>
       </div>
     </div>
   )

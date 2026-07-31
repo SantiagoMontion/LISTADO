@@ -417,20 +417,15 @@ body:has(.nm-hub-app) {
 }
 
 .nm-hub-lightbox {
-  background: rgba(15, 23, 42, 0.72) !important;
-}
-
-.nm-hub-lightbox__toolbar {
-  background: rgba(15, 23, 42, 0.88) !important;
+  background: rgba(15, 23, 42, 0.82) !important;
 }
 
 .nm-hub-lightbox__img {
   background: #0f172a !important;
 }
 
-.nm-hub-lightbox__hint,
 .nm-hub-lightbox__counter {
-  color: rgba(248, 250, 252, 0.8) !important;
+  color: rgba(248, 250, 252, 0.92) !important;
 }
 
 /* ── Misc surfaces often hard-coded dark ────────────────────────── */
