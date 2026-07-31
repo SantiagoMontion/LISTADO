@@ -63,7 +63,7 @@ describe('QuickAddMeasureModal helpers', () => {
     })
   })
 
-  it('mayorista dimensions include Classic/PRO suffix via formatMayoristaDimensions', async () => {
+  it('mayorista and rectos dimensions include Classic/PRO suffix via formatMayoristaDimensions', async () => {
     const { formatMayoristaDimensions, mayoristaLineMaterialFromOption } = await import(
       '../lib/nmProdMayorista'
     )
