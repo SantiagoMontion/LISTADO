@@ -3580,7 +3580,7 @@ body:has(.nm-hub-app) {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  padding: 1rem 1.15rem 0.35rem;
+  padding: 1rem 1.15rem 1.25rem;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   min-height: 0;
@@ -3672,7 +3672,7 @@ select.hub-mayorista-client-modal__input {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 16px 18px 22px;
+  padding: 14px 18px 18px;
   border-top: 1px solid rgba(15, 23, 42, 0.06);
   background: #fafafa;
   flex-shrink: 0;
