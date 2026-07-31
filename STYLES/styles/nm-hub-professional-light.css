@@ -46,24 +46,8 @@ body:has(.nm-hub-app) {
   color: #0f172a !important;
 }
 
-.nm-hub-app .navbar-screen-title,
-.nm-hub-app .navbar-brand-subtitle,
-.nm-hub-app .nm-hub-brand-bar__context {
-  color: #5b6573 !important;
-}
-
-.nm-hub-app .navbar-home-btn.nm-hub-brand-bar__home,
-.nm-hub-app .nm-hub-brand-bar__home {
-  color: #334155 !important;
-  background: #f1f5f9 !important;
-  border-color: rgba(15, 23, 42, 0.1) !important;
-}
-
-.nm-hub-app .navbar-home-btn.nm-hub-brand-bar__home:hover,
-.nm-hub-app .nm-hub-brand-bar__home:hover {
-  background: #e8eef7 !important;
-  border-color: rgba(21, 101, 216, 0.35) !important;
-  color: #1565d8 !important;
+.nm-hub-app .nm-hub-brand-logo {
+  filter: none;
 }
 
 .nm-hub-app .nm-hub-brand-bar__btn,

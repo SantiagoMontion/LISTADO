@@ -1,61 +1,7 @@
 import type { ReactNode } from 'react'
-import { APP_BRAND_TITLE } from '../lib/appBrand'
 import { onHubLinkClick } from '../lib/hubNavigate'
 import { HubAdminSignOutButton } from './HubAdminSignOutButton'
-
-/** Casa clásica (trazo / pantallas no integradas). */
-function HomeIconOutline() {
-  return (
-    <svg
-      className="nm-hub-brand-bar__home-svg"
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-    >
-      <path
-        d="M4 10.5 12 4l8 6.5"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M7.5 10v10h9V10"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M10.5 20v-4h3v4"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
-
-/** Casa sólida (navbar integrada dashboard / tareas — alto contraste en taller). */
-function HomeIconSolid() {
-  return (
-    <svg
-      className="nm-hub-brand-bar__home-svg nm-hub-brand-bar__home-svg--solid"
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-    >
-      <path d="M12 3 2 12h3v9h7v-6h4v6h7v-9h3L12 3z" />
-    </svg>
-  )
-}
+import notmidLogoUrl from '../assets/brand/notmid-logo.svg'
 
 /** Marca + inicio (/): misma barra en hub, login y lista de corte. */
 export type HubBrandSubtitleTone = 'default' | 'accent' | 'pending' | 'completed' | 'muted'
@@ -70,7 +16,7 @@ export function HubBrandBar({
   integratedDashboard = false,
 }: {
   context?: string
-  /** Línea bajo NOT BRAIN (solo con integratedDashboard; reemplaza el bloque tipo “context” antiguo). */
+  /** Línea bajo el logo (solo con integratedDashboard). */
   integratedSubtitle?: string
   /** Acentos del subtítulo: verde crear, azul pendientes, gris completadas, muted (p. ej. impresos). */
   integratedSubtitleTone?: HubBrandSubtitleTone
@@ -98,32 +44,25 @@ export function HubBrandBar({
     <div
       className={`nm-hub-brand-bar${hasTrailing ? ' nm-hub-brand-bar--with-trailing' : ''}${integratedDashboard ? ' nm-hub-brand-bar--integrated-dashboard' : ''}`}
     >
-      <a
-        href="/"
-        className={`nm-hub-brand-bar__home${integratedDashboard ? ' navbar-home-btn' : ''}`}
-        aria-label="Inicio"
-        title="Inicio"
-        onClick={(e) => onHubLinkClick(e, '/')}
-      >
-        {integratedDashboard ? <HomeIconSolid /> : <HomeIconOutline />}
-      </a>
       <TitleTag
         className={`nm-hub-brand-bar__heading${headingStacked ? ' nm-hub-brand-bar__heading--stacked navbar-brand-group' : ''}`}
       >
         <a
           href="/"
           className={`nm-hub-brand-bar__brand${integratedDashboard ? ' navbar-brand' : ''}`}
+          aria-label="NOT BRAIN — Inicio"
+          title="Inicio"
           onClick={(e) => onHubLinkClick(e, '/')}
         >
-          {APP_BRAND_TITLE}
+          <img
+            src={notmidLogoUrl}
+            alt="NOT BRAIN"
+            className="nm-hub-brand-logo"
+            draggable={false}
+          />
         </a>
-        {headingStacked ? (
-          <span className={subtitleClasses}>
-            {integratedSubtitle}
-          </span>
-        ) : context ? (
-          <span className="nm-hub-brand-bar__context">{context}</span>
-        ) : null}
+        {headingStacked ? <span className={subtitleClasses}>{integratedSubtitle}</span> : null}
+        {!headingStacked && context ? <span className="nm-hub-brand-bar__context">{context}</span> : null}
       </TitleTag>
       {hasTrailing ? (
         <div className="nm-hub-brand-bar__trailing">

@@ -991,22 +991,32 @@ a.nm-hub-brand-bar__btn:hover {
 
 .nm-hub-brand-bar__brand {
   margin: 0;
-  font-size: 1.35rem;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  color: #0f172a;
   text-decoration: none;
-  line-height: 1.15;
+  line-height: 0;
 }
 
 .nm-hub-brand-bar__brand:hover {
-  color: #e2e8f0;
+  opacity: 0.82;
 }
 
 .nm-hub-brand-bar__brand:focus-visible {
-  outline: 2px solid rgba(96, 165, 250, 0.85);
+  outline: 2px solid rgba(21, 101, 216, 0.85);
   outline-offset: 3px;
   border-radius: 0.2rem;
+}
+
+.nm-hub-brand-logo {
+  display: block;
+  height: 1.35rem;
+  width: auto;
+  max-width: min(11.5rem, 46vw);
+  object-fit: contain;
+  object-position: left center;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 .nm-hub-brand-bar__context {
@@ -2523,29 +2533,33 @@ body:has(.nm-hub-app) {
 
 .nm-hub-app .navbar-brand.nm-hub-brand-bar__brand {
   margin: 0;
-  font-family: var(--font-rebel-heading);
-  font-weight: 800;
-  font-size: 1.15rem;
-  letter-spacing: -0.02em;
+  display: inline-flex;
+  align-items: center;
   color: var(--text-primary);
   text-decoration: none;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: min(52vw, 16rem);
+  line-height: 0;
+  max-width: none;
+  overflow: visible;
   text-shadow: none;
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: normal;
 }
 
 .nm-hub-app .navbar-brand.nm-hub-brand-bar__brand:hover {
   color: var(--text-primary);
-  opacity: 0.92;
+  opacity: 0.82;
 }
 
 .nm-hub-app .nm-hub-brand-bar__heading--stacked .navbar-brand.nm-hub-brand-bar__brand {
-  font-size: clamp(1rem, 3.9vw, 1.09rem);
-  letter-spacing: 0.48px;
-  max-width: min(240px, calc(100vw - 9rem));
+  font-size: inherit;
+  letter-spacing: normal;
+  max-width: none;
+}
+
+.nm-hub-app .nm-hub-brand-logo {
+  height: 1.4rem;
+  max-width: min(12rem, calc(100vw - 9rem));
 }
 
 .nm-hub-app--dashboard .nm-hub-brand-bar__context {
@@ -2813,10 +2827,14 @@ body:has(.nm-hub-app) {
   .nm-hub-brand-bar--with-trailing
   .nm-hub-brand-bar__heading:not(.nm-hub-brand-bar__heading--stacked)
   .navbar-brand.nm-hub-brand-bar__brand {
-  max-width: min(10rem, calc(100vw - 11.25rem));
+  max-width: none;
 }
 
 .nm-hub-app .nm-hub-brand-bar--with-trailing .nm-hub-brand-bar__heading--stacked .navbar-brand.nm-hub-brand-bar__brand {
+  max-width: none;
+}
+
+.nm-hub-app .nm-hub-brand-bar--with-trailing .nm-hub-brand-logo {
   max-width: min(11rem, calc(100vw - 10rem));
 }
 
