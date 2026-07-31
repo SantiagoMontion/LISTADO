@@ -56,67 +56,67 @@
   /* ── Color Palette: Light Mode ── */
   
   /* Backgrounds */
-  --background: #efefec;
-  --surface: #efefec;
-  --surface-secondary: #efefec;
-  --surface-tertiary: #efefec;
-  --overlay: rgba(0, 0, 0, 0.6);
+  --background: #f3f5f8;
+  --surface: #ffffff;
+  --surface-secondary: #f8fafc;
+  --surface-tertiary: #eef1f5;
+  --overlay: rgba(15, 23, 42, 0.45);
   
   /* Foregrounds */
-  --foreground: #171717;                   /* Primary text */
-  --foreground-secondary: #767474;         /* Secondary text */
-  --foreground-tertiary: rgba(0, 0, 0, 0.6);
-  --foreground-muted: rgba(0, 0, 0, 0.4);
-  --foreground-subtle: rgba(0, 0, 0, 0.25);
+  --foreground: #0f172a;                   /* Primary text */
+  --foreground-secondary: #5b6573;         /* Secondary text */
+  --foreground-tertiary: rgba(15, 23, 42, 0.62);
+  --foreground-muted: rgba(15, 23, 42, 0.45);
+  --foreground-subtle: rgba(15, 23, 42, 0.28);
   
   /* Borders */
-  --border-default: rgba(0, 0, 0, 0.08);
-  --border-strong: rgba(0, 0, 0, 0.12);
-  --border-hover: rgba(0, 0, 0, 0.15);
-  --border-focus: rgba(37, 99, 235, 0.5);
+  --border-default: rgba(15, 23, 42, 0.08);
+  --border-strong: rgba(15, 23, 42, 0.14);
+  --border-hover: rgba(15, 23, 42, 0.18);
+  --border-focus: rgba(21, 101, 216, 0.45);
   
   /* Interactive States */
-  --interactive-hover: rgba(0, 0, 0, 0.03);
-  --interactive-active: rgba(0, 0, 0, 0.05);
-  --interactive-selected: rgba(37, 99, 235, 0.08);
-  --interactive-disabled: rgba(0, 0, 0, 0.02);
+  --interactive-hover: rgba(15, 23, 42, 0.04);
+  --interactive-active: rgba(15, 23, 42, 0.07);
+  --interactive-selected: rgba(21, 101, 216, 0.08);
+  --interactive-disabled: rgba(15, 23, 42, 0.03);
   
   /* Brand & Accent */
-  --brand-primary: #e8d800;
-  --brand-primary-hover: #e8d800;
-  --brand-primary-active: #e8d800;
-  --brand-secondary: rgba(37, 99, 235, 0.1);
-  --accent: #e8d800;
+  --brand-primary: #1565d8;
+  --brand-primary-hover: #0d47a1;
+  --brand-primary-active: #0b3d8c;
+  --brand-secondary: rgba(21, 101, 216, 0.1);
+  --accent: #1565d8;
   
   /* Semantic Colors */
-  --success: #10B981;
-  --success-surface: rgba(16, 185, 129, 0.1);
-  --warning: #F59E0B;
-  --warning-surface: rgba(245, 158, 11, 0.1);
-  --error: #EF4444;
-  --error-surface: rgba(239, 68, 68, 0.1);
-  --info: #e8d800;
-  --info-surface: rgba(59, 130, 246, 0.1);
+  --success: #0f9f6e;
+  --success-surface: rgba(15, 159, 110, 0.1);
+  --warning: #c27803;
+  --warning-surface: rgba(194, 120, 3, 0.1);
+  --error: #d92d20;
+  --error-surface: rgba(217, 45, 32, 0.1);
+  --info: #1565d8;
+  --info-surface: rgba(21, 101, 216, 0.1);
 
   /* Legacy tokens for backwards compatibility */
-  --card: #cccccc;
-  --card-foreground: #0F172A;
-  --popover: #cccccc;
-  --popover-foreground: #0F172A;
-  --primary: #0F172A;
-  --primary-foreground: #F8FAFC;
-  --secondary: #F1F5F9;
-  --secondary-foreground: #0F172A;
-  --muted: #F1F5F9;
-  --muted-foreground: #64748B;
-  --accent-foreground: #0F172A;
-  --destructive: #EF4444;
-  --destructive-foreground: #cccccc;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #1565d8;
+  --primary-foreground: #ffffff;
+  --secondary: #eef1f5;
+  --secondary-foreground: #0f172a;
+  --muted: #eef1f5;
+  --muted-foreground: #64748b;
+  --accent-foreground: #ffffff;
+  --destructive: #d92d20;
+  --destructive-foreground: #ffffff;
   --input: transparent;
-  --input-background: #F1F5F9;
-  --switch-background: #CBD5E1;
-  --ring: rgba(0, 0, 0, 0.2);
-  --brand: #e8d800;
+  --input-background: #f8fafc;
+  --switch-background: #cbd5e1;
+  --ring: rgba(21, 101, 216, 0.35);
+  --brand: #1565d8;
   
   /* Old adaptive tokens (kept for backwards compatibility) */
   --text-primary: rgba(0, 0, 0, 0.9);
