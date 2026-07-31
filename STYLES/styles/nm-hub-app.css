@@ -2905,7 +2905,7 @@ body:has(.nm-hub-app) {
   min-width: 0;
   margin: 0;
   padding: 8px 14px;
-  border-radius: 999px;
+  border-radius: 14px;
   border: 1px solid rgba(148, 163, 184, 0.35);
   background-color: rgba(148, 163, 184, 0.1);
   color: #64748b;
@@ -3186,7 +3186,7 @@ body:has(.nm-hub-app) {
   display: inline-flex;
   align-items: center;
   padding: 3px 9px;
-  border-radius: 999px;
+  border-radius: 14px;
   border: 1px solid transparent;
   font-size: 0.65rem;
   font-weight: 700;
@@ -3279,7 +3279,7 @@ body:has(.nm-hub-app) {
   width: 100%;
   min-height: 2.5rem;
   padding: 0.45rem 1.85rem 0.45rem 0.85rem;
-  border-radius: 10px;
+  border-radius: 14px;
   border: 1px solid transparent;
   font-size: 0.78rem;
   font-weight: 700;
@@ -3702,10 +3702,10 @@ select.hub-mayorista-client-modal__input {
   transition: background-color 0.15s ease, opacity 0.15s ease, color 0.15s ease;
 }
 
-.hub-mayorista-client-modal__btn-cancel {
+\.hub-mayorista-client-modal__btn-cancel {
   padding: 10px 14px;
   border: none;
-  border-radius: 10px;
+  border-radius: 14px;
   background: transparent;
   color: #1d1d1f;
 }
@@ -3714,10 +3714,10 @@ select.hub-mayorista-client-modal__input {
   background: rgba(15, 23, 42, 0.05);
 }
 
-.hub-mayorista-client-modal__btn-delete {
+\.hub-mayorista-client-modal__btn-delete {
   padding: 10px 12px;
   border: none;
-  border-radius: 10px;
+  border-radius: 14px;
   background: transparent;
   color: #d70015;
 }
@@ -3726,10 +3726,10 @@ select.hub-mayorista-client-modal__input {
   background: rgba(215, 0, 21, 0.08);
 }
 
-.hub-mayorista-client-modal__btn-submit {
+\.hub-mayorista-client-modal__btn-submit {
   padding: 10px 18px;
   border: none;
-  border-radius: 999px;
+  border-radius: 14px;
   background: #1565d8;
   color: #ffffff;
 }
@@ -3798,11 +3798,11 @@ select.hub-mayorista-client-modal__input {
   margin-top: 0.55rem;
 }
 
-.hub-mayorista-client-confirm__accept {
+\.hub-mayorista-client-confirm__accept {
   margin: 0;
   padding: 10px 18px;
   border: none;
-  border-radius: 999px;
+  border-radius: 14px;
   background: #d70015;
   color: #ffffff;
   font: inherit;
@@ -4107,11 +4107,11 @@ select.hub-mayorista-client-modal__input {
   justify-content: center;
 }
 
-.nm-hub-app--tasks .hub-tasks-edit-btn {
+\.nm-hub-app--tasks .hub-tasks-edit-btn {
   margin: 0;
   min-height: 32px;
   padding: 0 10px;
-  border-radius: 8px;
+  border-radius: 14px;
   border: 1px solid rgba(21, 101, 216, 0.35);
   background: rgba(21, 101, 216, 0.08);
   color: #1565d8;
@@ -4279,7 +4279,7 @@ select.hub-mayorista-client-modal__input {
   -webkit-appearance: none;
   margin: 0;
   padding: 5px 22px 5px 8px;
-  border-radius: 8px;
+  border-radius: 14px;
   border: 1px solid rgba(15, 23, 42, 0.14);
   background-color: #ffffff;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M6 9l6 6 6-6' stroke='%64748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
@@ -4715,7 +4715,7 @@ select.hub-mayorista-client-modal__input {
   justify-content: center;
   background: #ffffff;
   border: 1px solid rgba(15, 23, 42, 0.1);
-  border-radius: 12px;
+  border-radius: 14px;
   color: #1565d8;
   cursor: pointer;
   transition:
@@ -4743,7 +4743,7 @@ select.hub-mayorista-client-modal__input {
   color: inherit;
 }
 
-.nm-hub-app--tasks form#nm-hub-tareas-nueva .btn-submit-task {
+\.nm-hub-app--tasks form#nm-hub-tareas-nueva .btn-submit-task {
   width: 100%;
   background-color: #1565d8;
   color: #ffffff;
@@ -4751,7 +4751,7 @@ select.hub-mayorista-client-modal__input {
   font-size: 1.05rem;
   padding: 15px 18px;
   border: none;
-  border-radius: 999px;
+  border-radius: 14px;
   text-transform: none;
   letter-spacing: -0.015em;
   cursor: pointer;
@@ -5160,13 +5160,13 @@ select.hub-mayorista-client-modal__input {
   outline-offset: 2px;
 }
 
-.nm-hub-app--tasks .btn-delete-task {
+\.nm-hub-app--tasks .btn-delete-task {
   background: rgba(239, 68, 68, 0.08);
   border: 1px solid rgba(239, 68, 68, 0.35);
   color: rgba(252, 165, 165, 0.95);
   width: 36px;
   padding: 0;
-  border-radius: 10px;
+  border-radius: 14px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -5185,14 +5185,14 @@ select.hub-mayorista-client-modal__input {
   cursor: not-allowed;
 }
 
-.nm-hub-app--tasks .btn-task-notes {
+\.nm-hub-app--tasks .btn-task-notes {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 5px;
   min-height: 32px;
   padding: 0 10px;
-  border-radius: 8px;
+  border-radius: 14px;
   border: 1px solid rgba(15, 23, 42, 0.12);
   background-color: #ffffff;
   color: #0f172a;
@@ -5556,12 +5556,12 @@ select.hub-mayorista-client-modal__input {
   gap: 8px;
 }
 
-.nm-hub-task-notes-compose__attach,
+\.nm-hub-task-notes-compose__attach,
 .nm-hub-task-notes-compose__preview-remove {
   margin: 0;
   padding: 7px 12px;
   border: 1px solid rgba(15, 23, 42, 0.12);
-  border-radius: 999px;
+  border-radius: 14px;
   background: #ffffff;
   color: #1565d8;
   font-family: inherit;
@@ -5671,11 +5671,11 @@ select.hub-mayorista-client-modal__input {
   margin-top: 2px;
 }
 
-.nm-hub-task-notes-compose__cancel {
+\.nm-hub-task-notes-compose__cancel {
   margin: 0;
   padding: 10px 14px;
   border: none;
-  border-radius: 10px;
+  border-radius: 14px;
   background: transparent;
   color: #1d1d1f;
   font-family: inherit;
@@ -5694,11 +5694,11 @@ select.hub-mayorista-client-modal__input {
   cursor: not-allowed;
 }
 
-.nm-hub-task-notes-compose__submit {
+\.nm-hub-task-notes-compose__submit {
   margin: 0;
   padding: 10px 18px;
   border: none;
-  border-radius: 999px;
+  border-radius: 14px;
   background: #1565d8;
   color: #ffffff;
   font-family: inherit;
@@ -6840,11 +6840,11 @@ select.hub-mayorista-client-modal__input {
   color: #0d47a1;
 }
 
-.hub-page-primary-action {
+\.hub-page-primary-action {
   flex: 0 0 auto;
   margin-top: 0.15rem;
   padding: 0.65rem 1.05rem;
-  border-radius: 10px;
+  border-radius: 14px;
   border: 1px solid #1565d8;
   background: #1565d8;
   color: #ffffff;
@@ -6912,7 +6912,7 @@ select.hub-mayorista-client-modal__input {
   display: inline-flex;
   align-items: stretch;
   padding: 3px;
-  border-radius: 10px;
+  border-radius: 14px;
   border: 1px solid rgba(15, 23, 42, 0.12);
   background: #f1f5f9;
   gap: 2px;
@@ -6923,7 +6923,7 @@ select.hub-mayorista-client-modal__input {
   min-height: 2.15rem;
   padding: 0.4rem 0.85rem;
   border: 0;
-  border-radius: 8px;
+  border-radius: 12px;
   background: transparent;
   color: #64748b;
   font: inherit;
