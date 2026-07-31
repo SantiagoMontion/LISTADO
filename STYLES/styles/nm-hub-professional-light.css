@@ -463,10 +463,17 @@ body:has(.nm-hub-app) {
 }
 
 .nm-hub-app .filter-pill--active,
+.nm-hub-app .filter-pill.active,
 .nm-hub-app .nm-hub-subtab--active {
   background: rgba(21, 101, 216, 0.08) !important;
   border-color: rgba(21, 101, 216, 0.35) !important;
   color: #1565d8 !important;
+}
+
+.nm-hub-app--cut-list .cut-list-ordenar-btn.active {
+  background: #1565d8 !important;
+  border-color: #1565d8 !important;
+  color: #ffffff !important;
 }
 
 /* ── Modals / panels / lightbox ─────────────────────────────────── */
@@ -849,15 +856,33 @@ body:has(.nm-hub-app) {
 }
 
 /* Cut list items */
-.nm-hub-app--cut-list .cut-list-item,
+.nm-hub-app--cut-list .cut-item-row,
+.nm-hub-app--cut-list .cut-measurements,
 .nm-hub-app--cut-list .cut-list-day-label,
 .nm-hub-app--cut-list .cut-material-badge {
   color: #0f172a !important;
 }
 
-.nm-hub-app--cut-list .cut-list-item {
+.nm-hub-app--cut-list .cut-item-row {
   background: #ffffff !important;
-  border-color: rgba(15, 23, 42, 0.08) !important;
+  border-color: rgba(15, 23, 42, 0.1) !important;
+}
+
+.nm-hub-app--cut-list .cut-qty,
+.nm-hub-app--cut-list .cut-qty-sep,
+.nm-hub-app--cut-list .cut-list-day-label {
+  color: #6e6e73 !important;
+}
+
+.nm-hub-app--cut-list .select-filter-rebel {
+  background: #ffffff !important;
+  color: #1d1d1f !important;
+  border-color: rgba(15, 23, 42, 0.1) !important;
+}
+
+.nm-hub-app--cut-list .cut-list-search {
+  background: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.1) !important;
 }
 
 /* Despachos — refuerzo light */

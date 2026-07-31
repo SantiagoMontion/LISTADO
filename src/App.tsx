@@ -1677,7 +1677,7 @@ export default function App() {
                     </div>
                   ) : allCutEntireReport ? (
                     <div className="nm-prod-all-cut-state">
-                      <p className="nm-prod-all-cut-text">Todo cortado! Seguí así</p>
+                      <p className="nm-prod-all-cut-text">Todo cortado</p>
                     </div>
                   ) : allCutInActiveTab && hasPendingInOtherMaterialTab ? (
                     <div className="nm-prod-all-cut-state">
@@ -1749,7 +1749,7 @@ export default function App() {
               disabled={allPendingTasksLoading}
               onChange={(e) => setMergeAllListsChecked(e.target.checked)}
             />
-            <span>Sumar TODAS las listas</span>
+            <span>Sumar todas las listas</span>
           </label>
         </div>
       ) : null}

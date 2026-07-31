@@ -6308,14 +6308,14 @@ select.hub-mayorista-client-modal__input {
 }
 
 /* --------------------------------------------------------------------------
-   Lista de corte (/manejador) — dark rebel
+   Lista de corte (/manejador) — Apple light
    -------------------------------------------------------------------------- */
 
 .nm-hub-app--cut-list .cut-list-container {
-  padding: 12px 16px;
+  padding: 0.85rem 0 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   width: 100%;
   box-sizing: border-box;
 }
@@ -6339,39 +6339,42 @@ select.hub-mayorista-client-modal__input {
 }
 
 .nm-hub-app--cut-list .cut-list-date-nav .nm-prod-date-label {
-  color: var(--text-rebel-primary);
+  color: #1d1d1f;
   font-size: 1.05rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
 }
 
 .nm-hub-app--cut-list .select-filter-rebel {
-  background-color: var(--bg-input-field) !important;
-  border: 1px solid var(--border-input-base) !important;
-  border-radius: 12px;
-  padding: 12px 16px;
-  color: #fcfdff !important;
-  font-size: 0.95rem;
-  font-weight: 600;
+  background-color: #ffffff !important;
+  border: 1px solid rgba(15, 23, 42, 0.1) !important;
+  border-radius: 14px;
+  padding: 12px 40px 12px 14px;
+  color: #1d1d1f !important;
+  font-size: 0.92rem;
+  font-weight: 650;
   width: 100%;
   box-sizing: border-box;
   margin-bottom: 0;
   appearance: none;
   -webkit-appearance: none;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%239099A3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%236e6e73' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>");
   background-repeat: no-repeat;
-  background-position: right 16px center;
+  background-position: right 14px center;
   background-size: 16px;
   font-family: inherit;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .nm-hub-app--cut-list .select-filter-rebel:focus {
   outline: none !important;
-  border-color: var(--accent-focus) !important;
-  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.15) !important;
+  border-color: rgba(21, 101, 216, 0.45) !important;
+  box-shadow: 0 0 0 3px rgba(21, 101, 216, 0.15) !important;
 }
 
 .nm-hub-app--cut-list .select-filter-rebel option {
-  background: #181a1f;
-  color: #fcfdff;
+  background: #ffffff;
+  color: #1d1d1f;
 }
 
 .nm-hub-app--cut-list .cut-list-tabs-toolbar {
@@ -6390,11 +6393,11 @@ select.hub-mayorista-client-modal__input {
 .nm-hub-app--cut-list .cut-list-tabs-toolbar .filter-carousel-container {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
   overflow-x: auto;
   white-space: nowrap;
-  padding: 4px 20px 12px 0;
+  padding: 2px 20px 4px 0;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
 }
@@ -6407,42 +6410,43 @@ select.hub-mayorista-client-modal__input {
   flex-shrink: 0;
   box-sizing: border-box;
   margin: 0;
-  background-color: var(--bg-surface-rebel);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  border-radius: 12px;
-  padding: 10px 16px;
-  color: #535a62;
+  background-color: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 980px;
+  padding: 8px 14px;
+  color: #5b6573;
   font: inherit;
-  font-size: 0.9rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  font-size: 0.84rem;
+  font-weight: 650;
+  text-transform: none;
+  letter-spacing: -0.01em;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
   -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
 }
 
 .nm-hub-app--cut-list .cut-list-tabs-toolbar .filter-pill.active {
-  background-color: #fcfdff;
-  color: #08090a;
-  border-color: #fcfdff;
-  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
+  background-color: rgba(21, 101, 216, 0.1);
+  color: #1565d8;
+  border-color: rgba(21, 101, 216, 0.35);
+  box-shadow: none;
 }
 
 .nm-hub-app--cut-list .cut-list-tabs-toolbar .filter-pill:not(.active):hover {
-  background-color: #181a1f;
-  border-color: rgba(255, 255, 255, 0.1);
-  color: #9099a3;
+  background-color: #f2f2f7;
+  border-color: rgba(15, 23, 42, 0.14);
+  color: #1d1d1f;
 }
 
 .nm-hub-app--cut-list .cut-list-tabs-toolbar .filter-pill:focus-visible {
-  outline: 2px solid rgba(74, 222, 128, 0.45);
+  outline: 2px solid rgba(21, 101, 216, 0.45);
   outline-offset: 2px;
 }
 
 .nm-hub-app--cut-list .cut-list-search-row {
   width: 100%;
-  margin-top: -4px;
+  margin-top: 0;
 }
 
 .nm-hub-app--cut-list .cut-list-search {
@@ -6451,34 +6455,37 @@ select.hub-mayorista-client-modal__input {
   gap: 10px;
   width: 100%;
   box-sizing: border-box;
-  min-height: 48px;
+  min-height: 44px;
   padding: 0 14px;
   margin: 0;
   flex: none;
   min-width: 0;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background-color: #181a1f;
+  border-radius: 14px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  background-color: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   cursor: text;
 }
 
 .nm-hub-app--cut-list .cut-list-search:focus-within {
-  border-color: rgba(74, 222, 128, 0.45);
-  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.12);
+  border-color: rgba(21, 101, 216, 0.45);
+  box-shadow: 0 0 0 3px rgba(21, 101, 216, 0.12);
 }
 
 .nm-hub-app--cut-list .cut-list-search .nm-prod-completed-search-inline-icon {
-  color: #8b949e;
+  color: #8a93a0;
 }
 
 .nm-hub-app--cut-list .cut-list-search .nm-prod-completed-search-inline-input {
   width: 100%;
   font-size: 0.95rem;
-  color: #fcfdff;
+  color: #1d1d1f;
+  background: transparent;
+  border: 0;
 }
 
 .nm-hub-app--cut-list .cut-list-search .nm-prod-completed-search-inline-input::placeholder {
-  color: #535a62;
+  color: #8a93a0;
 }
 
 /* Modal agregar medida individual */
@@ -6486,23 +6493,24 @@ select.hub-mayorista-client-modal__input {
   width: min(100%, 26rem);
   max-height: min(90dvh, 40rem);
   overflow: auto;
-  background-color: var(--bg-surface-rebel);
-  border: 1px solid rgba(255, 255, 255, 0.03);
+  background-color: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.1);
   border-radius: 16px;
   padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 20px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.18);
   box-sizing: border-box;
 }
 
 .quick-add-measure-modal .modal-rebel-title {
-  font-size: 1.25rem;
-  font-weight: 800;
-  color: #fcfdff;
+  font-size: 1.2rem;
+  font-weight: 750;
+  color: #1d1d1f;
   margin: 0;
   line-height: 1.2;
+  letter-spacing: -0.02em;
 }
 
 .quick-add-measure-modal .modal-filter-section,
@@ -6512,11 +6520,11 @@ select.hub-mayorista-client-modal__input {
 }
 
 .quick-add-measure-modal .modal-section-label {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #8b949e;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: #6e6e73;
+  text-transform: none;
+  letter-spacing: -0.01em;
   margin-bottom: 8px;
   display: block;
 }
@@ -6528,32 +6536,31 @@ select.hub-mayorista-client-modal__input {
 }
 
 .quick-add-measure-modal .modal-type-pill {
-  background-color: #181a1f;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 10px;
+  background-color: #f2f2f7;
+  border: 1px solid transparent;
+  border-radius: 980px;
   padding: 8px 14px;
-  color: #9099a3;
+  color: #5b6573;
   font-size: 0.85rem;
-  font-weight: 700;
+  font-weight: 650;
   font-family: inherit;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  text-transform: none;
+  letter-spacing: -0.01em;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   -webkit-tap-highlight-color: transparent;
 }
 
 .quick-add-measure-modal .modal-type-pill.active {
-  background-color: #fcfdff;
-  color: #08090a;
-  border-color: #fcfdff;
-  box-shadow: 0 4px 10px rgba(255, 255, 255, 0.1);
+  background-color: rgba(21, 101, 216, 0.1);
+  color: #1565d8;
+  border-color: rgba(21, 101, 216, 0.35);
+  box-shadow: none;
 }
 
 .quick-add-measure-modal .modal-type-pill:not(.active):hover:not(:disabled) {
-  background-color: #21262d;
-  border-color: rgba(255, 255, 255, 0.1);
-  color: #c5cdd6;
+  background-color: #e8e8ed;
+  color: #1d1d1f;
 }
 
 .quick-add-measure-modal .modal-type-pill:disabled {
@@ -6562,11 +6569,11 @@ select.hub-mayorista-client-modal__input {
 }
 
 .quick-add-measure-modal .modal-numeric-input {
-  background-color: #181a1f !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background-color: #f2f2f7 !important;
+  border: 1px solid transparent !important;
   border-radius: 12px;
   padding: 14px;
-  color: #fcfdff;
+  color: #1d1d1f;
   font-size: 1rem;
   font-weight: 600;
   font-family: inherit;
@@ -6578,8 +6585,9 @@ select.hub-mayorista-client-modal__input {
 
 .quick-add-measure-modal .modal-numeric-input:focus {
   outline: none !important;
-  border-color: #4ade80 !important;
-  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.15) !important;
+  background-color: #ffffff !important;
+  border-color: rgba(21, 101, 216, 0.45) !important;
+  box-shadow: 0 0 0 3px rgba(21, 101, 216, 0.15) !important;
 }
 
 .quick-add-measure-modal .modal-numeric-input:disabled {
@@ -6592,9 +6600,9 @@ select.hub-mayorista-client-modal__input {
   border-radius: 10px;
   font-size: 0.85rem;
   font-weight: 600;
-  color: #fb7185;
-  background: rgba(251, 113, 133, 0.08);
-  border: 1px solid rgba(251, 113, 133, 0.25);
+  color: #b42318;
+  background: rgba(217, 45, 32, 0.08);
+  border: 1px solid rgba(217, 45, 32, 0.2);
 }
 
 .quick-add-measure-modal .modal-actions-footer {
@@ -6605,25 +6613,23 @@ select.hub-mayorista-client-modal__input {
 
 .quick-add-measure-modal .btn-modal-cancel {
   flex: 1;
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  color: #9099a3;
-  font-weight: 700;
+  background: #f2f2f7;
+  border: 0;
+  color: #3a3a3c;
+  font-weight: 650;
   font-family: inherit;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   padding: 14px;
   border-radius: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  text-transform: none;
+  letter-spacing: -0.01em;
   cursor: pointer;
-  transition:
-    background-color 0.15s ease,
-    color 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .quick-add-measure-modal .btn-modal-cancel:hover:not(:disabled) {
-  background-color: rgba(255, 255, 255, 0.03);
-  color: #fcfdff;
+  background-color: #e8e8ed;
+  color: #1d1d1f;
 }
 
 .quick-add-measure-modal .btn-modal-cancel:disabled {
@@ -6633,40 +6639,40 @@ select.hub-mayorista-client-modal__input {
 
 .quick-add-measure-modal .btn-modal-add {
   flex: 1;
-  font-weight: 800;
+  font-weight: 700;
   font-family: inherit;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   padding: 14px;
   border-radius: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  text-transform: none;
+  letter-spacing: -0.01em;
   border: none;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .quick-add-measure-modal .btn-modal-add:disabled {
-  background-color: #21262d !important;
-  color: #484f58 !important;
+  background-color: #e8e8ed !important;
+  color: #8a93a0 !important;
   cursor: not-allowed;
   box-shadow: none;
 }
 
 .quick-add-measure-modal .btn-modal-add:not(:disabled) {
-  background-color: #4ade80 !important;
-  color: #08090a !important;
-  box-shadow: 0 4px 12px rgba(74, 222, 128, 0.2);
+  background-color: #1565d8 !important;
+  color: #ffffff !important;
+  box-shadow: 0 1px 2px rgba(21, 101, 216, 0.25);
 }
 
 .quick-add-measure-modal .btn-modal-add:not(:disabled):hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(74, 222, 128, 0.28);
+  box-shadow: 0 4px 12px rgba(21, 101, 216, 0.28);
 }
 
 .nm-hub-app--cut-list .cut-list-items {
   display: flex;
   flex-direction: column;
   gap: 0;
+  padding-bottom: 0.25rem;
 }
 
 .nm-hub-app--cut-list .cut-list-ordenar-bar {
@@ -6680,7 +6686,7 @@ select.hub-mayorista-client-modal__input {
   width: 100%;
   max-width: none;
   padding: 10px var(--nm-hub-padding-x) calc(10px + env(safe-area-inset-bottom, 0px));
-  background: linear-gradient(to top, #0c0e12 65%, rgba(12, 14, 18, 0));
+  background: linear-gradient(to top, #f3f5f8 70%, rgba(243, 245, 248, 0));
   pointer-events: none;
 }
 
@@ -6699,16 +6705,17 @@ select.hub-mayorista-client-modal__input {
   align-items: center;
   gap: 10px;
   margin: 0;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background-color: var(--bg-surface-rebel);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  color: #9099a3;
-  font-size: 0.85rem;
+  padding: 11px 14px;
+  border-radius: 14px;
+  background-color: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  color: #5b6573;
+  font-size: 0.88rem;
   font-weight: 600;
   cursor: pointer;
   pointer-events: auto;
   -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .nm-hub-app--cut-list .cut-list-ordenar-merge-input {
@@ -6716,14 +6723,14 @@ select.hub-mayorista-client-modal__input {
   height: 18px;
   margin: 0;
   flex-shrink: 0;
-  accent-color: #4ade80;
+  accent-color: #1565d8;
   cursor: pointer;
 }
 
 .nm-hub-app--cut-list .cut-list-ordenar-merge:has(.cut-list-ordenar-merge-input:checked) {
-  color: #fcfdff;
-  border-color: rgba(74, 222, 128, 0.35);
-  background-color: rgba(74, 222, 128, 0.08);
+  color: #1d1d1f;
+  border-color: rgba(21, 101, 216, 0.35);
+  background-color: rgba(21, 101, 216, 0.06);
 }
 
 .nm-hub-app--cut-list .cut-list-day-label {
@@ -6731,22 +6738,22 @@ select.hub-mayorista-client-modal__input {
   margin-top: 2px;
   font-size: 0.75rem;
   font-weight: 600;
-  letter-spacing: 0.02em;
-  color: #9099a3;
+  letter-spacing: -0.01em;
+  color: #8a93a0;
 }
 
 .nm-hub-app--cut-list .cut-material-badge {
   display: inline-block;
   margin-top: 2px;
   margin-right: 6px;
-  padding: 1px 6px;
-  border-radius: 4px;
+  padding: 2px 8px;
+  border-radius: 980px;
   font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  color: #5b6470;
-  background: rgba(91, 100, 112, 0.12);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: #5b6573;
+  background: #f2f2f7;
 }
 
 .nm-hub-app--cut-list .cut-mold-section {
@@ -6758,18 +6765,18 @@ select.hub-mayorista-client-modal__input {
   font-size: 0.85rem;
   font-weight: 600;
   line-height: 1.45;
-  color: #9099a3;
+  color: #5b6573;
   white-space: pre-line;
 }
 
 .nm-hub-app--cut-list .cut-mold-section__title,
 .nm-hub-app--cut-list .cut-plan-section__title {
   margin: 0 0 10px;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #737a82;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: #6e6e73;
 }
 
 .nm-hub-app--cut-list .cut-plan-section {
@@ -6788,7 +6795,7 @@ select.hub-mayorista-client-modal__input {
   margin: 0 0 4px;
   font-size: 0.85rem;
   font-weight: 600;
-  color: #9099a3;
+  color: #6e6e73;
   text-align: center;
 }
 
@@ -6796,29 +6803,30 @@ select.hub-mayorista-client-modal__input {
   margin: 0;
   padding: 14px;
   border-radius: 14px;
-  background: rgba(74, 222, 128, 0.08);
-  border: 1px solid rgba(74, 222, 128, 0.25);
+  background: rgba(15, 159, 110, 0.08);
+  border: 1px solid rgba(15, 159, 110, 0.22);
 }
 
 .nm-hub-app--cut-list .cut-strip-plan__summary-title {
   margin: 0 0 6px;
   font-size: 1rem;
   font-weight: 700;
-  color: #fcfdff;
+  color: #1d1d1f;
+  letter-spacing: -0.02em;
 }
 
 .nm-hub-app--cut-list .cut-strip-plan__summary-meta {
   margin: 0 0 8px;
   font-size: 0.9rem;
-  font-weight: 600;
-  color: #4ade80;
+  font-weight: 650;
+  color: #0f9f6e;
 }
 
 .nm-hub-app--cut-list .cut-strip-plan__summary-hint {
   margin: 0;
   font-size: 0.8rem;
   line-height: 1.4;
-  color: #9099a3;
+  color: #6e6e73;
 }
 
 .nm-hub-app--cut-list .cut-strip-plan__list {
@@ -6834,8 +6842,9 @@ select.hub-mayorista-client-modal__input {
   margin: 0;
   padding: 14px;
   border-radius: 14px;
-  background: var(--bg-surface-rebel);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   transition: opacity 0.2s ease, filter 0.2s ease;
 }
 
@@ -6864,52 +6873,52 @@ select.hub-mayorista-client-modal__input {
   min-width: 2rem;
   padding: 4px 10px;
   border-radius: 8px;
-  background: #fcfdff;
-  color: #08090a;
+  background: #f2f2f7;
+  color: #1d1d1f;
   font-size: 0.9rem;
-  font-weight: 800;
+  font-weight: 750;
 }
 
 .nm-hub-app--cut-list .cut-strip-plan__sheets {
   font-size: 0.85rem;
   font-weight: 700;
-  color: #4ade80;
+  color: #0f9f6e;
 }
 
 .nm-hub-app--cut-list .cut-strip-plan__cut-size {
   margin: 0 0 6px;
   font-size: 1.05rem;
-  color: #fcfdff;
+  color: #1d1d1f;
 }
 
 .nm-hub-app--cut-list .cut-strip-plan__cut-size strong {
   font-size: 1.25rem;
-  color: #4ade80;
+  color: #0f9f6e;
 }
 
 .nm-hub-app--cut-list .cut-strip-plan__width {
   margin: 0 0 12px;
   font-size: 0.85rem;
-  color: #9099a3;
+  color: #6e6e73;
 }
 
 .nm-hub-app--cut-list .cut-strip-plan__waste {
-  color: #737a82;
+  color: #8a93a0;
 }
 
 .nm-hub-app--cut-list .cut-strip-plan__pieces {
   padding-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
 }
 
 .nm-hub-app--cut-list .cut-strip-plan__pieces-label {
   display: block;
   margin-bottom: 8px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: #737a82;
+  font-size: 0.78rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: #6e6e73;
 }
 
 .nm-hub-app--cut-list .cut-strip-plan__pieces-lines {
@@ -6922,7 +6931,7 @@ select.hub-mayorista-client-modal__input {
   font-size: 1.05rem;
   font-weight: 700;
   line-height: 1.4;
-  color: #fcfdff;
+  color: #1d1d1f;
 }
 
 .nm-hub-app--cut-list .cut-strip-plan__piece-row {
@@ -6948,7 +6957,7 @@ select.hub-mayorista-client-modal__input {
   width: 20px;
   height: 20px;
   margin: 0;
-  accent-color: #4ade80;
+  accent-color: #1565d8;
   cursor: pointer;
 }
 
@@ -6957,7 +6966,7 @@ select.hub-mayorista-client-modal__input {
   font-size: 1.05rem;
   font-weight: 700;
   line-height: 1.5;
-  color: #fcfdff;
+  color: #1d1d1f;
   word-break: break-word;
 }
 
@@ -6973,31 +6982,31 @@ select.hub-mayorista-client-modal__input {
 .nm-hub-app--cut-list .cut-strip-plan__pieces-list li {
   padding: 8px 12px;
   border-radius: 10px;
-  background: #181a1f;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #f2f2f7;
+  border: 1px solid transparent;
   font-size: 1rem;
   font-weight: 700;
-  color: #fcfdff;
+  color: #1d1d1f;
 }
 
 .nm-hub-app--cut-list .cut-strip-plan__unplaced {
   padding: 12px 14px;
   border-radius: 12px;
-  background: rgba(248, 113, 113, 0.1);
-  border: 1px solid rgba(248, 113, 113, 0.35);
+  background: rgba(217, 45, 32, 0.08);
+  border: 1px solid rgba(217, 45, 32, 0.22);
 }
 
 .nm-hub-app--cut-list .cut-strip-plan__unplaced-title {
   margin: 0 0 8px;
   font-size: 0.85rem;
   font-weight: 700;
-  color: #f87171;
+  color: #b42318;
 }
 
 .nm-hub-app--cut-list .cut-strip-plan__unplaced ul {
   margin: 0;
   padding-left: 1.1rem;
-  color: #fca5a5;
+  color: #b42318;
   font-size: 0.9rem;
 }
 
@@ -7006,73 +7015,81 @@ select.hub-mayorista-client-modal__input {
   width: 100%;
   box-sizing: border-box;
   margin: 0;
-  background-color: var(--bg-surface-rebel);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  border-radius: 12px;
+  background-color: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 14px;
   padding: 14px 16px;
-  color: #535a62;
+  color: #1d1d1f;
   font: inherit;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  text-transform: none;
+  letter-spacing: -0.02em;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
   -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .nm-hub-app--cut-list .cut-list-ordenar-btn.active {
-  background-color: #fcfdff;
-  color: #08090a;
-  border-color: #fcfdff;
-  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
+  background-color: #1565d8;
+  color: #ffffff;
+  border-color: #1565d8;
+  box-shadow: 0 1px 2px rgba(21, 101, 216, 0.25);
 }
 
 .nm-hub-app--cut-list .cut-list-ordenar-btn:not(.active):hover {
-  background-color: #181a1f;
-  border-color: rgba(255, 255, 255, 0.1);
-  color: #9099a3;
+  background-color: #f2f2f7;
+  border-color: rgba(15, 23, 42, 0.14);
+  color: #1d1d1f;
 }
 
 .nm-hub-app--cut-list .cut-list-ordenar-btn:focus-visible {
-  outline: 2px solid rgba(74, 222, 128, 0.45);
+  outline: 2px solid rgba(21, 101, 216, 0.45);
   outline-offset: 2px;
 }
 
 .nm-hub-app--cut-list .cut-list-empty-msg,
 .nm-hub-app--cut-list .nm-prod-task-meta {
-  color: var(--text-rebel-secondary);
-  font-size: 0.9rem;
+  color: #6e6e73;
+  font-size: 0.92rem;
+  text-align: center;
+  padding: 1.5rem 0.75rem;
 }
 
 .nm-hub-app--cut-list .cut-list-error {
-  margin: 0 16px;
+  margin: 0;
 }
 
 .nm-hub-app--cut-list .nm-prod-all-cut-state {
-  padding: 1.25rem 0.5rem;
+  padding: 2.75rem 1rem;
+  text-align: center;
 }
 
 .nm-hub-app--cut-list .nm-prod-all-cut-text,
 .nm-hub-app--cut-list .nm-prod-empty-text {
-  color: var(--text-rebel-secondary);
+  margin: 0;
+  color: #8a93a0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 .nm-hub-app--cut-list .nm-prod-delete-list-wrap {
-  margin-top: 0.25rem;
+  margin-top: 0.5rem;
 }
 
 /* Filas de corte */
 .nm-hub-app--cut-list .cut-item-row {
   position: relative;
-  background-color: var(--bg-surface-rebel);
-  border: 1px solid rgba(255, 255, 255, 0.02);
+  background-color: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.1);
   border-radius: 14px;
-  padding: 16px;
+  padding: 14px 16px;
   margin-bottom: 10px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   box-sizing: border-box;
-  transition: opacity 0.2s ease, filter 0.2s ease;
+  transition: opacity 0.2s ease, filter 0.2s ease, border-color 0.15s ease;
 }
 
 .nm-hub-app--cut-list .cut-item-row--ordenar-dismissed {
@@ -7103,7 +7120,7 @@ select.hub-mayorista-client-modal__input {
   width: 20px;
   height: 20px;
   margin: 0;
-  accent-color: #4ade80;
+  accent-color: #1565d8;
   cursor: pointer;
 }
 
@@ -7116,11 +7133,12 @@ select.hub-mayorista-client-modal__input {
 }
 
 .nm-hub-app--cut-list .cut-item-row.normal-state {
-  border-left: 4px solid rgba(255, 255, 255, 0.05);
+  border-left: 3px solid transparent;
 }
 
 .nm-hub-app--cut-list .cut-item-row.alert-state {
-  border-left: 4px solid #ffab40 !important;
+  border-left: 3px solid #c27803 !important;
+  background: rgba(194, 120, 3, 0.04);
 }
 
 .nm-hub-app--cut-list .cut-item-row--completed {
@@ -7137,24 +7155,25 @@ select.hub-mayorista-client-modal__input {
 }
 
 .nm-hub-app--cut-list .cut-measurements {
-  font-size: 1.2rem;
-  font-weight: 800;
-  color: #fcfdff;
+  font-size: 1.15rem;
+  font-weight: 750;
+  color: #1d1d1f;
   margin: 0;
   line-height: 1.2;
+  letter-spacing: -0.02em;
 }
 
 .nm-hub-app--cut-list .cut-qty,
 .nm-hub-app--cut-list .cut-qty-sep {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--text-rebel-secondary);
+  font-size: 0.95rem;
+  font-weight: 650;
+  color: #6e6e73;
 }
 
 .nm-hub-app--cut-list .cut-alert-text {
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-weight: 700;
-  color: #ffab40;
+  color: #c27803;
   white-space: nowrap;
 }
 
@@ -7166,9 +7185,9 @@ select.hub-mayorista-client-modal__input {
 }
 
 .nm-hub-app--cut-list .btn-utility-rebel {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  color: #9099a3;
+  background: #f2f2f7;
+  border: 0;
+  color: #3a3a3c;
   width: 38px;
   height: 38px;
   border-radius: 10px;
@@ -7176,7 +7195,7 @@ select.hub-mayorista-client-modal__input {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease;
   padding: 0;
   font-family: inherit;
   font-size: 1rem;
@@ -7184,23 +7203,23 @@ select.hub-mayorista-client-modal__input {
 }
 
 .nm-hub-app--cut-list .btn-utility-rebel:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fcfdff;
+  background: #e8e8ed;
+  color: #1d1d1f;
 }
 
 .nm-hub-app--cut-list .btn-utility-rebel--priority {
-  border-color: rgba(255, 171, 64, 0.45);
-  color: #ffab40;
+  background: rgba(194, 120, 3, 0.12);
+  color: #c27803;
 }
 
 .nm-hub-app--cut-list .btn-utility-rebel--active {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fcfdff;
+  background: rgba(21, 101, 216, 0.12);
+  color: #1565d8;
 }
 
 .nm-hub-app--cut-list .btn-action-complete-rebel {
-  background-color: #4ade80;
-  color: #08090a;
+  background-color: #0f9f6e;
+  color: #ffffff;
   border: none;
   width: 38px;
   height: 38px;
@@ -7211,8 +7230,8 @@ select.hub-mayorista-client-modal__input {
   font-weight: 800;
   font-size: 1.15rem;
   cursor: pointer;
-  box-shadow: 0 4px 10px rgba(74, 222, 128, 0.15);
-  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(15, 159, 110, 0.25);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
   padding: 0;
   font-family: inherit;
   line-height: 1;
@@ -7220,7 +7239,7 @@ select.hub-mayorista-client-modal__input {
 
 .nm-hub-app--cut-list .btn-action-complete-rebel:hover:not(:disabled) {
   transform: scale(1.03);
-  box-shadow: 0 4px 14px rgba(74, 222, 128, 0.25);
+  box-shadow: 0 4px 12px rgba(15, 159, 110, 0.28);
 }
 
 .nm-hub-app--cut-list .btn-action-complete-rebel:disabled,
@@ -7233,14 +7252,14 @@ select.hub-mayorista-client-modal__input {
 .nm-hub-app--cut-list .cut-item-notes {
   margin: 10px 0 0;
   font-size: 0.82rem;
-  color: var(--text-rebel-secondary);
+  color: #6e6e73;
   line-height: 1.35;
   width: 100%;
 }
 
 .nm-hub-app--cut-list .cut-readonly-label {
   font-size: 0.78rem;
-  color: var(--text-rebel-muted);
+  color: #8a93a0;
 }
 
 /* --------------------------------------------------------------------------
