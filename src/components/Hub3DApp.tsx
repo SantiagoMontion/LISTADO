@@ -567,7 +567,7 @@ export function Hub3DApp({
               onClick={() => setConfigOpen(true)}
               disabled={configLoading}
             >
-              {configLoading ? 'Cargando config…' : 'Configurar impresora'}
+              {configLoading ? 'Cargando…' : 'Configuración impresora'}
             </button>
           </div>
           {configSaveError ? (

@@ -492,6 +492,29 @@ body:has(.nm-hub-app) {
   color: #0f172a !important;
 }
 
+/* 3D cotizador — refuerzo light */
+.nm-hub-app--3d .printing3d-section,
+.nm-hub-app--3d .printing3d-output-block,
+.nm-hub-app--3d .printing3d-accordion {
+  background: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  color: #0f172a !important;
+}
+
+.nm-hub-app--3d .printing3d-page__title,
+.nm-hub-app--3d .printing3d-summary-stat__value,
+.nm-hub-app--3d .printing3d-accordion__summary,
+.nm-hub-app--3d .printing3d-breakdown__row strong,
+.nm-hub-app--3d .printing3d-logistics__item strong {
+  color: #0f172a !important;
+}
+
+.nm-hub-app--3d .printing3d-page__lead,
+.nm-hub-app--3d .printing3d-field__label,
+.nm-hub-app--3d .printing3d-config-status {
+  color: #5b6573 !important;
+}
+
 .hub-desktop-nav__link {
   color: #64748b !important;
 }
