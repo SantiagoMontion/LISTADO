@@ -2577,20 +2577,42 @@ body:has(.nm-hub-app) {
   max-width: min(340px, calc(100vw - 9rem));
 }
 
-.nm-hub-app--cut-list .nm-hub-brand-bar__trailing .navbar-trailing-action-btn.nm-hub-brand-bar__btn {
-  width: 40px;
-  height: 40px;
-  min-width: 40px;
-  min-height: 40px;
-  padding: 0;
+.nm-hub-app--cut-list .nm-hub-brand-bar__trailing .navbar-trailing-action-btn.cut-list-nuevo-corte-btn {
+  width: auto;
+  height: auto;
+  min-width: 0;
+  min-height: 36px;
+  padding: 0.5rem 0.95rem;
   box-sizing: border-box;
-  border-radius: 12px;
+  border-radius: 980px;
+  border: 1px solid #1565d8;
+  background: #1565d8;
+  color: #ffffff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.35rem;
+  font-size: 0.84rem;
   font-weight: 700;
-  line-height: 1;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(21, 101, 216, 0.25);
+}
+
+.nm-hub-app--cut-list .nm-hub-brand-bar__trailing .navbar-trailing-action-btn.cut-list-nuevo-corte-btn:hover:not(:disabled) {
+  background: #1257bc;
+  border-color: #1257bc;
+  color: #ffffff;
+}
+
+.nm-hub-app--cut-list .nm-hub-brand-bar__trailing .navbar-trailing-action-btn.cut-list-nuevo-corte-btn:focus-visible {
+  outline: 2px solid rgba(21, 101, 216, 0.45);
+  outline-offset: 2px;
+}
+
+.nm-hub-app--cut-list .nm-hub-brand-bar__trailing .navbar-trailing-action-btn.cut-list-nuevo-corte-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .nm-hub-app.nm-hub-app--tasks .nm-hub-brand-bar__trailing .navbar-trailing-action-btn.nm-hub-brand-bar__btn,

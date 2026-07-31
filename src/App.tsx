@@ -1288,16 +1288,16 @@ export default function App() {
             isCutList && canEditTasks ? (
               <button
                 type="button"
-                className="nm-hub-brand-bar__btn navbar-trailing-action-btn"
+                className="nm-hub-brand-bar__btn navbar-trailing-action-btn cut-list-nuevo-corte-btn"
                 onClick={() => {
                   setQuickAddError(null)
                   setPendingQuickAdd(true)
                 }}
                 disabled={!configured || loading}
-                aria-label="Agregar medida al día seleccionado"
-                title="Agregar medida"
+                aria-label="Nuevo corte"
+                title="Nuevo corte"
               >
-                +
+                Nuevo corte
               </button>
             ) : null
           }

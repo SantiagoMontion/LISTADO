@@ -71,6 +71,18 @@ body:has(.nm-hub-app) {
   border-color: rgba(21, 101, 216, 0.3) !important;
 }
 
+.nm-hub-app--cut-list .navbar-trailing-action-btn.cut-list-nuevo-corte-btn {
+  background: #1565d8 !important;
+  border-color: #1565d8 !important;
+  color: #ffffff !important;
+}
+
+.nm-hub-app--cut-list .navbar-trailing-action-btn.cut-list-nuevo-corte-btn:hover:not(:disabled) {
+  background: #1257bc !important;
+  border-color: #1257bc !important;
+  color: #ffffff !important;
+}
+
 .hub-desktop-nav {
   background: rgba(255, 255, 255, 0.92) !important;
   border-bottom: 1px solid rgba(15, 23, 42, 0.08) !important;
