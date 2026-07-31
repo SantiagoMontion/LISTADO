@@ -246,9 +246,12 @@ function ResultAccordion({ title, children }: ResultAccordionProps) {
 interface MainSummaryProps {
   result: Printing3DResults
   sale: Printing3DRoundedSale
+  piezasPorCama: number
 }
 
-function MainSummary({ result, sale }: MainSummaryProps) {
+function MainSummary({ result, sale, piezasPorCama }: MainSummaryProps) {
+  const showPerUnit = piezasPorCama > 1
+
   return (
     <section className="printing3d-output-block printing3d-summary">
       <h2 className="printing3d-output-block__title">Resumen</h2>
@@ -264,7 +267,10 @@ function MainSummary({ result, sale }: MainSummaryProps) {
         <div className="printing3d-summary__hero">
           <span className="printing3d-summary__hero-label">Precio</span>
           <strong className="printing3d-summary__hero-value">
-            {formatWholeMoney(sale.precioVentaUnitario)} c/u
+            {formatWholeMoney(sale.precioVentaUnitario)}
+            {showPerUnit ? (
+              <span className="printing3d-summary__hero-unit"> c/u</span>
+            ) : null}
           </strong>
         </div>
       </div>
@@ -602,6 +608,7 @@ export function Hub3DApp({
                 <MainSummary
                   result={result}
                   sale={roundedSale!}
+                  piezasPorCama={quote.piezasPorCama}
                 />
 
                 <ResultAccordion title="Desglose">
