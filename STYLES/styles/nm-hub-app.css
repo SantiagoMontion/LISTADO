@@ -9260,6 +9260,17 @@ body:has(.nm-hub-app--logistica-andreani) {
   font-weight: 600;
 }
 
+.nm-hub-app--3d input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.nm-hub-app--3d input[type='number']::-webkit-outer-spin-button,
+.nm-hub-app--3d input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 .nm-hub-app--3d .printing3d-field__input.nm-hub-input:focus,
 .nm-hub-app--3d .printing3d-slider__number.nm-hub-input:focus,
 .nm-hub-app--3d .printing3d-select.nm-hub-input:focus {
