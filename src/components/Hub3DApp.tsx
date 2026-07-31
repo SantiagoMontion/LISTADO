@@ -139,7 +139,7 @@ function ProfitField({ value, onChange, id = 'porcentaje-ganancia' }: ProfitFiel
   return (
     <div className="printing3d-field printing3d-field--full">
       <label className="printing3d-field__label" htmlFor={id}>
-        Porcentaje de ganancia deseada
+        Ganancia
       </label>
       <div className="printing3d-slider-row">
         <input
@@ -160,7 +160,7 @@ function ProfitField({ value, onChange, id = 'porcentaje-ganancia' }: ProfitFiel
           max={99}
           step={1}
           value={value}
-          aria-label="Porcentaje de ganancia deseada"
+          aria-label="Ganancia"
           onChange={(e) => {
             const parsed = Number.parseFloat(e.target.value)
             onChange(Number.isFinite(parsed) ? parsed : 0)
@@ -189,7 +189,7 @@ function BedPrintTimeSelect({ horasCama, minutosCama, onChange }: BedPrintTimeSe
 
   return (
     <label className="printing3d-field" htmlFor="tiempo-cama">
-      <span className="printing3d-field__label">Tiempo de impresión de la cama</span>
+      <span className="printing3d-field__label">Tiempo</span>
       <select
         id="tiempo-cama"
         className="nm-hub-input printing3d-select"
@@ -252,32 +252,32 @@ interface MainSummaryProps {
 function MainSummary({ result, sale, quantity }: MainSummaryProps) {
   const showTotal = quantity > 1
   const totalLabel = (total: number, format: (value: number) => string = formatWholeMoney) =>
-    `Total del pedido (${quantity} u.): ${format(total)}`
+    `Pedido (${quantity} u.): ${format(total)}`
 
   return (
     <section className="printing3d-output-block printing3d-summary">
-      <h2 className="printing3d-output-block__title">Resumen principal</h2>
+      <h2 className="printing3d-output-block__title">Resumen</h2>
       <div className="printing3d-summary__layout">
         <div className="printing3d-summary__side">
           <SummaryStat
-            label="Costo de producción"
+            label="Costo"
             value={formatMoney(result.costoUnitarioFinal)}
-            hint="por unidad"
+            hint="/ u."
             totalLabel={showTotal ? totalLabel(result.costoTotalProduccion, formatMoney) : undefined}
           />
           <SummaryStat
-            label="Ganancia neta"
+            label="Ganancia"
             value={formatWholeMoney(sale.gananciaNetaUnitaria)}
-            hint={`por unidad · margen ${formatNumber(sale.margenRealPorcentaje, 1)}%`}
+            hint={`/ u. · ${formatNumber(sale.margenRealPorcentaje, 1)}%`}
             totalLabel={showTotal ? totalLabel(sale.gananciaNetaTotal) : undefined}
           />
         </div>
         <div className="printing3d-summary__hero">
-          <span className="printing3d-summary__hero-label">Precio de venta sugerido</span>
+          <span className="printing3d-summary__hero-label">Precio</span>
           <strong className="printing3d-summary__hero-value">
             {formatWholeMoney(sale.precioVentaUnitario)}
           </strong>
-          <span className="printing3d-summary__hero-hint">por unidad</span>
+          <span className="printing3d-summary__hero-hint">/ u.</span>
           {showTotal ? (
             <span className="printing3d-summary__hero-total">
               {totalLabel(sale.precioVentaTotal)}
@@ -316,8 +316,7 @@ function PrinterConfigModal({
   config,
   onChange,
   onClose,
-  cloudSync = false,
-}: PrinterConfigModalProps) {
+}: Omit<PrinterConfigModalProps, 'cloudSync'> & { cloudSync?: boolean }) {
   if (!open) return null
 
   const patch = (partial: Partial<Printing3DPrinterConfig>) => {
@@ -339,20 +338,15 @@ function PrinterConfigModal({
       >
         <header className="printing3d-config-modal__head">
           <h2 id="printing3d-config-title" className="modal-title-rebel">
-            Configurar impresora
+            Impresora
           </h2>
-          <p className="printing3d-config-modal__lead">
-            {cloudSync
-              ? 'Estos valores se guardan en la nube y los comparte todo el equipo.'
-              : 'Estos valores se guardan en este dispositivo hasta conectar Supabase.'}
-          </p>
         </header>
 
         <div className="printing3d-config-modal__body">
-          <InputSection title="Material (filamento)">
+          <InputSection title="Filamento">
             <NumberField
               id="cfg-precio-rollo"
-              label="Precio del rollo"
+              label="Precio rollo"
               value={config.precioRollo}
               onChange={(v) => patch({ precioRollo: v })}
               step={100}
@@ -360,7 +354,7 @@ function PrinterConfigModal({
             />
             <NumberField
               id="cfg-peso-rollo"
-              label="Peso del rollo"
+              label="Peso rollo"
               value={config.pesoRolloGramos}
               onChange={(v) => patch({ pesoRolloGramos: v })}
               min={1}
@@ -369,7 +363,7 @@ function PrinterConfigModal({
             />
             <NumberField
               id="cfg-peso-purga"
-              label="Purga / soportes / desperdicio por cama"
+              label="Purga"
               value={config.pesoPurgaCama}
               onChange={(v) => patch({ pesoPurgaCama: v })}
               step={0.1}
@@ -377,10 +371,10 @@ function PrinterConfigModal({
             />
           </InputSection>
 
-          <InputSection title="Máquina y energía">
+          <InputSection title="Máquina">
             <NumberField
               id="cfg-valor-impresora"
-              label="Valor / costo de la impresora"
+              label="Valor"
               value={config.valorImpresora}
               onChange={(v) => patch({ valorImpresora: v })}
               step={1000}
@@ -388,7 +382,7 @@ function PrinterConfigModal({
             />
             <NumberField
               id="cfg-vida-util"
-              label="Vida útil estimada"
+              label="Vida útil"
               value={config.vidaUtilHoras}
               onChange={(v) => patch({ vidaUtilHoras: v })}
               min={1}
@@ -397,7 +391,7 @@ function PrinterConfigModal({
             />
             <NumberField
               id="cfg-consumo-watts"
-              label="Consumo eléctrico promedio"
+              label="Consumo"
               value={config.consumoWatts}
               onChange={(v) => patch({ consumoWatts: v })}
               step={5}
@@ -405,18 +399,18 @@ function PrinterConfigModal({
             />
             <NumberField
               id="cfg-costo-kwh"
-              label="Costo del kWh"
+              label="kWh"
               value={config.costoKwh}
               onChange={(v) => patch({ costoKwh: v })}
               step={1}
-              suffix="$/kWh"
+              suffix="$"
             />
           </InputSection>
 
           <InputSection title="Mano de obra">
             <NumberField
               id="cfg-costo-hora"
-              label="Costo hora de trabajo"
+              label="Hora"
               value={config.costoHoraTrabajo}
               onChange={(v) => patch({ costoHoraTrabajo: v })}
               step={100}
@@ -424,7 +418,7 @@ function PrinterConfigModal({
             />
             <NumberField
               id="cfg-minutos-post"
-              label="Preparación / post-procesado por pieza"
+              label="Postproceso"
               value={config.minutosPostproceso}
               onChange={(v) => patch({ minutosPostproceso: v })}
               step={1}
@@ -432,10 +426,10 @@ function PrinterConfigModal({
             />
           </InputSection>
 
-          <InputSection title="Márgenes y riesgos">
+          <InputSection title="Márgenes">
             <NumberField
               id="cfg-porcentaje-fallos"
-              label="Porcentaje de fallos / mermas"
+              label="Fallos"
               value={config.porcentajeFallos}
               onChange={(v) => patch({ porcentajeFallos: v })}
               step={0.5}
@@ -547,7 +541,7 @@ export function Hub3DApp({
   return (
     <div className="nm-hub-app nm-hub-app--3d">
       <header className="dashboard-navbar dashboard-navbar-clean nm-hub-header">
-        <HubBrandBar integratedDashboard integratedSubtitle="Cotizador 3D" adminSignOut={adminSignOut} />
+        <HubBrandBar integratedDashboard integratedSubtitle="Calculadora 3D" adminSignOut={adminSignOut} />
       </header>
 
       <HubDesktopNav role={profileRole} />
@@ -555,38 +549,29 @@ export function Hub3DApp({
       <div className="printing3d-page">
         <header className="printing3d-page__head">
           <div className="printing3d-page__head-row">
-            <div>
-              <h1 className="printing3d-page__title">Cotizador de impresión 3D</h1>
-              <p className="printing3d-page__lead">
-                Ingresá los datos de la pieza y obtené el precio de venta al instante.
-              </p>
-            </div>
+            <h1 className="printing3d-page__title">Calculadora 3D</h1>
             <button
               type="button"
               className="printing3d-config-btn"
               onClick={() => setConfigOpen(true)}
               disabled={configLoading}
             >
-              {configLoading ? 'Cargando…' : 'Configuración impresora'}
+              {configLoading ? '…' : 'Impresora'}
             </button>
           </div>
           {configSaveError ? (
             <p className="printing3d-config-status printing3d-config-status--warn" role="status">
               {configSaveError}
             </p>
-          ) : configured ? (
-            <p className="printing3d-config-status" role="status">
-              Config compartida del taller (guardada en la nube).
-            </p>
           ) : null}
         </header>
 
         <div className="printing3d-layout">
           <div className="printing3d-layout__inputs">
-            <InputSection title="Cotización">
+            <InputSection title="Pieza">
               <NumberField
                 id="peso-filamento-cama"
-                label="Peso total de filamento de la cama (slicer)"
+                label="Peso"
                 value={quote.pesoFilamentoCama}
                 onChange={(v) => patchQuote({ pesoFilamentoCama: v })}
                 step={0.1}
@@ -599,7 +584,7 @@ export function Hub3DApp({
               />
               <NumberField
                 id="piezas-cama"
-                label="Piezas por cama"
+                label="Por cama"
                 value={quote.piezasPorCama}
                 onChange={(v) =>
                   patchQuote({ piezasPorCama: Math.max(1, Math.floor(v)) })
@@ -610,7 +595,7 @@ export function Hub3DApp({
               />
               <NumberField
                 id="cantidad-total"
-                label="Cantidad total a cotizar"
+                label="Cantidad"
                 value={quote.cantidadTotalUnidades}
                 onChange={(v) =>
                   patchQuote({ cantidadTotalUnidades: Math.max(1, Math.floor(v)) })
@@ -621,7 +606,7 @@ export function Hub3DApp({
               />
               <NumberField
                 id="insumos-extra"
-                label="Insumos extra por pieza (opcional)"
+                label="Extra"
                 value={quote.insumosExtraPieza}
                 onChange={(v) => patchQuote({ insumosExtraPieza: v })}
                 step={10}
@@ -637,7 +622,7 @@ export function Hub3DApp({
           <div className="printing3d-layout__results">
             {!result.valid ? (
               <div className="printing3d-errors" role="alert">
-                <p className="printing3d-errors__title">Revisá estos datos:</p>
+                <p className="printing3d-errors__title">Errores</p>
                 <ul>
                   {result.errors.map((error) => (
                     <li key={error}>{error}</li>
@@ -652,7 +637,7 @@ export function Hub3DApp({
                   quantity={quote.cantidadTotalUnidades}
                 />
 
-                <ResultAccordion title="Desglose del costo unitario">
+                <ResultAccordion title="Desglose">
                   <div className="printing3d-breakdown">
                     <BreakdownRow
                       label="Filamento"
@@ -663,7 +648,7 @@ export function Hub3DApp({
                       value={formatMoney(result.breakdown.costoElectricidad)}
                     />
                     <BreakdownRow
-                      label="Desgaste de máquina"
+                      label="Desgaste"
                       value={formatMoney(result.breakdown.costoDepreciacion)}
                     />
                     <BreakdownRow
@@ -671,28 +656,28 @@ export function Hub3DApp({
                       value={formatMoney(result.breakdown.costoManoObra)}
                     />
                     <BreakdownRow
-                      label="Insumos extra"
+                      label="Extra"
                       value={formatMoney(result.breakdown.insumosExtra)}
                     />
                     <BreakdownRow
-                      label="Reserva fallos / mermas"
+                      label="Fallos"
                       value={formatMoney(result.breakdown.reservaFallos)}
                     />
                   </div>
                 </ResultAccordion>
 
-                <ResultAccordion title="Datos logísticos de producción">
+                <ResultAccordion title="Producción">
                   <div className="printing3d-logistics">
                     <div className="printing3d-logistics__item">
-                      <span>Camas / platos necesarios</span>
+                      <span>Camas</span>
                       <strong>{numberFmt.format(result.camasTotales)}</strong>
                     </div>
                     <div className="printing3d-logistics__item">
-                      <span>Tiempo total de impresión</span>
+                      <span>Tiempo</span>
                       <strong>{formatHours(result.horasTotalesMaquinado)}</strong>
                     </div>
                     <div className="printing3d-logistics__item">
-                      <span>Filamento total</span>
+                      <span>Filamento</span>
                       <strong>
                         {formatNumber(result.filamentoTotalGramos, 1)} g
                         <span className="printing3d-logistics__detail">

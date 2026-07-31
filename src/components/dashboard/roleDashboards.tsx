@@ -44,7 +44,7 @@ export function AdminDashboard({ stats }: RoleDashboardProps) {
         title="Andreani"
       />
       <DashboardCard href={links.uploadList} accent="create" icon="↑" title="Subir lista" />
-      <DashboardCard href={links.printing3d} accent="create" icon="◈" title="Cotizador 3D" />
+      <DashboardCard href={links.printing3d} accent="create" icon="◈" title="Calculadora 3D" />
     </nav>
   )
 }

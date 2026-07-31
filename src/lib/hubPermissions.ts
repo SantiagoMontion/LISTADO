@@ -226,7 +226,7 @@ export function hubDesktopNavGroups(
   }
 
   if (perms.view3DCalculator) {
-    groups.push({ id: 'herramientas', label: 'Cotizador 3D', href: links.printing3d })
+    groups.push({ id: 'herramientas', label: 'Calculadora 3D', href: links.printing3d })
   }
 
   return groups
