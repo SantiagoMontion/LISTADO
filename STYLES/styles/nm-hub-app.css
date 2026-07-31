@@ -5966,6 +5966,19 @@ body:has(.nm-hub-app) {
   margin-bottom: 1.25rem;
 }
 
+.hub-page-head--with-action {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem 1.25rem;
+  flex-wrap: wrap;
+}
+
+.hub-page-head__main {
+  min-width: 0;
+  flex: 1 1 16rem;
+}
+
 .hub-page-head__title {
   margin: 0 0 0.35rem;
   font-size: clamp(1.35rem, 2.4vw, 1.7rem);
@@ -5981,6 +5994,128 @@ body:has(.nm-hub-app) {
   font-size: 0.92rem;
   color: #5b6573;
   line-height: 1.45;
+}
+
+.hub-page-back {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 0 0.45rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #1565d8;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 650;
+  cursor: pointer;
+  letter-spacing: -0.01em;
+}
+
+.hub-page-back:hover {
+  color: #0d47a1;
+}
+
+.hub-page-primary-action {
+  flex: 0 0 auto;
+  margin-top: 0.15rem;
+  padding: 0.65rem 1.05rem;
+  border-radius: 10px;
+  border: 1px solid #1565d8;
+  background: #1565d8;
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(21, 101, 216, 0.2);
+}
+
+.hub-page-primary-action:hover {
+  background: #0d47a1;
+  border-color: #0d47a1;
+}
+
+.nm-hub-app--tasks .hub-tasks-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.nm-hub-app--tasks .hub-tasks-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 0.75rem;
+}
+
+.nm-hub-app--tasks .hub-tasks-filters .tasks-hub-search-wrap {
+  flex: 1 1 12rem;
+  min-width: 10rem;
+  max-width: 20rem;
+}
+
+.nm-hub-app--tasks .hub-tasks-filters .nm-hub-task-search.field-input {
+  max-width: none;
+}
+
+.nm-hub-app--tasks .hub-tasks-filter-field {
+  flex: 0 1 auto;
+}
+
+.nm-hub-app--tasks .hub-tasks-filter-select {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  min-height: 2.5rem;
+  padding: 0.55rem 2rem 0.55rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  background-color: #ffffff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M6 9l6 6 6-6' stroke='%64748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.7rem center;
+  color: #0f172a;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.nm-hub-app--tasks .hub-tasks-completion-seg {
+  display: inline-flex;
+  align-items: stretch;
+  padding: 3px;
+  border-radius: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: #f1f5f9;
+  gap: 2px;
+}
+
+.nm-hub-app--tasks .hub-tasks-completion-seg__btn {
+  margin: 0;
+  min-height: 2.15rem;
+  padding: 0.4rem 0.85rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #64748b;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 650;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.nm-hub-app--tasks .hub-tasks-completion-seg__btn:hover {
+  color: #0f172a;
+}
+
+.nm-hub-app--tasks .hub-tasks-completion-seg__btn--active {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
 }
 
 .nm-hub-app--lista-upload .lista-upload-container {

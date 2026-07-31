@@ -77,6 +77,16 @@ const TASK_CREATE_TYPES: HubTaskCreateType[] = [
   'devolucion',
 ]
 
+const TASK_FILTER_TYPES: HubTaskCreateType[] = [
+  'mayorista',
+  'rehacer',
+  'canje',
+  'devolucion',
+  'falta',
+]
+
+type TaskCompletionFilter = 'all' | 'pending' | 'completed'
+
 function taskTypeUsesClientFields(type: HubTaskCreateType | null): boolean {
   return type === 'mayorista' || type === 'canje'
 }
@@ -380,6 +390,8 @@ export function HubTasksApp({
   const [busy, setBusy] = useState(false)
   const [expandedDetailIds, setExpandedDetailIds] = useState<Set<string>>(() => new Set())
   const [taskQuery, setTaskQuery] = useState('')
+  const [typeFilter, setTypeFilter] = useState<HubTaskCreateType | 'all'>('all')
+  const [completionFilter, setCompletionFilter] = useState<TaskCompletionFilter>('all')
   const [pendingDeleteTask, setPendingDeleteTask] = useState<NmHubTask | null>(null)
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
   const [bulkDeleteSelectedIds, setBulkDeleteSelectedIds] = useState<Set<string>>(() => new Set())
@@ -628,13 +640,17 @@ export function HubTasksApp({
 
   const filteredSorted = useMemo(() => {
     const q = taskQuery.trim().toLowerCase()
-    if (!q) return sorted
     return sorted.filter((t) => {
+      if (typeFilter !== 'all' && t.task_type !== typeFilter) return false
+      if (completionFilter === 'pending' && isHubTaskCompleted(t)) return false
+      if (completionFilter === 'completed' && !isHubTaskCompleted(t)) return false
+      if (!q) return true
       const title = (t.title ?? '').toLowerCase()
       const body = (t.body ?? '').toLowerCase()
-      return title.includes(q) || body.includes(q)
+      const typeLabel = t.task_type ? TASK_TYPE_LABEL[t.task_type].toLowerCase() : ''
+      return title.includes(q) || body.includes(q) || typeLabel.includes(q)
     })
-  }, [sorted, taskQuery])
+  }, [sorted, taskQuery, typeFilter, completionFilter])
 
   const goCreatePanel = useCallback(() => {
     if (readOnly) return
@@ -968,28 +984,16 @@ export function HubTasksApp({
     }
   }
 
-  const showCreateNavBtn = !readOnly && panel === 'list'
+  const goListPanel = useCallback(() => {
+    resetCreateForm()
+    replaceListPanelUrl()
+    setPanel('list')
+  }, [resetCreateForm])
 
   return (
     <div className="nm-hub-app nm-hub-app--tasks">
       <header className="nm-hub-header dashboard-navbar">
-        <HubBrandBar
-          integratedDashboard
-          adminSignOut={isAdmin}
-          trailing={
-            showCreateNavBtn ? (
-              <button
-                type="button"
-                className="nm-hub-brand-bar__btn navbar-trailing-action-btn"
-                onClick={() => goCreatePanel()}
-                aria-label="Nueva tarea"
-                title="Nueva tarea"
-              >
-                +
-              </button>
-            ) : null
-          }
-        />
+        <HubBrandBar integratedDashboard adminSignOut={isAdmin} />
       </header>
 
       <HubDesktopNav role={profileRole} />
@@ -1002,11 +1006,16 @@ export function HubTasksApp({
 
       {!readOnly && panel === 'create' ? (
         <form id="nm-hub-tareas-nueva" className="nm-hub-card nm-hub-card--task-create" onSubmit={(e) => void onCreate(e)}>
-          <header className="hub-page-head">
-            <h1 className="hub-page-head__title">Nueva tarea</h1>
-            <p className="hub-page-head__lead">
-              Elegí el tipo y cargá los datos del pedido o cambio.
-            </p>
+          <header className="hub-page-head hub-page-head--with-action">
+            <div className="hub-page-head__main">
+              <button type="button" className="hub-page-back" onClick={goListPanel}>
+                ‹ Tareas
+              </button>
+              <h1 className="hub-page-head__title">Nueva tarea</h1>
+              <p className="hub-page-head__lead">
+                Elegí el tipo y cargá los datos del pedido o cambio.
+              </p>
+            </div>
           </header>
           <div className="form-container-clean">
           <div className="field-group">
@@ -1354,50 +1363,115 @@ export function HubTasksApp({
 
       {panel === 'list' ? (
         <section id="nm-hub-tareas-lista" className="nm-hub-section nm-hub-section--task-list" aria-labelledby="hub-tasks-title">
-          <header className="hub-page-head">
-            <h1 id="hub-tasks-title" className="hub-page-head__title">
-              Tareas
-            </h1>
-            <p className="hub-page-head__lead">
-              Pedidos mayoristas, cambios y devoluciones. Las completadas (enviado y pago) se muestran atenuadas.
-            </p>
+          <header className="hub-page-head hub-page-head--with-action">
+            <div className="hub-page-head__main">
+              <h1 id="hub-tasks-title" className="hub-page-head__title">
+                Tareas
+              </h1>
+              <p className="hub-page-head__lead">
+                Pedidos mayoristas, cambios y devoluciones del mes.
+              </p>
+            </div>
+            {!readOnly ? (
+              <button
+                type="button"
+                className="hub-page-primary-action"
+                onClick={() => goCreatePanel()}
+              >
+                Nueva tarea
+              </button>
+            ) : null}
           </header>
-          <div className="hub-tasks-month-bar" aria-label="Mes">
-            <button
-              type="button"
-              className="nm-hub-btn nm-hub-btn-ghost"
-              onClick={() => applyMonth(addMonthsToYearMonth(yearMonth, -1))}
-              aria-label="Mes anterior"
-            >
-              ‹
-            </button>
-            <h2 className="hub-tasks-month-title">{formatMonthYearLabel(yearMonth)}</h2>
-            <button
-              type="button"
-              className="nm-hub-btn nm-hub-btn-ghost"
-              onClick={() => applyMonth(addMonthsToYearMonth(yearMonth, 1))}
-              aria-label="Mes siguiente"
-            >
-              ›
-            </button>
-          </div>
-          <div className="tasks-hub-filters-stack">
-            <div className="nm-hub-task-search-wrap tasks-hub-search-wrap">
-              <label className="nm-hub-sr-only" htmlFor="nm-hub-task-q">
-                Buscar en tareas
-              </label>
-              <input
-                id="nm-hub-task-q"
-                type="search"
-                className="nm-hub-input field-input nm-hub-task-search"
-                placeholder="Buscar por título, tipo o detalle…"
-                value={taskQuery}
-                onChange={(e) => setTaskQuery(e.target.value)}
-                autoComplete="off"
-                spellCheck={false}
-              />
+
+          <div className="hub-tasks-toolbar">
+            <div className="hub-tasks-month-bar" aria-label="Mes">
+              <button
+                type="button"
+                className="nm-hub-btn nm-hub-btn-ghost"
+                onClick={() => applyMonth(addMonthsToYearMonth(yearMonth, -1))}
+                aria-label="Mes anterior"
+              >
+                ‹
+              </button>
+              <h2 className="hub-tasks-month-title">{formatMonthYearLabel(yearMonth)}</h2>
+              <button
+                type="button"
+                className="nm-hub-btn nm-hub-btn-ghost"
+                onClick={() => applyMonth(addMonthsToYearMonth(yearMonth, 1))}
+                aria-label="Mes siguiente"
+              >
+                ›
+              </button>
+            </div>
+
+            <div className="hub-tasks-filters" role="search">
+              <div className="nm-hub-task-search-wrap tasks-hub-search-wrap">
+                <label className="nm-hub-sr-only" htmlFor="nm-hub-task-q">
+                  Buscar en tareas
+                </label>
+                <input
+                  id="nm-hub-task-q"
+                  type="search"
+                  className="nm-hub-input field-input nm-hub-task-search"
+                  placeholder="Buscar"
+                  value={taskQuery}
+                  onChange={(e) => setTaskQuery(e.target.value)}
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+              </div>
+
+              <div className="hub-tasks-filter-field">
+                <label className="nm-hub-sr-only" htmlFor="nm-hub-task-type-filter">
+                  Filtrar por tipo
+                </label>
+                <select
+                  id="nm-hub-task-type-filter"
+                  className="hub-tasks-filter-select"
+                  value={typeFilter}
+                  onChange={(e) =>
+                    setTypeFilter(e.target.value as HubTaskCreateType | 'all')
+                  }
+                >
+                  <option value="all">Todos los tipos</option>
+                  {TASK_FILTER_TYPES.map((type) => (
+                    <option key={type} value={type}>
+                      {TASK_TYPE_LABEL[type]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div
+                className="hub-tasks-completion-seg"
+                role="group"
+                aria-label="Filtrar por estado de completado"
+              >
+                {(
+                  [
+                    { value: 'all', label: 'Todas' },
+                    { value: 'pending', label: 'Pendientes' },
+                    { value: 'completed', label: 'Completadas' },
+                  ] as const
+                ).map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    className={`hub-tasks-completion-seg__btn${
+                      completionFilter === opt.value
+                        ? ' hub-tasks-completion-seg__btn--active'
+                        : ''
+                    }`}
+                    aria-pressed={completionFilter === opt.value}
+                    onClick={() => setCompletionFilter(opt.value)}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
+
           {loading && rawTasks.length === 0 ? (
             <p className="nm-hub-muted">Cargando…</p>
           ) : null}
@@ -1405,7 +1479,7 @@ export function HubTasksApp({
             <p className="nm-hub-muted">No hay tareas en {formatMonthYearLabel(yearMonth)}.</p>
           ) : null}
           {!loading && monthTasks.length > 0 && filteredSorted.length === 0 ? (
-            <p className="nm-hub-muted">Ninguna tarea coincide con la búsqueda.</p>
+            <p className="nm-hub-muted">Ninguna tarea coincide con los filtros.</p>
           ) : null}
           <div className="hub-tasks-table-wrap" aria-busy={loading}>
             <table className="hub-tasks-table">
