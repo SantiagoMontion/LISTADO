@@ -567,6 +567,67 @@ body:has(.nm-hub-app) {
   border-color: rgba(15, 23, 42, 0.1) !important;
 }
 
+/* Analíticas corte / envío — contraste Apple light */
+.nm-hub-app--cut-analytics .week-pager-rebel,
+.nm-hub-app--dispatch-analytics .week-pager-rebel,
+.nm-hub-app--cut-analytics .kpi-card-rebel,
+.nm-hub-app--dispatch-analytics .kpi-card-rebel,
+.nm-hub-app--cut-analytics .chart-card-wrapper,
+.nm-hub-app--dispatch-analytics .chart-card-wrapper,
+.nm-hub-app--cut-analytics .insights-log-box,
+.nm-hub-app--dispatch-analytics .insights-log-box {
+  background: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  color: #1d1d1f !important;
+}
+
+.nm-hub-app--cut-analytics .week-range-text,
+.nm-hub-app--dispatch-analytics .week-range-text,
+.nm-hub-app--cut-analytics .kpi-card-number,
+.nm-hub-app--dispatch-analytics .kpi-card-number,
+.nm-hub-app--cut-analytics .dispatch-bar-chart__value,
+.nm-hub-app--dispatch-analytics .dispatch-bar-chart__value,
+.nm-hub-app--cut-analytics .chart-card-wrapper__title,
+.nm-hub-app--dispatch-analytics .chart-card-wrapper__title,
+.nm-hub-app--cut-analytics .insights-log-box__title,
+.nm-hub-app--dispatch-analytics .insights-log-box__title {
+  color: #1d1d1f !important;
+}
+
+.nm-hub-app--cut-analytics .kpi-card-label,
+.nm-hub-app--dispatch-analytics .kpi-card-label,
+.nm-hub-app--cut-analytics .kpi-card-subtext,
+.nm-hub-app--dispatch-analytics .kpi-card-subtext,
+.nm-hub-app--cut-analytics .dispatch-bar-chart__day,
+.nm-hub-app--dispatch-analytics .dispatch-bar-chart__day {
+  color: #6e6e73 !important;
+}
+
+.nm-hub-app--cut-analytics .insight-log-row,
+.nm-hub-app--dispatch-analytics .insight-log-row {
+  color: #3a3a3c !important;
+  border-bottom-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+.nm-hub-app--cut-analytics .insight-bot-tag,
+.nm-hub-app--dispatch-analytics .insight-bot-tag {
+  color: #1565d8 !important;
+}
+
+.nm-hub-app--cut-analytics .week-pager-btn,
+.nm-hub-app--dispatch-analytics .week-pager-btn {
+  background: #f2f2f7 !important;
+  color: #1d1d1f !important;
+  border-color: transparent !important;
+}
+
+.nm-hub-app--cut-analytics .kpi-card-rebel.alert-critical .kpi-card-number,
+.nm-hub-app--dispatch-analytics .kpi-card-rebel.alert-critical .kpi-card-number,
+.nm-hub-app--cut-analytics .dispatch-bar-chart__reference-label,
+.nm-hub-app--dispatch-analytics .dispatch-bar-chart__reference-label {
+  color: #c93400 !important;
+}
+
 .nm-hub-app .nm-hub-error,
 .nm-hub-app [role='alert'].nm-hub-error {
   color: #b42318 !important;

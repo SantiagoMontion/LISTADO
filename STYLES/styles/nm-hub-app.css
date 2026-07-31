@@ -1840,19 +1840,20 @@ a.nm-hub-brand-bar__btn:hover {
   color: var(--accent-rebel-green, #22c55e);
 }
 
-/* Analítica admin despachos (/pedidos-despachados/analitica) */
+/* Analítica admin — corte y despachos (Apple light) */
 .nm-hub-app.nm-hub-app--dispatch-analytics .dashboard-navbar.dashboard-navbar-clean,
 .nm-hub-app.nm-hub-app--cut-analytics .dashboard-navbar.dashboard-navbar-clean {
-  background-color: var(--bg-surface-rebel);
+  background-color: rgba(255, 255, 255, 0.92);
 }
 
 .nm-hub-app.nm-hub-app--dispatch-analytics .admin-analytics-holder,
 .nm-hub-app.nm-hub-app--cut-analytics .admin-analytics-holder {
-  padding: 12px 16px 24px;
+  padding: 12px 0 28px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   width: 100%;
+  max-width: 52rem;
   box-sizing: border-box;
 }
 
@@ -1863,10 +1864,10 @@ a.nm-hub-brand-bar__btn:hover {
 
 .nm-hub-app.nm-hub-app--dispatch-analytics .week-pager-rebel,
 .nm-hub-app.nm-hub-app--cut-analytics .week-pager-rebel {
-  background-color: var(--bg-surface-rebel);
-  border: 1px solid rgba(255, 255, 255, 0.02);
+  background-color: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.1);
   border-radius: 14px;
-  padding: 12px 16px;
+  padding: 10px 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1874,20 +1875,21 @@ a.nm-hub-brand-bar__btn:hover {
   box-sizing: border-box;
   margin-bottom: 0;
   gap: 10px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .nm-hub-app.nm-hub-app--dispatch-analytics .week-pager-btn,
 .nm-hub-app.nm-hub-app--cut-analytics .week-pager-btn {
   flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 10px;
+  background: #f2f2f7;
+  border: 1px solid transparent;
+  border-radius: 14px;
   width: 40px;
   height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fcfdff;
+  color: #1d1d1f;
   font-size: 1.1rem;
   font-weight: 700;
   line-height: 1;
@@ -1898,13 +1900,13 @@ a.nm-hub-brand-bar__btn:hover {
 
 .nm-hub-app.nm-hub-app--dispatch-analytics .week-pager-btn:hover:not(:disabled),
 .nm-hub-app.nm-hub-app--cut-analytics .week-pager-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: #e8e8ed;
+  border-color: transparent;
 }
 
 .nm-hub-app.nm-hub-app--dispatch-analytics .week-pager-btn:focus-visible,
 .nm-hub-app.nm-hub-app--cut-analytics .week-pager-btn:focus-visible {
-  outline: 2px solid var(--accent-rebel-blue, #3b82f6);
+  outline: 2px solid #1565d8;
   outline-offset: 2px;
 }
 
@@ -1918,11 +1920,12 @@ a.nm-hub-brand-bar__btn:hover {
 .nm-hub-app.nm-hub-app--cut-analytics .week-range-text {
   flex: 1;
   text-align: center;
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: #9099a3;
+  font-size: 0.95rem;
+  font-weight: 650;
+  color: #1d1d1f;
   font-variant-numeric: tabular-nums;
   line-height: 1.3;
+  letter-spacing: -0.01em;
 }
 
 .nm-hub-app.nm-hub-app--dispatch-analytics .kpi-analytics-grid,
@@ -1935,51 +1938,55 @@ a.nm-hub-brand-bar__btn:hover {
 
 .nm-hub-app.nm-hub-app--dispatch-analytics .kpi-card-rebel,
 .nm-hub-app.nm-hub-app--cut-analytics .kpi-card-rebel {
-  background-color: var(--bg-surface-rebel);
-  border: 1px solid rgba(255, 255, 255, 0.02);
+  background-color: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.1);
   border-radius: 14px;
-  padding: 14px 10px;
+  padding: 14px 12px;
   display: flex;
   flex-direction: column;
   gap: 4px;
   min-width: 0;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .nm-hub-app.nm-hub-app--dispatch-analytics .kpi-card-rebel.alert-critical,
 .nm-hub-app.nm-hub-app--cut-analytics .kpi-card-rebel.alert-critical {
-  border-left: 3px solid #ffab40;
+  border-left: 3px solid #ff9500;
+  background: #fffaf3;
 }
 
 .nm-hub-app.nm-hub-app--dispatch-analytics .kpi-card-label,
 .nm-hub-app.nm-hub-app--cut-analytics .kpi-card-label {
-  font-size: 0.62rem;
-  font-weight: 700;
-  color: #535a62;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-size: 0.7rem;
+  font-weight: 650;
+  color: #6e6e73;
+  text-transform: none;
+  letter-spacing: -0.01em;
   line-height: 1.2;
 }
 
 .nm-hub-app.nm-hub-app--dispatch-analytics .kpi-card-number,
 .nm-hub-app.nm-hub-app--cut-analytics .kpi-card-number {
-  font-size: clamp(1.15rem, 5vw, 1.5rem);
-  font-weight: 800;
-  color: #fcfdff;
+  font-size: clamp(1.35rem, 5vw, 1.75rem);
+  font-weight: 750;
+  color: #1d1d1f;
   line-height: 1.1;
-  font-family: var(--font-rebel-count, inherit);
+  font-family: inherit;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
 }
 
 .nm-hub-app.nm-hub-app--dispatch-analytics .kpi-card-rebel.alert-critical .kpi-card-number,
 .nm-hub-app.nm-hub-app--cut-analytics .kpi-card-rebel.alert-critical .kpi-card-number {
-  color: #ffab40;
+  color: #c93400;
 }
 
 .nm-hub-app.nm-hub-app--dispatch-analytics .kpi-card-subtext,
 .nm-hub-app.nm-hub-app--cut-analytics .kpi-card-subtext {
-  font-size: 0.68rem;
-  color: #9099a3;
-  line-height: 1.2;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #8e8e93;
+  line-height: 1.25;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1987,12 +1994,13 @@ a.nm-hub-brand-bar__btn:hover {
 
 .nm-hub-app.nm-hub-app--dispatch-analytics .chart-card-wrapper,
 .nm-hub-app.nm-hub-app--cut-analytics .chart-card-wrapper {
-  background-color: var(--bg-surface-rebel);
-  border: 1px solid rgba(255, 255, 255, 0.02);
-  border-radius: 16px;
-  padding: 20px 16px 16px;
+  background-color: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 14px;
+  padding: 18px 16px 16px;
   width: 100%;
   box-sizing: border-box;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .nm-hub-app.nm-hub-app--dispatch-analytics .chart-card-wrapper__title,
@@ -2000,18 +2008,28 @@ a.nm-hub-brand-bar__btn:hover {
 .nm-hub-app.nm-hub-app--dispatch-analytics .insights-log-box__title,
 .nm-hub-app.nm-hub-app--cut-analytics .insights-log-box__title {
   margin: 0 0 14px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: #535a62;
+  font-size: 0.8125rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: #1d1d1f;
 }
 
 .nm-hub-app.nm-hub-app--dispatch-analytics .dispatch-bar-chart__plot,
 .nm-hub-app.nm-hub-app--cut-analytics .dispatch-bar-chart__plot {
   position: relative;
-  height: 11.5rem;
-  padding-top: 0.5rem;
+  height: 12rem;
+  padding-top: 0.65rem;
+  border-radius: 12px;
+  background:
+    linear-gradient(to top, rgba(15, 23, 42, 0.04) 1px, transparent 1px) 0 100% / 100% 25%,
+    linear-gradient(to top, rgba(15, 23, 42, 0.035) 1px, transparent 1px) 0 75% / 100% 25%,
+    linear-gradient(to top, rgba(15, 23, 42, 0.03) 1px, transparent 1px) 0 50% / 100% 25%,
+    linear-gradient(to top, rgba(15, 23, 42, 0.025) 1px, transparent 1px) 0 25% / 100% 25%,
+    #f8fafc;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  padding: 0.65rem 0.5rem 0.35rem;
+  box-sizing: border-box;
 }
 
 .nm-hub-app.nm-hub-app--dispatch-analytics .dispatch-bar-chart__bars,
@@ -2050,42 +2068,42 @@ a.nm-hub-brand-bar__btn:hover {
 .nm-hub-app.nm-hub-app--cut-analytics .dispatch-bar-chart__bar {
   width: 100%;
   min-height: 4px;
-  border-radius: 6px 6px 2px 2px;
-  background: rgba(34, 197, 94, 0.85);
+  border-radius: 8px 8px 4px 4px;
+  background: #34c759;
   transition: height 0.2s ease;
 }
 
 .nm-hub-app.nm-hub-app--dispatch-analytics .dispatch-bar-chart__bar--below,
 .nm-hub-app.nm-hub-app--cut-analytics .dispatch-bar-chart__bar--below {
-  background: rgba(70, 207, 248, 0.55);
+  background: #64b5f6;
 }
 
 .nm-hub-app.nm-hub-app--dispatch-analytics .dispatch-bar-chart__value,
 .nm-hub-app.nm-hub-app--cut-analytics .dispatch-bar-chart__value {
-  font-size: 0.8rem;
-  font-weight: 800;
-  font-family: var(--font-rebel-count, inherit);
-  color: #fcfdff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-family: inherit;
+  color: #1d1d1f;
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }
 
 .nm-hub-app.nm-hub-app--dispatch-analytics .dispatch-bar-chart__day,
 .nm-hub-app.nm-hub-app--cut-analytics .dispatch-bar-chart__day {
-  font-size: 0.65rem;
-  font-weight: 700;
-  color: #535a62;
+  font-size: 0.68rem;
+  font-weight: 650;
+  color: #6e6e73;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
 }
 
 .nm-hub-app.nm-hub-app--dispatch-analytics .dispatch-bar-chart__reference,
 .nm-hub-app.nm-hub-app--cut-analytics .dispatch-bar-chart__reference {
   position: absolute;
-  left: 0;
-  right: 0;
+  left: 0.5rem;
+  right: 0.5rem;
   z-index: 2;
-  border-top: 1px dashed rgba(255, 171, 64, 0.65);
+  border-top: 1.5px dashed rgba(255, 149, 0, 0.85);
   pointer-events: none;
 }
 
@@ -2093,32 +2111,34 @@ a.nm-hub-brand-bar__btn:hover {
 .nm-hub-app.nm-hub-app--cut-analytics .dispatch-bar-chart__reference-label {
   position: absolute;
   right: 0;
-  top: -1.1rem;
-  font-size: 0.62rem;
+  top: -1.15rem;
+  font-size: 0.68rem;
   font-weight: 700;
-  color: #ffab40;
-  letter-spacing: 0.03em;
+  color: #c93400;
+  letter-spacing: -0.01em;
   white-space: nowrap;
 }
 
 .nm-hub-app.nm-hub-app--dispatch-analytics .insights-log-box,
 .nm-hub-app.nm-hub-app--cut-analytics .insights-log-box {
-  background-color: var(--bg-surface-rebel);
-  border: 1px solid rgba(255, 255, 255, 0.02);
+  background-color: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.1);
   border-radius: 14px;
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .nm-hub-app.nm-hub-app--dispatch-analytics .insight-log-row,
 .nm-hub-app.nm-hub-app--cut-analytics .insight-log-row {
   font-size: 0.9rem;
-  color: #d1d5db;
+  font-weight: 500;
+  color: #3a3a3c;
   line-height: 1.45;
-  padding-bottom: 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
 }
 
 .nm-hub-app.nm-hub-app--dispatch-analytics .insight-log-row:last-child,
@@ -2129,9 +2149,9 @@ a.nm-hub-brand-bar__btn:hover {
 
 .nm-hub-app.nm-hub-app--dispatch-analytics .insight-bot-tag,
 .nm-hub-app.nm-hub-app--cut-analytics .insight-bot-tag {
-  color: #34d399;
-  font-weight: 850;
-  letter-spacing: 0.5px;
+  color: #1565d8;
+  font-weight: 750;
+  letter-spacing: 0.02em;
   margin-right: 6px;
 }
 
