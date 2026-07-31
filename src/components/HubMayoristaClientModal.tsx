@@ -59,11 +59,16 @@ export function HubMayoristaClientModal({
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !busy && !saving && !deleting) onClose()
+      if (e.key !== 'Escape' || busy || saving || deleting) return
+      if (confirmDelete) {
+        setConfirmDelete(false)
+        return
+      }
+      onClose()
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [open, onClose, busy, saving, deleting])
+  }, [open, onClose, busy, saving, deleting, confirmDelete])
 
   const applyClientToForm = (client: NmHubMayoristaClient) => {
     setSelectedClientId(client.id)
@@ -93,17 +98,21 @@ export function HubMayoristaClientModal({
 
   if (!open) return null
 
-  const onDelete = async () => {
+  const selectedClientName = fullName.trim() || clients.find((c) => c.id === selectedClientId)?.full_name || 'este cliente'
+
+  const requestDelete = () => {
+    if (!selectedClientId || disabled) return
+    setLocalError(null)
+    setConfirmDelete(true)
+  }
+
+  const onConfirmDelete = async () => {
     if (!selectedClientId) return
-    if (!confirmDelete) {
-      setConfirmDelete(true)
-      setLocalError(null)
-      return
-    }
     setDeleting(true)
     setLocalError(null)
     try {
       await deleteMayoristaClient(selectedClientId)
+      setConfirmDelete(false)
       onSaved()
       onClose()
     } catch (err: unknown) {
@@ -153,7 +162,7 @@ export function HubMayoristaClientModal({
       className="hub-mayorista-client-backdrop"
       role="presentation"
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget && !disabled) onClose()
+        if (e.target === e.currentTarget && !disabled && !confirmDelete) onClose()
       }}
     >
       <form
@@ -294,9 +303,9 @@ export function HubMayoristaClientModal({
               type="button"
               className="hub-mayorista-client-modal__btn-delete"
               disabled={disabled}
-              onClick={() => void onDelete()}
+              onClick={requestDelete}
             >
-              {deleting ? 'Eliminando…' : confirmDelete ? 'Confirmar' : 'Eliminar'}
+              Eliminar
             </button>
           ) : (
             <span className="hub-mayorista-client-modal__actions-spacer" aria-hidden />
@@ -315,6 +324,43 @@ export function HubMayoristaClientModal({
             </button>
           </div>
         </footer>
+
+        {confirmDelete ? (
+          <div
+            className="hub-mayorista-client-confirm"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby={`${titleId}-delete-title`}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <div className="hub-mayorista-client-confirm__card">
+              <h3 className="hub-mayorista-client-confirm__title" id={`${titleId}-delete-title`}>
+                ¿Eliminar cliente?
+              </h3>
+              <p className="hub-mayorista-client-confirm__text">
+                Estás seguro de eliminar a <strong>{selectedClientName}</strong>
+              </p>
+              <div className="hub-mayorista-client-confirm__actions">
+                <button
+                  type="button"
+                  className="hub-mayorista-client-modal__btn-cancel"
+                  disabled={deleting}
+                  onClick={() => setConfirmDelete(false)}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="hub-mayorista-client-confirm__accept"
+                  disabled={deleting}
+                  onClick={() => void onConfirmDelete()}
+                >
+                  {deleting ? 'Eliminando…' : 'Aceptar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </form>
     </div>
   )

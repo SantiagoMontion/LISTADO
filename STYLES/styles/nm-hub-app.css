@@ -3494,6 +3494,7 @@ body:has(.nm-hub-app) {
 }
 
 .hub-mayorista-client-modal {
+  position: relative;
   width: min(100%, 26rem);
   max-height: min(90dvh, 40rem);
   margin: 0;
@@ -3671,7 +3672,7 @@ select.hub-mayorista-client-modal__input {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 14px 18px 18px;
+  padding: 16px 18px 22px;
   border-top: 1px solid rgba(15, 23, 42, 0.06);
   background: #fafafa;
   flex-shrink: 0;
@@ -3741,6 +3742,83 @@ select.hub-mayorista-client-modal__input {
 .hub-mayorista-client-modal__btn-delete:disabled,
 .hub-mayorista-client-modal__btn-submit:disabled {
   opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.hub-mayorista-client-confirm {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  box-sizing: border-box;
+  background: rgba(15, 23, 42, 0.42);
+}
+
+.hub-mayorista-client-confirm__card {
+  width: min(100%, 20rem);
+  padding: 1.25rem 1.2rem 1.15rem;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.22);
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.hub-mayorista-client-confirm__title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #1d1d1f;
+  line-height: 1.25;
+}
+
+.hub-mayorista-client-confirm__text {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #6e6e73;
+  line-height: 1.4;
+}
+
+.hub-mayorista-client-confirm__text strong {
+  color: #1d1d1f;
+  font-weight: 700;
+}
+
+.hub-mayorista-client-confirm__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 0.55rem;
+}
+
+.hub-mayorista-client-confirm__accept {
+  margin: 0;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 999px;
+  background: #d70015;
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hub-mayorista-client-confirm__accept:hover:not(:disabled) {
+  background: #b80012;
+}
+
+.hub-mayorista-client-confirm__accept:disabled {
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
