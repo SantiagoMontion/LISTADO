@@ -1010,11 +1010,11 @@ a.nm-hub-brand-bar__btn:hover {
 
 .nm-hub-brand-logo {
   display: block;
-  height: 1.35rem;
+  height: 1.4rem;
   width: auto;
-  max-width: min(11.5rem, 46vw);
+  max-width: none;
+  flex-shrink: 0;
   object-fit: contain;
-  object-position: left center;
   user-select: none;
   -webkit-user-drag: none;
 }
@@ -1420,9 +1420,9 @@ a.nm-hub-brand-bar__btn:hover {
   font-weight: 600;
 }
 
-/* Pedidos despachados (/pedidos-despachados) */
+/* Pedidos despachados (/pedidos-despachados) — light professional */
 .nm-hub-app.nm-hub-app--dispatched-orders .dashboard-navbar.dashboard-navbar-clean {
-  background-color: #121417;
+  background-color: rgba(255, 255, 255, 0.92);
 }
 
 .nm-hub-app.nm-hub-app--dispatched-orders .nm-hub-dispatched-feedback {
@@ -1434,14 +1434,16 @@ a.nm-hub-brand-bar__btn:hover {
 }
 
 .nm-hub-app.nm-hub-app--dispatched-orders .date-pager-faja-compacta {
-  background-color: #121417;
-  border-radius: 16px;
+  background-color: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
   padding: 10px 16px;
   display: flex;
   align-items: center;
   width: 100%;
   box-sizing: border-box;
-  margin-bottom: 16px;
+  margin: 1rem 0 1.25rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .nm-hub-app.nm-hub-app--dispatched-orders .date-pager-faja-compacta .date-pager-compact-side {
@@ -1461,10 +1463,10 @@ a.nm-hub-brand-bar__btn:hover {
 .nm-hub-app.nm-hub-app--dispatched-orders .pager-tactic-btn {
   width: 40px;
   height: 40px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text-rebel-primary, #f8fafc);
+  border-radius: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: #f8fafc;
+  color: #0f172a;
   font-size: 1.1rem;
   cursor: pointer;
   display: inline-flex;
@@ -1474,12 +1476,12 @@ a.nm-hub-brand-bar__btn:hover {
 }
 
 .nm-hub-app.nm-hub-app--dispatched-orders .pager-tactic-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.14);
+  background: #eef2ff;
+  border-color: rgba(21, 101, 216, 0.35);
 }
 
 .nm-hub-app.nm-hub-app--dispatched-orders .pager-tactic-btn:focus-visible {
-  outline: 2px solid var(--accent-rebel-blue, #3b82f6);
+  outline: 2px solid var(--accent-rebel-blue, #1565d8);
   outline-offset: 2px;
 }
 
@@ -1501,14 +1503,14 @@ a.nm-hub-brand-bar__btn:hover {
 .nm-hub-app.nm-hub-app--dispatched-orders .date-text-accent-number {
   font-size: 1.35rem;
   font-weight: 800;
-  color: var(--text-rebel-primary, #f8fafc);
+  color: #0f172a;
   line-height: 1.1;
   font-family: var(--font-rebel-count, inherit);
 }
 
 .nm-hub-app.nm-hub-app--dispatched-orders .nm-hub-printed-date-native.nm-hub-date-native {
   font-size: 0.72rem;
-  color: var(--text-rebel-muted, #9099a3);
+  color: #64748b;
   background: transparent;
   border: none;
   text-align: center;
@@ -1517,16 +1519,22 @@ a.nm-hub-brand-bar__btn:hover {
 }
 
 .nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-hero {
-  margin-top: 0.5rem;
-  padding: 1.75rem 1.25rem 2rem;
-  border-radius: 20px;
-  background: linear-gradient(165deg, rgba(24, 28, 34, 0.98) 0%, rgba(14, 16, 20, 0.98) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  margin: 0 auto;
+  width: 100%;
+  max-width: 28rem;
+  padding: 1.75rem 1.5rem 1.75rem;
+  border-radius: 14px;
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 0.35rem;
+  gap: 0.5rem;
+  overflow: visible;
+  min-height: 0;
+  height: auto;
 }
 
 .nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-hero__label {
@@ -1535,16 +1543,16 @@ a.nm-hub-brand-bar__btn:hover {
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--text-rebel-muted, #9099a3);
+  color: #64748b;
 }
 
 .nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-hero__count {
   margin: 0.15rem 0 0;
-  font-size: clamp(4.5rem, 22vw, 6.5rem);
+  font-size: clamp(3.5rem, 16vw, 5.25rem);
   font-weight: 800;
   line-height: 0.95;
   font-family: var(--font-rebel-count, inherit);
-  color: var(--accent-rebel-green, #22c55e);
+  color: var(--accent-rebel-green, #0f9f6e);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1559,7 +1567,7 @@ a.nm-hub-brand-bar__btn:hover {
 .nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-add-btn {
   width: 52px;
   height: 52px;
-  border-radius: 16px;
+  border-radius: 14px;
   font-size: 1.75rem;
   font-weight: 700;
   line-height: 1;
@@ -1567,15 +1575,15 @@ a.nm-hub-brand-bar__btn:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(34, 197, 94, 0.35);
-  background: rgba(34, 197, 94, 0.12);
-  color: var(--accent-rebel-green, #22c55e);
+  border: 1px solid rgba(15, 159, 110, 0.35);
+  background: rgba(15, 159, 110, 0.1);
+  color: var(--accent-rebel-green, #0f9f6e);
   cursor: pointer;
   transition: background 0.15s ease, transform 0.12s ease;
 }
 
 .nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-add-btn:hover:not(:disabled) {
-  background: rgba(34, 197, 94, 0.22);
+  background: rgba(15, 159, 110, 0.18);
   transform: scale(1.04);
 }
 
@@ -1585,18 +1593,20 @@ a.nm-hub-brand-bar__btn:hover {
 }
 
 .nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-add-btn:focus-visible {
-  outline: 2px solid var(--accent-rebel-green, #22c55e);
+  outline: 2px solid var(--accent-rebel-green, #0f9f6e);
   outline-offset: 2px;
 }
 
 .nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-edit {
   width: 100%;
-  max-width: 280px;
+  max-width: 100%;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 0.65rem;
-  margin-top: 0.35rem;
+  gap: 0.85rem;
+  margin-top: 0.5rem;
+  background: transparent;
+  overflow: visible;
 }
 
 .nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-edit__label {
@@ -1605,7 +1615,7 @@ a.nm-hub-brand-bar__btn:hover {
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--text-rebel-muted, #9099a3);
+  color: #64748b;
   text-align: center;
 }
 
@@ -1618,31 +1628,47 @@ a.nm-hub-brand-bar__btn:hover {
   font-family: var(--font-rebel-count, inherit);
   font-variant-numeric: tabular-nums;
   padding: 0.65rem 0.75rem;
-  border-radius: 14px;
-  color: var(--accent-rebel-green, #22c55e);
-  background: rgba(0, 0, 0, 0.28);
-  border: 1px solid rgba(34, 197, 94, 0.35);
+  border-radius: 12px;
+  color: #0f172a;
+  background: #f8fafc;
+  border: 1px solid rgba(15, 23, 42, 0.14);
 }
 
 .nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-edit__input:focus {
   outline: none;
-  border-color: rgba(34, 197, 94, 0.65);
-  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.18);
+  border-color: rgba(21, 101, 216, 0.55);
+  box-shadow: 0 0 0 3px rgba(21, 101, 216, 0.15);
+  background: #ffffff;
 }
 
 .nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-edit__actions {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.65rem;
   justify-content: center;
   flex-wrap: wrap;
+  padding-bottom: 0.15rem;
 }
 
 .nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-edit__save,
 .nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-edit__cancel {
-  min-width: 7rem;
-  font-size: 0.85rem;
-  padding: 0.55rem 1rem;
-  border-radius: 12px;
+  min-width: 7.5rem;
+  font-size: 0.88rem;
+  padding: 0.65rem 1.1rem;
+  border-radius: 10px;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-edit__save.nm-prod-btn-primary,
+.nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-edit__save {
+  background: #1565d8;
+  border: 1px solid #1565d8;
+  color: #ffffff;
+}
+
+.nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-edit__cancel.nm-prod-btn,
+.nm-hub-app.nm-hub-app--dispatched-orders .hub-dispatched-edit__cancel {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  color: #0f172a;
 }
 
 .nm-hub-app--dispatched-orders .nm-hub-brand-bar__trailing-group,
@@ -1661,7 +1687,7 @@ a.nm-hub-brand-bar__btn:hover {
 
 /* Estadísticas despachos (/pedidos-despachados/estadisticas) */
 .nm-hub-app.nm-hub-app--dispatched-stats .dashboard-navbar.dashboard-navbar-clean {
-  background-color: #121417;
+  background-color: rgba(255, 255, 255, 0.92);
 }
 
 .nm-hub-app.nm-hub-app--dispatched-stats .hub-dispatched-stats-feedback {
@@ -2558,8 +2584,9 @@ body:has(.nm-hub-app) {
 }
 
 .nm-hub-app .nm-hub-brand-logo {
-  height: 1.4rem;
-  max-width: min(12rem, calc(100vw - 9rem));
+  height: 1.45rem;
+  width: auto;
+  max-width: none;
 }
 
 .nm-hub-app--dashboard .nm-hub-brand-bar__context {
@@ -2832,10 +2859,6 @@ body:has(.nm-hub-app) {
 
 .nm-hub-app .nm-hub-brand-bar--with-trailing .nm-hub-brand-bar__heading--stacked .navbar-brand.nm-hub-brand-bar__brand {
   max-width: none;
-}
-
-.nm-hub-app .nm-hub-brand-bar--with-trailing .nm-hub-brand-logo {
-  max-width: min(11rem, calc(100vw - 10rem));
 }
 
 /* --------------------------------------------------------------------------
