@@ -1763,11 +1763,16 @@ export function HubTasksApp({
                               }
                             >
                               Notas
-                              {noteCounts[t.id] ? (
-                                <span className="btn-task-notes__count" aria-hidden="true">
-                                  {noteCounts[t.id]}
-                                </span>
-                              ) : null}
+                              <span
+                                className={
+                                  noteCounts[t.id]
+                                    ? 'btn-task-notes__count'
+                                    : 'btn-task-notes__count btn-task-notes__count--empty'
+                                }
+                                aria-hidden="true"
+                              >
+                                {noteCounts[t.id] || '0'}
+                              </span>
                             </button>
                             {canDeleteTasks && !readOnly ? (
                               <button

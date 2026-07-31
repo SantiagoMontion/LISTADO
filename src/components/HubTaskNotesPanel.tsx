@@ -5,7 +5,6 @@ import {
   deleteHubTaskNote,
   fetchHubTaskNotes,
   fetchHubProfileDisplayNames,
-  HUB_TASK_NOTE_IMAGE_MAX_BYTES,
   signedImageUrl,
   updateHubTaskNote,
   validateHubTaskNoteImageFile,
@@ -18,13 +17,15 @@ function formatNoteWhen(iso: string): string {
   try {
     const d = new Date(iso)
     if (Number.isNaN(d.getTime())) return iso
-    return d.toLocaleString('es-AR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
+    const day = d.getDate()
+    const monthRaw = d.toLocaleDateString('es-AR', { month: 'short' }).replace('.', '').trim()
+    const month = monthRaw.charAt(0).toUpperCase() + monthRaw.slice(1)
+    const time = d.toLocaleTimeString('es-AR', {
       hour: '2-digit',
       minute: '2-digit',
+      hour12: false,
     })
+    return `${day} ${month}, ${time}`
   } catch {
     return iso
   }
@@ -142,20 +143,25 @@ function TaskNoteItem({ note, authorName, canManage, busy, onEdit, onDelete }: T
       {editing ? (
         <form className="nm-hub-task-note-edit" onSubmit={(e) => void saveEdit(e)}>
           <textarea
-            className="field-textarea nm-hub-textarea nm-hub-task-notes-field"
+            className="nm-hub-task-notes-field"
             rows={3}
             value={editDraft}
             disabled={busy}
             onChange={(e) => setEditDraft(e.target.value)}
             aria-label="Editar nota"
           />
-          <div className="modal-actions-row nm-hub-task-note-edit__actions">
-            <button type="button" className="btn-modal-cancel" disabled={busy} onClick={cancelEdit}>
+          <div className="nm-hub-task-notes-compose__actions nm-hub-task-note-edit__actions">
+            <button
+              type="button"
+              className="nm-hub-task-notes-compose__cancel"
+              disabled={busy}
+              onClick={cancelEdit}
+            >
               Cancelar
             </button>
             <button
               type="submit"
-              className="btn-modal-submit-active"
+              className="nm-hub-task-notes-compose__submit"
               disabled={busy || (!editDraft.trim() && !hasImages)}
             >
               {busy ? 'Guardando…' : 'Guardar'}
@@ -165,15 +171,12 @@ function TaskNoteItem({ note, authorName, canManage, busy, onEdit, onDelete }: T
       ) : (
         <>
           <div className="nm-hub-task-note__head">
-            <p className="nm-hub-task-note__meta-line task-meta-log">
-              <span className="task-assignee-chip nm-hub-task-note__author">{authorName}</span>
-              <span className="nm-hub-task-note__time-sep" aria-hidden="true">
-                {' · '}
-              </span>
+            <div className="nm-hub-task-note__meta">
+              <span className="nm-hub-task-note__author">{authorName}</span>
               <time className="nm-hub-task-note__time" dateTime={note.created_at}>
                 {formatNoteWhen(note.created_at)}
               </time>
-            </p>
+            </div>
             {canManage ? (
               <div className="nm-hub-task-note__menu-wrap" ref={menuWrapRef}>
                 <button
@@ -242,7 +245,7 @@ function TaskNoteItem({ note, authorName, canManage, busy, onEdit, onDelete }: T
             ) : null}
           </div>
           {note.body.trim() ? (
-            <p className="nm-hub-task-note__body task-description-text">{note.body}</p>
+            <p className="nm-hub-task-note__body">{note.body}</p>
           ) : null}
           <NoteImageThumbnails paths={note.image_paths ?? []} />
         </>
@@ -471,8 +474,6 @@ export function HubTaskNotesPanel({
     }
   }
 
-  const maxMb = HUB_TASK_NOTE_IMAGE_MAX_BYTES / (1024 * 1024)
-
   return (
     <div
       className="upload-images-modal-backdrop nm-hub-task-notes-backdrop"
@@ -487,25 +488,25 @@ export function HubTaskNotesPanel({
       >
         <header className="nm-hub-task-notes-panel__head">
           <div className="nm-hub-task-notes-panel__titles">
-            <h2 id="nm-hub-task-notes-title" className="modal-title-rebel">
+            <h2 id="nm-hub-task-notes-title" className="nm-hub-task-notes-panel__title">
               Notas
             </h2>
             <p className="nm-hub-task-notes-panel__subtitle">{task.title}</p>
           </div>
           <button
             type="button"
-            className="pager-tactic-btn nm-hub-task-notes-panel__close-icon"
+            className="nm-hub-task-notes-panel__close"
             onClick={onClose}
             aria-label="Cerrar"
           >
-            ×
+            ✕
           </button>
         </header>
 
         <div ref={threadRef} className="nm-hub-task-notes-thread" aria-live="polite" aria-busy={loading}>
-          {loading ? <p className="nm-hub-muted nm-hub-task-notes-empty">Cargando notas…</p> : null}
+          {loading ? <p className="nm-hub-task-notes-empty">Cargando notas…</p> : null}
           {!loading && notes.length === 0 ? (
-            <p className="nm-hub-muted nm-hub-task-notes-empty">Todavía no hay notas. Dejá la primera abajo.</p>
+            <p className="nm-hub-task-notes-empty">Todavía no hay notas.</p>
           ) : null}
           {!loading
             ? notes.map((n) => (
@@ -528,14 +529,14 @@ export function HubTaskNotesPanel({
           </p>
         ) : null}
 
-        <form className="nm-hub-task-notes-compose modal-field-group" onSubmit={(e) => void onSubmit(e)}>
-          <label className="modal-field-label" htmlFor="nm-hub-task-note-draft">
+        <form className="nm-hub-task-notes-compose" onSubmit={(e) => void onSubmit(e)}>
+          <label className="nm-hub-task-notes-compose__label" htmlFor="nm-hub-task-note-draft">
             Nueva nota
           </label>
           <textarea
             id="nm-hub-task-note-draft"
             ref={textareaRef}
-            className="field-textarea nm-hub-textarea nm-hub-task-notes-field"
+            className="nm-hub-task-notes-field"
             rows={3}
             placeholder="Escribí una nota…"
             value={draft}
@@ -554,13 +555,12 @@ export function HubTaskNotesPanel({
           <div className="nm-hub-task-notes-compose__image-row">
             <button
               type="button"
-              className="nm-hub-btn nm-hub-btn-ghost nm-hub-task-notes-compose__attach"
+              className="nm-hub-task-notes-compose__attach"
               disabled={saving || Boolean(pendingImage)}
               onClick={() => imageInputRef.current?.click()}
             >
               Adjuntar imagen
             </button>
-            <span className="nm-hub-muted nm-hub-task-notes-compose__image-hint">Máx. {maxMb} MB</span>
           </div>
           {pendingImage && pendingImagePreview ? (
             <div className="nm-hub-task-notes-compose__preview">
@@ -575,7 +575,7 @@ export function HubTaskNotesPanel({
                 </span>
                 <button
                   type="button"
-                  className="nm-hub-btn nm-hub-btn-ghost nm-hub-task-notes-compose__preview-remove"
+                  className="nm-hub-task-notes-compose__preview-remove"
                   disabled={saving}
                   onClick={clearPendingImage}
                   aria-label="Quitar imagen"
@@ -585,12 +585,16 @@ export function HubTaskNotesPanel({
               </div>
             </div>
           ) : null}
-          <div className="modal-actions-row">
-            <button type="button" className="btn-modal-cancel" disabled={saving} onClick={onClose}>
+          <div className="nm-hub-task-notes-compose__actions">
+            <button type="button" className="nm-hub-task-notes-compose__cancel" disabled={saving} onClick={onClose}>
               Cerrar
             </button>
-            <button type="submit" className="btn-modal-submit-active" disabled={saving || !canSubmit}>
-              {saving ? 'Enviando…' : 'Agregar nota'}
+            <button
+              type="submit"
+              className="nm-hub-task-notes-compose__submit"
+              disabled={saving || !canSubmit}
+            >
+              {saving ? 'Enviando…' : 'Agregar'}
             </button>
           </div>
         </form>

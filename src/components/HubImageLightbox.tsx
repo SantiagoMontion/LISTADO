@@ -7,6 +7,12 @@ const LIGHTBOX_DISMISS_PX = 110
 const LIGHTBOX_GALLERY_SWIPE_PX = 56
 const LIGHTBOX_TAP_MOVE_PX = 12
 
+/** Márgenes del viewport para que la foto nunca toque los bordes. */
+const LIGHTBOX_MARGIN_X_PX = 72
+const LIGHTBOX_MARGIN_Y_PX = 96
+const LIGHTBOX_MARGIN_X_MOBILE_PX = 48
+const LIGHTBOX_MARGIN_Y_MOBILE_PX = 80
+
 function clampLightboxScale(s: number): number {
   return Math.min(LIGHTBOX_MAX_SCALE, Math.max(LIGHTBOX_MIN_SCALE, s))
 }
@@ -16,6 +22,18 @@ function touchDistance(touches: { length: number; 0?: Touch; 1?: Touch }): numbe
   const dx = touches[1].clientX - touches[0].clientX
   const dy = touches[1].clientY - touches[0].clientY
   return Math.hypot(dx, dy)
+}
+
+function measureFitBox(): { w: number; h: number } {
+  const mobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches
+  const marginX = mobile ? LIGHTBOX_MARGIN_X_MOBILE_PX : LIGHTBOX_MARGIN_X_PX
+  const marginY = mobile ? LIGHTBOX_MARGIN_Y_MOBILE_PX : LIGHTBOX_MARGIN_Y_PX
+  const vw = window.visualViewport?.width ?? window.innerWidth
+  const vh = window.visualViewport?.height ?? window.innerHeight
+  return {
+    w: Math.max(160, Math.floor(vw - marginX * 2)),
+    h: Math.max(160, Math.floor(vh - marginY * 2)),
+  }
 }
 
 export type HubImageLightboxGallery = {
@@ -38,6 +56,7 @@ export function HubImageLightbox({
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const [dismissY, setDismissY] = useState(0)
   const [dragging, setDragging] = useState(false)
+  const [fitBox, setFitBox] = useState(measureFitBox)
 
   const historyPushedRef = useRef(false)
   const dismissYRef = useRef(0)
@@ -96,6 +115,22 @@ export function HubImageLightbox({
   useEffect(() => {
     resetView()
   }, [src, resetView])
+
+  useEffect(() => {
+    const update = () => {
+      const next = measureFitBox()
+      setFitBox((prev) => (prev.w === next.w && prev.h === next.h ? prev : next))
+    }
+    update()
+    window.addEventListener('resize', update)
+    window.visualViewport?.addEventListener('resize', update)
+    window.visualViewport?.addEventListener('scroll', update)
+    return () => {
+      window.removeEventListener('resize', update)
+      window.visualViewport?.removeEventListener('resize', update)
+      window.visualViewport?.removeEventListener('scroll', update)
+    }
+  }, [])
 
   useEffect(() => {
     scaleRef.current = scale
@@ -256,7 +291,6 @@ export function HubImageLightbox({
         if (dx < 0) galleryRef.current.onNext?.()
         else galleryRef.current.onPrev?.()
       } else if (t.moved <= LIGHTBOX_TAP_MOVE_PX) {
-        // Tap en imagen (touch): zoom in/out
         ignoreClickRef.current = true
         toggleZoom()
       }
@@ -299,8 +333,8 @@ export function HubImageLightbox({
       >
         <div
           className="nm-hub-lightbox__frame"
+          style={{ width: fitBox.w, height: fitBox.h }}
           onClick={(e) => {
-            // Click en el marco (fuera de la foto) cierra.
             if (e.target === e.currentTarget && dismissY < 8) requestClose()
           }}
         >

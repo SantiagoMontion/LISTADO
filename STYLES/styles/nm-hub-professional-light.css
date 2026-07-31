@@ -421,11 +421,60 @@ body:has(.nm-hub-app) {
 }
 
 .nm-hub-lightbox__img {
-  background: #0f172a !important;
+  background: transparent !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  object-fit: contain !important;
 }
 
 .nm-hub-lightbox__counter {
   color: rgba(248, 250, 252, 0.92) !important;
+}
+
+/* Notas panel — contraste Apple light (override leftovers) */
+.nm-hub-task-notes-panel,
+.nm-hub-task-notes-panel .nm-hub-task-note__body,
+.nm-hub-task-notes-panel .nm-hub-task-note__author,
+.nm-hub-task-notes-panel .nm-hub-task-notes-compose__cancel {
+  color: #1d1d1f !important;
+}
+
+.nm-hub-task-notes-panel .nm-hub-task-note__time,
+.nm-hub-task-notes-panel .nm-hub-task-notes-panel__subtitle,
+.nm-hub-task-notes-panel .nm-hub-task-notes-compose__label,
+.nm-hub-task-notes-panel .nm-hub-task-notes-empty {
+  color: #6e6e73 !important;
+}
+
+.nm-hub-task-notes-panel .nm-hub-task-note__time {
+  color: #8e8e93 !important;
+}
+
+.nm-hub-task-notes-panel .nm-hub-task-note {
+  background: transparent !important;
+  border-color: rgba(15, 23, 42, 0.06) !important;
+}
+
+.nm-hub-task-notes-panel .nm-hub-task-notes-compose {
+  background: #fafafa !important;
+}
+
+.nm-hub-task-notes-panel .nm-hub-task-notes-field {
+  background: #ffffff !important;
+  color: #1d1d1f !important;
+  border-color: rgba(15, 23, 42, 0.12) !important;
+}
+
+.nm-hub-task-notes-panel .nm-hub-task-notes-compose__submit {
+  background: #1565d8 !important;
+  color: #ffffff !important;
+}
+
+.nm-hub-task-notes-panel .nm-hub-task-notes-panel__close {
+  background: #e8e8ed !important;
+  color: #3a3a3c !important;
 }
 
 /* ── Misc surfaces often hard-coded dark ────────────────────────── */
