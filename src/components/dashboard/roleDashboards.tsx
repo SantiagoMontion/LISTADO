@@ -8,29 +8,11 @@ interface RoleDashboardProps {
   perms: HubPermissions
 }
 
-export function OnlineOperatorDashboard({ stats }: RoleDashboardProps) {
-  const links = hubDashboardLinks(stats.day)
-  return (
-    <nav className="cards-container-rebel" aria-label="Panel Clientes">
-      <DashboardCard href={links.createTask} accent="create" icon="✎" title="Crear tarea" />
-      <DashboardCard
-        href={links.pendingTasks}
-        accent="pending"
-        icon="☰"
-        stat={stats.pendingHubTasks}
-        statLabel="pendientes"
-        title="Ver tareas pendientes"
-      />
-    </nav>
-  )
-}
-
+/** Home único: cards de producto (sin duplicar acciones del nav). */
 export function AdminDashboard({ stats }: RoleDashboardProps) {
   const links = hubDashboardLinks(stats.day)
   return (
-    <nav className="cards-container-rebel" aria-label="Panel administración">
-      <DashboardCard href={links.createTask} accent="create" icon="✎" title="Crear tarea" />
-      <DashboardCard href={links.uploadList} accent="create" icon="↑" title="Subir lista" />
+    <nav className="cards-container-rebel" aria-label="Accesos principales">
       <DashboardCard
         href={links.cutList}
         accent="pending"
@@ -43,110 +25,43 @@ export function AdminDashboard({ stats }: RoleDashboardProps) {
         href={links.pendingTasks}
         accent="pending"
         icon="☰"
-        stat={stats.urgentHubTasks}
-        statLabel="urgentes"
-        title="Tareas pendientes"
+        stat={stats.pendingHubTasks}
+        statLabel="pendientes"
+        title="Tareas"
       />
-      <DashboardCard href={links.printedFiles} accent="files" icon="▣" title="Archivos impresos" />
       <DashboardCard
         href={links.dispatchedOrders}
         accent="files"
         icon="▦"
         stat={stats.dispatchedOrdersMonthTotal}
-        statLabel="en el mes"
-        title="Pedidos despachados"
-      />
-      <DashboardCard
-        href={links.dispatchAnalytics}
-        accent="pending"
-        icon="◫"
-        title="Analítica de despachos"
-      />
-      <DashboardCard
-        href={links.cutAnalytics}
-        accent="pending"
-        icon="✂"
-        title="Analítica de corte"
+        statLabel="salidas del mes"
+        title="Registro de salidas"
       />
       <DashboardCard
         href={links.logisticaAndreani}
         accent="files"
         icon="⧉"
-        title="Logística Andreani"
+        title="Andreani"
       />
-      <DashboardCard href={links.printing3d} accent="create" icon="◈" title="3D" />
-    </nav>
-  )
-}
-
-export function ListaCreatorDashboard({ stats }: RoleDashboardProps) {
-  const links = hubDashboardLinks(stats.day)
-  return (
-    <nav className="cards-container-rebel" aria-label="Panel PDF creator">
       <DashboardCard href={links.uploadList} accent="create" icon="↑" title="Subir lista" />
-      <DashboardCard href={links.uploadImages} accent="files" icon="▣" title="Subir imágenes" />
-      <DashboardCard
-        href={links.cutList}
-        accent="pending"
-        icon="✂"
-        stat={stats.pendingCutItems}
-        statLabel="pendientes en corte"
-        title="Ver lista de corte"
-      />
-      <DashboardCard href={links.createTask} accent="create" icon="✎" title="Crear tarea" />
-      <DashboardCard
-        href={links.pendingTasks}
-        accent="pending"
-        icon="☰"
-        stat={stats.pendingHubTasks}
-        statLabel="pendientes hub"
-        title="Tareas del taller"
-      />
+      <DashboardCard href={links.printing3d} accent="create" icon="◈" title="Cotizador 3D" />
     </nav>
   )
 }
 
-export function Taller1Dashboard({ stats }: RoleDashboardProps) {
-  const links = hubDashboardLinks(stats.day)
-  return (
-    <nav className="cards-container-rebel" aria-label="Panel supervisor">
-      <DashboardCard href={links.createTask} accent="create" icon="✎" title="Crear tarea" />
-      <DashboardCard
-        href={links.pendingTasks}
-        accent="pending"
-        icon="☰"
-        stat={stats.pendingHubTasks}
-        statLabel="pendientes"
-        title="Ver tareas pendientes"
-      />
-      <DashboardCard href={links.printedFiles} accent="files" icon="▣" title="Ver archivos impresos" />
-      <DashboardCard
-        href={links.dispatchedOrders}
-        accent="files"
-        icon="▦"
-        stat={stats.dispatchedOrdersMonthTotal}
-        statLabel="en el mes"
-        title="Pedidos despachados"
-      />
-    </nav>
-  )
+/** Compat: todos los paneles de rol apuntan al mismo home. */
+export function OnlineOperatorDashboard(props: RoleDashboardProps) {
+  return <AdminDashboard {...props} />
 }
 
-export function Taller2Dashboard({ stats }: RoleDashboardProps) {
-  const links = hubDashboardLinks(stats.day)
-  return (
-    <nav
-      className="cards-container-rebel cards-container-rebel--focus"
-      aria-label="Panel operario de corte"
-    >
-      <DashboardCard
-        href={links.cutList}
-        accent="pending"
-        icon="✂"
-        stat={stats.pendingCutItems}
-        statLabel="ítems por cortar"
-        title="Lista de corte"
-      />
-    </nav>
-  )
+export function ListaCreatorDashboard(props: RoleDashboardProps) {
+  return <AdminDashboard {...props} />
+}
+
+export function Taller1Dashboard(props: RoleDashboardProps) {
+  return <AdminDashboard {...props} />
+}
+
+export function Taller2Dashboard(props: RoleDashboardProps) {
+  return <AdminDashboard {...props} />
 }

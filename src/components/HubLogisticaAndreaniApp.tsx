@@ -240,7 +240,7 @@ export function HubLogisticaAndreaniApp({
       <header className="dashboard-navbar dashboard-navbar-clean nm-hub-header">
         <HubBrandBar
           integratedDashboard
-          integratedSubtitle="Logística Andreani"
+          integratedSubtitle="Andreani"
           adminSignOut={adminSignOut}
         />
       </header>
@@ -250,7 +250,7 @@ export function HubLogisticaAndreaniApp({
       <div className="logistica-page">
         <section className="logistica-page__head">
           <div>
-            <h1 className="logistica-page__title">Centro de despacho Andreani</h1>
+            <h1 className="logistica-page__title">Andreani — etiquetas y envíos</h1>
           </div>
           <button
             type="button"

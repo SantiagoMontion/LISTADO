@@ -100,7 +100,9 @@ export function DashboardContainer({
       {!guestMode ? (
         <div className="header-section">
           <p className="welcome-text-rebel">{displayName ? `Hola, ${displayName}` : 'Hola'}</p>
-          <span className="role-badge-sticker">{roleLabel}</span>
+          <span className="role-badge-sticker" title="Perfil">
+            {roleLabel}
+          </span>
         </div>
       ) : null}
 

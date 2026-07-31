@@ -491,6 +491,35 @@ body:has(.nm-hub-app) {
   color: #0f172a !important;
 }
 
+.hub-desktop-nav__link {
+  color: #64748b !important;
+}
+
+.hub-desktop-nav__link:hover,
+.hub-desktop-nav__trigger:hover {
+  color: #0f172a !important;
+  background: rgba(15, 23, 42, 0.04) !important;
+}
+
+.hub-desktop-nav__link--active {
+  color: #1565d8 !important;
+  border-bottom-color: #1565d8 !important;
+}
+
+.hub-desktop-nav__submenu {
+  background: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.1) !important;
+}
+
+.hub-desktop-nav__sublink {
+  color: #334155 !important;
+}
+
+.hub-desktop-nav__sublink--active {
+  color: #1565d8 !important;
+  background: rgba(21, 101, 216, 0.08) !important;
+}
+
 @media (min-width: 768px) {
   body:has(.nm-hub-app) {
     background-color: #f3f5f8 !important;

@@ -4,7 +4,6 @@ import type { HubUserRole } from './types'
 
 export interface HubPermissions {
   uploadProductionList: boolean
-  uploadMaterialImages: boolean
   viewCutList: boolean
   editCutList: boolean
   deleteCutList: boolean
@@ -12,7 +11,6 @@ export interface HubPermissions {
   createHubTasks: boolean
   editHubTasks: boolean
   deleteHubTasks: boolean
-  viewPrintedFiles: boolean
   viewDispatchedOrders: boolean
   editDispatchedOrders: boolean
   viewLogisticaAndreani: boolean
@@ -23,7 +21,6 @@ export interface HubPermissions {
 /** Acceso completo para todos: ya no hay diferencias por usuario/rol. */
 const FULL_ACCESS: HubPermissions = {
   uploadProductionList: true,
-  uploadMaterialImages: true,
   viewCutList: true,
   editCutList: true,
   deleteCutList: true,
@@ -31,7 +28,6 @@ const FULL_ACCESS: HubPermissions = {
   createHubTasks: true,
   editHubTasks: true,
   deleteHubTasks: true,
-  viewPrintedFiles: true,
   viewDispatchedOrders: true,
   editDispatchedOrders: true,
   viewLogisticaAndreani: true,
@@ -65,7 +61,6 @@ export type HubAppPath =
   | '/creador'
   | '/manejador'
   | '/tareas'
-  | '/archivos-impresos'
   | '/pedidos-despachados'
   | '/pedidos-despachados/cargar'
   | '/pedidos-despachados/analitica'
@@ -93,8 +88,6 @@ export function canAccessHubPath(
       return perms.viewCutList
     case '/tareas':
       return perms.viewHubTasks
-    case '/archivos-impresos':
-      return perms.viewPrintedFiles
     case '/pedidos-despachados':
       return perms.viewDispatchedOrders
     case '/pedidos-despachados/cargar':
@@ -119,7 +112,6 @@ export function normalizeHubPath(path: string): HubAppPath | string {
   if (p === '/creador') return '/creador'
   if (p === '/manejador') return '/manejador'
   if (p === '/tareas') return '/tareas'
-  if (p === '/archivos-impresos') return '/archivos-impresos'
   if (p === '/pedidos-despachados/estadisticas') return '/pedidos-despachados'
   if (p === '/pedidos-despachados/cargar') return '/pedidos-despachados/cargar'
   if (p === '/pedidos-despachados/analitica') return '/pedidos-despachados/analitica'
@@ -142,7 +134,6 @@ export function hubPathBlockedMessage(path: string, role: HubUserRole | null | u
   if (p === '/creador') return `El perfil «${label}» no puede subir listas de producción.`
   if (p === '/manejador') return `El perfil «${label}» no accede a la lista de corte.`
   if (p === '/tareas') return `El perfil «${label}» no usa tareas del taller.`
-  if (p === '/archivos-impresos') return `El perfil «${label}» no ve archivos impresos.`
   if (p === '/pedidos-despachados') {
     return `El perfil «${label}» no ve pedidos despachados.`
   }
@@ -169,12 +160,10 @@ export function hubDashboardLinks(day: string = todayIsoLocal()) {
   const d = encodeURIComponent(day)
   return {
     uploadList: '/creador',
-    uploadImages: `/creador?subir=imagenes`,
     cutList: '/manejador',
     createTask: `/tareas?d=${d}&hub=crear#nm-hub-tareas-nueva`,
     pendingTasks: `/tareas?m=${d.slice(0, 7)}#nm-hub-tareas-lista`,
     completedTasks: `/tareas?m=${d.slice(0, 7)}&hub=completadas#nm-hub-tareas-lista`,
-    printedFiles: `/archivos-impresos?d=${d}`,
     dispatchedOrders: `/pedidos-despachados?m=${d.slice(0, 7)}`,
     dispatchAnalytics: '/pedidos-despachados/analitica',
     cutAnalytics: '/lista-corte/analitica',
@@ -188,26 +177,68 @@ export interface HubDesktopNavItem {
   label: string
 }
 
-/** Enlaces del menú horizontal (solo escritorio). Todos ven lo mismo. */
-export function hubDesktopNavLinks(
+export interface HubDesktopNavGroup {
+  id: string
+  label: string
+  /** Link directo si el grupo no tiene hijos */
+  href?: string
+  items?: HubDesktopNavItem[]
+}
+
+/** Menú agrupado (estilo Meta/Google Admin). */
+export function hubDesktopNavGroups(
   role: HubUserRole | null | undefined,
-): HubDesktopNavItem[] {
+): HubDesktopNavGroup[] {
   const perms = getHubPermissions(role)
   if (!perms) return []
 
   const day = todayIsoLocal()
   const d = encodeURIComponent(day)
   const links = hubDashboardLinks(day)
-  return [
-    { href: '/', label: 'Inicio' },
-    { href: `/tareas?m=${d.slice(0, 7)}`, label: 'Tareas' },
-    { href: links.cutList, label: 'Lista corte' },
-    { href: links.uploadList, label: 'Subir lista' },
-    { href: links.printedFiles, label: 'Impresos' },
-    { href: links.dispatchedOrders, label: 'Despachos' },
-    { href: links.logisticaAndreani, label: 'Andreani' },
-    { href: links.dispatchAnalytics, label: 'Analítica desp.' },
-    { href: links.cutAnalytics, label: 'Analítica corte' },
-    { href: links.printing3d, label: '3D' },
-  ]
+  const groups: HubDesktopNavGroup[] = [{ id: 'inicio', label: 'Inicio', href: '/' }]
+
+  if (perms.viewHubTasks) {
+    groups.push({
+      id: 'tareas',
+      label: 'Tareas',
+      href: `/tareas?m=${d.slice(0, 7)}`,
+    })
+  }
+
+  if (perms.viewCutList || perms.uploadProductionList) {
+    const corteItems: HubDesktopNavItem[] = []
+    if (perms.viewCutList) corteItems.push({ href: links.cutList, label: 'Lista de corte' })
+    if (perms.uploadProductionList) corteItems.push({ href: links.uploadList, label: 'Subir lista' })
+    if (perms.viewCutList) corteItems.push({ href: links.cutAnalytics, label: 'Analítica' })
+    groups.push({ id: 'corte', label: 'Corte', items: corteItems })
+  }
+
+  if (perms.viewDispatchedOrders || perms.viewLogisticaAndreani) {
+    const enviosItems: HubDesktopNavItem[] = []
+    if (perms.viewLogisticaAndreani) {
+      enviosItems.push({ href: links.logisticaAndreani, label: 'Andreani' })
+    }
+    if (perms.viewDispatchedOrders) {
+      enviosItems.push({ href: links.dispatchedOrders, label: 'Registro de salidas' })
+      enviosItems.push({ href: links.dispatchAnalytics, label: 'Analítica de salidas' })
+    }
+    groups.push({ id: 'envios', label: 'Envíos', items: enviosItems })
+  }
+
+  if (perms.view3DCalculator) {
+    groups.push({ id: 'herramientas', label: 'Cotizador 3D', href: links.printing3d })
+  }
+
+  return groups
+}
+
+/** @deprecated Prefer hubDesktopNavGroups — flat list for compatibility. */
+export function hubDesktopNavLinks(
+  role: HubUserRole | null | undefined,
+): HubDesktopNavItem[] {
+  return hubDesktopNavGroups(role).flatMap((g) => {
+    if (g.items?.length) return g.items
+    if (g.href) return [{ href: g.href, label: g.label }]
+    return []
+  })
 }

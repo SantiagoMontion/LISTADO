@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CutStripPlanView } from './components/CutStripPlanView'
-import { CreadorMaterialImagesModal } from './components/CreadorMaterialImagesModal'
 import { QuickAddMeasureModal } from './components/QuickAddMeasureModal'
 import { HubDispatchedOrdersApp } from './components/HubDispatchedOrdersApp'
 import { HubLogisticaAndreaniApp } from './components/HubLogisticaAndreaniApp'
@@ -8,7 +7,6 @@ import { Hub3DApp } from './components/Hub3DApp'
 import { HubAdminCutAnalytics } from './components/HubAdminCutAnalytics'
 import { HubAdminDispatchAnalytics } from './components/HubAdminDispatchAnalytics'
 import { HubDispatchedStatsApp } from './components/HubDispatchedStatsApp'
-import { HubPrintedFilesApp } from './components/HubPrintedFilesApp'
 import { MaterialTabs } from './components/MaterialTabs'
 import { TaskCard } from './components/TaskCard'
 import {
@@ -179,7 +177,6 @@ export default function App() {
   }, [navTick])
   const isLogin = path === '/entrar'
   const isHubTasks = path === '/tareas'
-  const isHubPrintedFiles = path === '/archivos-impresos'
   const isHubDispatchedCargar = path === '/pedidos-despachados/cargar'
   const isHubDispatchedAnalytics = path === '/pedidos-despachados/analitica'
   const isHubCutAnalytics = path === '/lista-corte/analitica'
@@ -207,12 +204,6 @@ export default function App() {
   const canImportReports =
     mode === 'creator' &&
     (!authEnabled || !profileReady || !profile || getHubPermissions(profile.role)?.uploadProductionList)
-  const showCreadorMaterialImages =
-    configured &&
-    authEnabled &&
-    profileReady &&
-    getHubPermissions(profile?.role)?.uploadMaterialImages &&
-    mode === 'creator'
   const canDeleteReports =
     mode === 'manager' &&
     (!authEnabled || !profileReady || !profile || canDeleteManejadorReport(profile.role))
@@ -229,7 +220,6 @@ export default function App() {
   const [pendingQuickAdd, setPendingQuickAdd] = useState(false)
   const [quickAddError, setQuickAddError] = useState<string | null>(null)
   const [pendingDates, setPendingDates] = useState<Set<string>>(new Set())
-  const [materialImgModalOpen, setMaterialImgModalOpen] = useState(false)
   const [stripPackSortActive, setStripPackSortActive] = useState(false)
   const [mergeAllListsChecked, setMergeAllListsChecked] = useState(false)
   const [allPendingTasks, setAllPendingTasks] = useState<NmProdTask[]>([])
@@ -246,17 +236,6 @@ export default function App() {
   useEffect(() => {
     allPendingLenRef.current = allPendingTasks.length
   }, [allPendingTasks.length])
-
-  useEffect(() => {
-    if (!showCreadorMaterialImages || path !== '/creador') return
-    const u = new URL(window.location.href)
-    if (u.searchParams.get('subir') !== 'imagenes') return
-    setMaterialImgModalOpen(true)
-    u.searchParams.delete('subir')
-    const q = u.searchParams.toString()
-    window.history.replaceState(null, '', `${u.pathname}${q ? `?${q}` : ''}${u.hash}`)
-    window.dispatchEvent(new CustomEvent(HUB_NAV_EVENT))
-  }, [navTick, path, showCreadorMaterialImages])
 
   /** Solo aplica el último refresh en vuelo; si uno viejo termina después, no pisa reports/pendingDates (el "!" quedaba pegado). */
   const reportsRefreshSeqRef = useRef(0)
@@ -1062,10 +1041,6 @@ export default function App() {
     return <HubLoadingScreen label="No se pudo cargar el perfil del hub." />
   }
 
-  if (authEnabled && authReady && session && isHubPrintedFiles && !profileReady) {
-    return <HubLoadingScreen label="Cargando perfil…" />
-  }
-
   if (
     authEnabled &&
     authReady &&
@@ -1094,23 +1069,6 @@ export default function App() {
           profileDisplayName={profile.display_name}
         />
       </>
-    )
-  }
-
-  if (
-    authEnabled &&
-    authReady &&
-    session &&
-    isHubPrintedFiles &&
-    profileReady &&
-    getHubPermissions(profile?.role)?.viewPrintedFiles
-  ) {
-    return (
-      <HubPrintedFilesApp
-        configured={configured}
-        profileRole={profile?.role}
-        adminSignOut
-      />
     )
   }
 
@@ -1270,10 +1228,12 @@ export default function App() {
     )
   }
 
-  if (!authEnabled && isHubPrintedFiles) {
+  if (!authEnabled && isHubTasks) {
     return (
       <div className="nm-hub-app">
-        <p className="nm-hub-muted">Configurá Supabase en <code>.env</code> para ver archivos impresos.</p>
+        <p className="nm-hub-muted">
+          Configurá Supabase en <code>.env</code> para usar tareas del hub.
+        </p>
         <a
           href="/"
           className="nm-hub-back"
@@ -1388,19 +1348,6 @@ export default function App() {
           >
             {loading ? 'Guardando…' : 'Subir lista'}
           </button>
-          {showCreadorMaterialImages ? (
-            <button
-              type="button"
-              className="btn-secondary-media"
-              disabled={!configured}
-              onClick={() => {
-                setMaterialImgModalOpen(true)
-                if (success) setSuccess(null)
-              }}
-            >
-              Subir imágenes
-            </button>
-          ) : null}
           {success ? (
             <p className="lista-upload-success" role="status">
               {success}
@@ -1549,15 +1496,6 @@ export default function App() {
           </section>
         </div>
       )}
-
-      {showCreadorMaterialImages ? (
-        <CreadorMaterialImagesModal
-          open={materialImgModalOpen}
-          configured={configured}
-          onClose={() => setMaterialImgModalOpen(false)}
-          onDone={(msg) => setSuccess(msg)}
-        />
-      ) : null}
 
       <QuickAddMeasureModal
         open={pendingQuickAdd}

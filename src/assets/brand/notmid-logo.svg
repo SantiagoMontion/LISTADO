@@ -1,17 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg id="Capa_1" data-name="Capa 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1349.33 167">
-  <defs>
-    <style>
-      .cls-1 {
-        letter-spacing: -.02em;
-      }
-
-      .cls-2 {
-        font-family: Megna-BlackDisplay, Megna;
-        font-size: 213.57px;
-        font-weight: 800;
-      }
-    </style>
-  </defs>
-  <text class="cls-2" transform="translate(2.67 163.8)"><tspan x="0" y="0">N</tspan><tspan class="cls-1" x="190.07" y="0">O</tspan><tspan x="372.03" y="0">TBRAIN</tspan></text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1349.33 167" role="img" aria-label="NOT BRAIN">
+  <text
+    x="2.67"
+    y="163.8"
+    fill="#0f172a"
+    font-family="Arial Black, Helvetica Neue, Arial, sans-serif"
+    font-size="213.57"
+    font-weight="800"
+  ><tspan x="2.67" y="163.8">N</tspan><tspan x="192.74" y="163.8" letter-spacing="-0.02em">O</tspan><tspan x="374.7" y="163.8">TBRAIN</tspan></text>
 </svg>

@@ -31,10 +31,6 @@ export function canUseManejador(role: HubUserRole | null | undefined): boolean {
   return getHubPermissions(role)?.viewCutList ?? false
 }
 
-export function canViewPrintedMaterialFiles(role: HubUserRole | null | undefined): boolean {
-  return getHubPermissions(role)?.viewPrintedFiles ?? false
-}
-
 export function canEditManejadorList(role: HubUserRole | null | undefined): boolean {
   return getHubPermissions(role)?.editCutList ?? false
 }

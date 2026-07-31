@@ -150,7 +150,7 @@ export function HubDispatchedStatsApp({
         <HubBrandBar
           integratedDashboard
           adminSignOut={adminSignOut}
-          integratedSubtitle="Pedidos despachados"
+          integratedSubtitle="Registro de salidas"
           integratedSubtitleTone="muted"
         />
       </header>

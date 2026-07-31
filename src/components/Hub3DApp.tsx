@@ -547,7 +547,7 @@ export function Hub3DApp({
   return (
     <div className="nm-hub-app nm-hub-app--3d">
       <header className="dashboard-navbar dashboard-navbar-clean nm-hub-header">
-        <HubBrandBar integratedDashboard integratedSubtitle="3D" adminSignOut={adminSignOut} />
+        <HubBrandBar integratedDashboard integratedSubtitle="Cotizador 3D" adminSignOut={adminSignOut} />
       </header>
 
       <HubDesktopNav role={profileRole} />
@@ -556,7 +556,7 @@ export function Hub3DApp({
         <header className="printing3d-page__head">
           <div className="printing3d-page__head-row">
             <div>
-              <h1 className="printing3d-page__title">Calculadora de impresión 3D</h1>
+              <h1 className="printing3d-page__title">Cotizador de impresión 3D</h1>
               <p className="printing3d-page__lead">
                 Ingresá los datos de la pieza y obtené el precio de venta al instante.
               </p>

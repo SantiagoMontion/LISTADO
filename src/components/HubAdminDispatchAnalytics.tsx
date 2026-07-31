@@ -193,7 +193,7 @@ export function HubAdminDispatchAnalytics({
         <HubBrandBar
           integratedDashboard
           adminSignOut={adminSignOut}
-          integratedSubtitle="Despachos Semanales"
+          integratedSubtitle="Analítica de salidas"
           integratedSubtitleTone="muted"
         />
       </header>
@@ -260,8 +260,8 @@ export function HubAdminDispatchAnalytics({
           </article>
         </section>
 
-        <section className="chart-card-wrapper" aria-label="Despachos por día">
-          <h3 className="chart-card-wrapper__title">Despachos por día</h3>
+        <section className="chart-card-wrapper" aria-label="Salidas por día">
+          <h3 className="chart-card-wrapper__title">Salidas por día</h3>
           <DispatchBarChart series={currentWeek} dailyAverage={analytics.dailyAverage} />
         </section>
 

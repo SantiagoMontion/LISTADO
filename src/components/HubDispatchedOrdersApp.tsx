@@ -185,7 +185,7 @@ export function HubDispatchedOrdersApp({
         <HubBrandBar
           integratedDashboard
           adminSignOut={adminSignOut}
-          integratedSubtitle="Cargar pedidos"
+          integratedSubtitle="Cargar salidas"
           integratedSubtitleTone="accent"
           trailing={
             <button
@@ -255,7 +255,7 @@ export function HubDispatchedOrdersApp({
 
       <section className="hub-dispatched-hero" aria-labelledby="hub-dispatched-hero-label">
         <p id="hub-dispatched-hero-label" className="hub-dispatched-hero__label">
-          Pedidos despachados
+          Pedidos salidos
         </p>
 
         {editing ? (

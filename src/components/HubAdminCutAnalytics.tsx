@@ -189,7 +189,7 @@ export function HubAdminCutAnalytics({
         <HubBrandBar
           integratedDashboard
           adminSignOut={adminSignOut}
-          integratedSubtitle="Corte Semanal"
+          integratedSubtitle="Analítica de corte"
           integratedSubtitleTone="muted"
         />
       </header>

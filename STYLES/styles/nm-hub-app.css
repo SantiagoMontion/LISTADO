@@ -1049,7 +1049,7 @@ a.nm-hub-brand-bar__btn:hover {
 
 /* Tareas: paginador día full-width — extremos flechas + fecha centrada */
 .nm-hub-app--tasks .nm-hub-date-strip.date-pager-fullwidth {
-  background-color: #121417;
+  background-color: var(--bg-surface-rebel);
   border-radius: 16px;
   padding: 12px 16px;
   display: flex;
@@ -1232,7 +1232,7 @@ a.nm-hub-brand-bar__btn:hover {
 
 /* Archivos impresos (/archivos-impresos) — feed visual + fecha compacta */
 .nm-hub-app.nm-hub-app--printed-files .dashboard-navbar.dashboard-navbar-clean {
-  background-color: #121417;
+  background-color: var(--bg-surface-rebel);
 }
 
 .nm-hub-app.nm-hub-app--printed-files .nm-hub-printed-feedback {
@@ -1244,7 +1244,7 @@ a.nm-hub-brand-bar__btn:hover {
 }
 
 .nm-hub-app.nm-hub-app--printed-files .date-pager-faja-compacta {
-  background-color: #121417;
+  background-color: var(--bg-surface-rebel);
   border-radius: 16px;
   padding: 10px 16px;
   display: flex;
@@ -1366,7 +1366,7 @@ a.nm-hub-brand-bar__btn:hover {
   margin: 0;
   text-align: left;
   cursor: zoom-in;
-  background-color: #121417;
+  background-color: var(--bg-surface-rebel);
   border-radius: 16px;
   padding: 12px;
   border: 1px solid rgba(255, 255, 255, 0.035);
@@ -1681,7 +1681,7 @@ a.nm-hub-brand-bar__btn:hover {
 
 /* Estadísticas despachos (/pedidos-despachados/estadisticas) */
 .nm-hub-app.nm-hub-app--dispatched-stats .dashboard-navbar.dashboard-navbar-clean {
-  background-color: #121417;
+  background-color: var(--bg-surface-rebel);
 }
 
 .nm-hub-app.nm-hub-app--dispatched-stats .hub-dispatched-stats-feedback {
@@ -1717,7 +1717,7 @@ a.nm-hub-brand-bar__btn:hover {
   margin-bottom: 0.85rem;
   padding: 1.1rem 1rem;
   border-radius: 18px;
-  background: linear-gradient(165deg, rgba(24, 28, 34, 0.98) 0%, rgba(14, 16, 20, 0.98) 100%);
+  background: #ffffff;
   border: 1px solid rgba(34, 197, 94, 0.22);
 }
 
@@ -1852,7 +1852,7 @@ a.nm-hub-brand-bar__btn:hover {
 /* Analítica admin despachos (/pedidos-despachados/analitica) */
 .nm-hub-app.nm-hub-app--dispatch-analytics .dashboard-navbar.dashboard-navbar-clean,
 .nm-hub-app.nm-hub-app--cut-analytics .dashboard-navbar.dashboard-navbar-clean {
-  background-color: #121417;
+  background-color: var(--bg-surface-rebel);
 }
 
 .nm-hub-app.nm-hub-app--dispatch-analytics .admin-analytics-holder,
@@ -1872,7 +1872,7 @@ a.nm-hub-brand-bar__btn:hover {
 
 .nm-hub-app.nm-hub-app--dispatch-analytics .week-pager-rebel,
 .nm-hub-app.nm-hub-app--cut-analytics .week-pager-rebel {
-  background-color: #121417;
+  background-color: var(--bg-surface-rebel);
   border: 1px solid rgba(255, 255, 255, 0.02);
   border-radius: 14px;
   padding: 12px 16px;
@@ -1944,7 +1944,7 @@ a.nm-hub-brand-bar__btn:hover {
 
 .nm-hub-app.nm-hub-app--dispatch-analytics .kpi-card-rebel,
 .nm-hub-app.nm-hub-app--cut-analytics .kpi-card-rebel {
-  background-color: #121417;
+  background-color: var(--bg-surface-rebel);
   border: 1px solid rgba(255, 255, 255, 0.02);
   border-radius: 14px;
   padding: 14px 10px;
@@ -1996,7 +1996,7 @@ a.nm-hub-brand-bar__btn:hover {
 
 .nm-hub-app.nm-hub-app--dispatch-analytics .chart-card-wrapper,
 .nm-hub-app.nm-hub-app--cut-analytics .chart-card-wrapper {
-  background-color: #121417;
+  background-color: var(--bg-surface-rebel);
   border: 1px solid rgba(255, 255, 255, 0.02);
   border-radius: 16px;
   padding: 20px 16px 16px;
@@ -2112,7 +2112,7 @@ a.nm-hub-brand-bar__btn:hover {
 
 .nm-hub-app.nm-hub-app--dispatch-analytics .insights-log-box,
 .nm-hub-app.nm-hub-app--cut-analytics .insights-log-box {
-  background-color: #121417;
+  background-color: var(--bg-surface-rebel);
   border: 1px solid rgba(255, 255, 255, 0.02);
   border-radius: 14px;
   padding: 16px;
@@ -4025,7 +4025,7 @@ body:has(.nm-hub-app) {
 /* Pista de filtros — tareas (2 segmentos 50%) e impresos (varios botones sin solapamiento) */
 .nm-hub-app--tasks .filter-track-rebel,
 .nm-hub-app--printed-files .filter-track-rebel {
-  background-color: #121417;
+  background-color: var(--bg-surface-rebel);
   border: 1px solid rgba(255, 255, 255, 0.02);
   border-radius: 14px;
   padding: 4px;
@@ -4954,7 +4954,7 @@ body:has(.nm-hub-app) {
   flex-shrink: 0;
   box-sizing: border-box;
   margin: 0;
-  background-color: #121417;
+  background-color: var(--bg-surface-rebel);
   border: 1px solid rgba(255, 255, 255, 0.04);
   border-radius: 12px;
   padding: 10px 16px;
@@ -5033,7 +5033,7 @@ body:has(.nm-hub-app) {
   width: min(100%, 26rem);
   max-height: min(90dvh, 40rem);
   overflow: auto;
-  background-color: #121417;
+  background-color: var(--bg-surface-rebel);
   border: 1px solid rgba(255, 255, 255, 0.03);
   border-radius: 16px;
   padding: 24px;
@@ -5248,7 +5248,7 @@ body:has(.nm-hub-app) {
   margin: 0;
   padding: 10px 12px;
   border-radius: 12px;
-  background-color: #121417;
+  background-color: var(--bg-surface-rebel);
   border: 1px solid rgba(255, 255, 255, 0.06);
   color: #9099a3;
   font-size: 0.85rem;
@@ -5553,7 +5553,7 @@ body:has(.nm-hub-app) {
   width: 100%;
   box-sizing: border-box;
   margin: 0;
-  background-color: #121417;
+  background-color: var(--bg-surface-rebel);
   border: 1px solid rgba(255, 255, 255, 0.04);
   border-radius: 12px;
   padding: 14px 16px;
@@ -5612,7 +5612,7 @@ body:has(.nm-hub-app) {
 /* Filas de corte */
 .nm-hub-app--cut-list .cut-item-row {
   position: relative;
-  background-color: #121417;
+  background-color: var(--bg-surface-rebel);
   border: 1px solid rgba(255, 255, 255, 0.02);
   border-radius: 14px;
   padding: 16px;
@@ -5932,7 +5932,7 @@ body:has(.nm-hub-app) {
   max-height: min(90dvh, 36rem);
   overflow: auto;
   box-sizing: border-box;
-  background-color: #121417;
+  background-color: var(--bg-surface-rebel);
   border: 1px solid rgba(255, 255, 255, 0.03);
   border-radius: 16px;
   padding: 24px;
@@ -7337,6 +7337,7 @@ body:has(.nm-hub-app--logistica-andreani) {
   .hub-desktop-nav__link {
     display: inline-flex;
     align-items: center;
+    gap: 0.35rem;
     padding: 0.85rem 0.95rem;
     border-radius: 0;
     border: none;
@@ -7344,22 +7345,71 @@ body:has(.nm-hub-app--logistica-andreani) {
     font-size: 0.875rem;
     font-weight: 600;
     letter-spacing: -0.01em;
-    color: #8b95a5;
+    color: #64748b;
+    background: transparent;
     text-decoration: none;
     white-space: nowrap;
+    font-family: inherit;
+    cursor: pointer;
     transition: color 0.15s, border-color 0.15s, background 0.15s;
   }
 
   .hub-desktop-nav__link:hover {
-    color: #e8edf4;
-    background: rgba(255, 255, 255, 0.03);
+    color: #0f172a;
+    background: rgba(15, 23, 42, 0.04);
     border-color: transparent;
   }
 
   .hub-desktop-nav__link--active {
-    color: #f8fafc;
-    border-bottom-color: var(--accent-rebel-blue);
+    color: #1565d8;
+    border-bottom-color: #1565d8;
     background: transparent;
+  }
+
+  .hub-desktop-nav__item {
+    position: relative;
+    list-style: none;
+  }
+
+  .hub-desktop-nav__caret {
+    font-size: 0.65rem;
+    opacity: 0.7;
+    line-height: 1;
+  }
+
+  .hub-desktop-nav__submenu {
+    position: absolute;
+    top: calc(100% - 2px);
+    left: 0;
+    z-index: 70;
+    min-width: 12.5rem;
+    margin: 0;
+    padding: 0.4rem;
+    list-style: none;
+    background: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
+  }
+
+  .hub-desktop-nav__sublink {
+    display: block;
+    padding: 0.55rem 0.75rem;
+    border-radius: 8px;
+    color: #334155;
+    text-decoration: none;
+    font-size: 0.84rem;
+    font-weight: 600;
+  }
+
+  .hub-desktop-nav__sublink:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+  }
+
+  .hub-desktop-nav__sublink--active {
+    background: rgba(21, 101, 216, 0.08);
+    color: #1565d8;
   }
 
   .nm-hub-app--dashboard .header-section {
