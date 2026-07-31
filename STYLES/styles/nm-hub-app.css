@@ -9416,6 +9416,15 @@ body:has(.nm-hub-app--logistica-andreani) {
   color: #0f172a;
 }
 
+.printing3d-summary__hero-unit {
+  margin-left: 0.2em;
+  font-size: 0.78rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: #475569;
+  vertical-align: baseline;
+}
+
 .printing3d-summary__hero-hint {
   margin-top: 0.2rem;
   font-size: 0.78rem;
