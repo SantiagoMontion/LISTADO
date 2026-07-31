@@ -1,12 +1,20 @@
 {
-  "name": "NOT BRAIN",
-  "short_name": "NOT BRAIN",
-  "description": "Panel NOTMID — tareas y taller",
+  "name": "Notmid Brain",
+  "short_name": "Notmid Brain",
+  "description": "Panel Notmid — tareas y taller",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#0c0e12",
-  "theme_color": "#46cff8",
+  "background_color": "#f3f5f8",
+  "theme_color": "#1565d8",
   "lang": "es-AR",
-  "orientation": "portrait-primary"
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
 }

@@ -1,2 +1,2 @@
 /** Título de marca en navbar / login / panel de producción */
-export const APP_BRAND_TITLE = 'NOT BRAIN'
+export const APP_BRAND_TITLE = 'Notmid Brain'
