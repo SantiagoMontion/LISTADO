@@ -3412,24 +3412,50 @@ body:has(.nm-hub-app) {
 }
 
 .nm-hub-app--tasks .hub-tasks-table__row td {
-  padding: 8px 10px;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  padding: 9px 10px;
+  border-bottom: 1px solid rgba(60, 60, 67, 0.08);
   vertical-align: middle;
-  color: #0f172a;
+  color: #1c1c1e;
 }
 
-.nm-hub-app--tasks .hub-tasks-table__row--pending td {
+/* Zebra — estilo lista Apple / Excel suave */
+.nm-hub-app--tasks .hub-tasks-table__row--odd td,
+.nm-hub-app--tasks .hub-tasks-table__detail-row.hub-tasks-table__row--odd td {
   background: #ffffff;
 }
 
+.nm-hub-app--tasks .hub-tasks-table__row--even td,
+.nm-hub-app--tasks .hub-tasks-table__detail-row.hub-tasks-table__row--even td {
+  background: #f5f5f7;
+}
+
 .nm-hub-app--tasks .hub-tasks-table__row--pending .hub-tasks-table__title {
-  color: #0f172a;
+  color: #1c1c1e;
+}
+
+.nm-hub-app--tasks .hub-tasks-table__row--odd:hover td,
+.nm-hub-app--tasks .hub-tasks-table__detail-row.hub-tasks-table__row--odd:hover td {
+  background: #f0f0f2;
+}
+
+.nm-hub-app--tasks .hub-tasks-table__row--even:hover td,
+.nm-hub-app--tasks .hub-tasks-table__detail-row.hub-tasks-table__row--even:hover td {
+  background: #ebebed;
 }
 
 .nm-hub-app--tasks .hub-tasks-table__row--completed td {
-  background: #f1f5f9;
-  color: #94a3b8;
-  opacity: 0.72;
+  color: #8e8e93;
+  opacity: 1;
+}
+
+.nm-hub-app--tasks .hub-tasks-table__row--completed.hub-tasks-table__row--odd td,
+.nm-hub-app--tasks .hub-tasks-table__detail-row--completed.hub-tasks-table__row--odd td {
+  background: #fafafa;
+}
+
+.nm-hub-app--tasks .hub-tasks-table__row--completed.hub-tasks-table__row--even td,
+.nm-hub-app--tasks .hub-tasks-table__detail-row--completed.hub-tasks-table__row--even td {
+  background: #f2f2f7;
 }
 
 .nm-hub-app--tasks .hub-tasks-table__row--completed .task-type-badge,
@@ -3439,13 +3465,52 @@ body:has(.nm-hub-app) {
 .nm-hub-app--tasks .hub-tasks-table__row--completed .hub-tasks-tracking-link,
 .nm-hub-app--tasks .hub-tasks-table__row--completed .hub-tasks-tracking-edit,
 .nm-hub-app--tasks .hub-tasks-table__row--completed .btn-task-notes,
-.nm-hub-app--tasks .hub-tasks-table__row--completed .btn-delete-task {
-  filter: saturate(0.45);
-  opacity: 0.85;
+.nm-hub-app--tasks .hub-tasks-table__row--completed .btn-delete-task,
+.nm-hub-app--tasks .hub-tasks-table__row--completed .hub-tasks-edit-btn {
+  filter: saturate(0.4);
+  opacity: 0.78;
 }
 
 .nm-hub-app--tasks .hub-tasks-table__detail-row--completed td {
-  opacity: 0.72;
+  opacity: 1;
+}
+
+/* Detalle expandido: misma franja de la fila, sin caja rara */
+.nm-hub-app--tasks .hub-tasks-table__row.is-expanded td,
+.nm-hub-app--tasks .hub-tasks-table__row:has(+ .hub-tasks-table__detail-row) td {
+  border-bottom-color: transparent;
+}
+
+.nm-hub-app--tasks .hub-tasks-table__detail-row td {
+  padding: 0 10px 12px;
+  border-bottom: 1px solid rgba(60, 60, 67, 0.1);
+}
+
+.nm-hub-app--tasks .hub-tasks-table__detail-panel {
+  margin: 0 0 0 0.15rem;
+  padding: 0.15rem 0 0.15rem 0.85rem;
+  border-left: 3px solid rgba(21, 101, 216, 0.35);
+}
+
+.nm-hub-app--tasks .hub-tasks-table__detail-body {
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #3a3a3c;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+}
+
+.nm-hub-app--tasks .hub-tasks-table__detail-row--completed .hub-tasks-table__detail-panel {
+  border-left-color: rgba(142, 142, 147, 0.45);
+}
+
+.nm-hub-app--tasks .hub-tasks-table__detail-row--completed .hub-tasks-table__detail-body {
+  color: #8e8e93;
 }
 
 .nm-hub-app--tasks .hub-tasks-table__col-tipo,
@@ -3524,24 +3589,6 @@ body:has(.nm-hub-app) {
 .nm-hub-app--tasks .hub-tasks-table__detail-btn:hover {
   color: #0d47a1;
   background: transparent;
-}
-
-.nm-hub-app--tasks .hub-tasks-table__detail-row td {
-  padding: 0 12px 12px;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
-  background: #f8fafc;
-}
-
-.nm-hub-app--tasks .hub-tasks-table__detail-body {
-  white-space: pre-wrap;
-  word-break: break-word;
-  padding: 10px 12px;
-  border-radius: 8px;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  background: #ffffff;
-  color: #334155;
-  font-size: 0.84rem;
-  line-height: 1.45;
 }
 
 .nm-hub-app--tasks .hub-tasks-table__meta {

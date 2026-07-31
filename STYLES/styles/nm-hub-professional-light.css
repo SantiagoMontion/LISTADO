@@ -240,25 +240,53 @@ body:has(.nm-hub-app) {
   border-bottom-color: rgba(15, 23, 42, 0.1) !important;
 }
 
-.nm-hub-app--tasks .hub-tasks-table__row--pending td {
-  color: #0f172a !important;
-  border-bottom-color: rgba(15, 23, 42, 0.06) !important;
+/* Zebra rows — no forzar blanco plano */
+.nm-hub-app--tasks .hub-tasks-table__row--odd td,
+.nm-hub-app--tasks .hub-tasks-table__detail-row.hub-tasks-table__row--odd td {
+  color: #1c1c1e !important;
+  border-bottom-color: rgba(60, 60, 67, 0.08) !important;
   background: #ffffff !important;
 }
 
-.nm-hub-app--tasks .hub-tasks-table__row--completed td {
-  background: #eef2f7 !important;
-  color: #94a3b8 !important;
-  opacity: 0.72 !important;
-  border-bottom-color: rgba(15, 23, 42, 0.05) !important;
+.nm-hub-app--tasks .hub-tasks-table__row--even td,
+.nm-hub-app--tasks .hub-tasks-table__detail-row.hub-tasks-table__row--even td {
+  color: #1c1c1e !important;
+  border-bottom-color: rgba(60, 60, 67, 0.08) !important;
+  background: #f5f5f7 !important;
 }
 
-.nm-hub-app--tasks .hub-tasks-table__row--pending:hover td {
-  background: #f8fafc !important;
+.nm-hub-app--tasks .hub-tasks-table__row--odd:hover td,
+.nm-hub-app--tasks .hub-tasks-table__detail-row.hub-tasks-table__row--odd:hover td {
+  background: #f0f0f2 !important;
 }
 
-.nm-hub-app--tasks .hub-tasks-table__row--completed:hover td {
-  background: #e8eef5 !important;
+.nm-hub-app--tasks .hub-tasks-table__row--even:hover td,
+.nm-hub-app--tasks .hub-tasks-table__detail-row.hub-tasks-table__row--even:hover td {
+  background: #ebebed !important;
+}
+
+.nm-hub-app--tasks .hub-tasks-table__row--completed.hub-tasks-table__row--odd td,
+.nm-hub-app--tasks .hub-tasks-table__detail-row--completed.hub-tasks-table__row--odd td {
+  background: #fafafa !important;
+  color: #8e8e93 !important;
+  opacity: 1 !important;
+}
+
+.nm-hub-app--tasks .hub-tasks-table__row--completed.hub-tasks-table__row--even td,
+.nm-hub-app--tasks .hub-tasks-table__detail-row--completed.hub-tasks-table__row--even td {
+  background: #f2f2f7 !important;
+  color: #8e8e93 !important;
+  opacity: 1 !important;
+}
+
+.nm-hub-app--tasks .hub-tasks-table__detail-body {
+  background: transparent !important;
+  color: #3a3a3c !important;
+  border: 0 !important;
+}
+
+.nm-hub-app--tasks .hub-tasks-table__detail-row--completed .hub-tasks-table__detail-body {
+  color: #8e8e93 !important;
 }
 
 .nm-hub-app--tasks .hub-tasks-table__detail-btn,
@@ -321,14 +349,10 @@ body:has(.nm-hub-app) {
 .nm-hub-app--tasks .hub-tasks-table__row--completed .hub-tasks-tracking-link,
 .nm-hub-app--tasks .hub-tasks-table__row--completed .hub-tasks-tracking-edit,
 .nm-hub-app--tasks .hub-tasks-table__row--completed .btn-task-notes,
-.nm-hub-app--tasks .hub-tasks-table__row--completed .btn-delete-task {
+.nm-hub-app--tasks .hub-tasks-table__row--completed .btn-delete-task,
+.nm-hub-app--tasks .hub-tasks-table__row--completed .hub-tasks-edit-btn {
   filter: saturate(0.4) !important;
   opacity: 0.8 !important;
-}
-
-.nm-hub-app--tasks .hub-tasks-table__detail-row--completed td {
-  opacity: 0.72 !important;
-  background: #eef2f7 !important;
 }
 
 /* Status / payment keep typed colors; chevron only on triggers */

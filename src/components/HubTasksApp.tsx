@@ -1621,14 +1621,15 @@ export function HubTasksApp({
                 </tr>
               </thead>
               <tbody>
-                {filteredSorted.map((t) => {
+                {filteredSorted.map((t, rowIndex) => {
                   const expanded = expandedDetailIds.has(t.id)
                   const workflow = t.workflow_status ?? 'sin_ingresar'
                   const payment = t.payment_status ?? 'sin_pagar'
                   const completed = isHubTaskCompleted(t)
                   const orderNumber = parseShopifyOrderNumberFromTitle(t.title)
                   const shopifyUrl = orderNumber ? (shopifyUrlsByOrder[orderNumber] ?? null) : null
-                  const rowClass = `hub-tasks-table__row${completed ? ' hub-tasks-table__row--completed' : ' hub-tasks-table__row--pending'}`
+                  const zebra = rowIndex % 2 === 0 ? 'hub-tasks-table__row--odd' : 'hub-tasks-table__row--even'
+                  const rowClass = `hub-tasks-table__row ${zebra}${completed ? ' hub-tasks-table__row--completed' : ' hub-tasks-table__row--pending'}`
                   return (
                     <Fragment key={t.id}>
                       <tr className={rowClass}>
@@ -1804,13 +1805,15 @@ export function HubTasksApp({
                       </tr>
                       {expanded && t.body ? (
                         <tr
-                          className={`hub-tasks-table__detail-row${completed ? ' hub-tasks-table__detail-row--completed' : ''}`}
+                          className={`hub-tasks-table__detail-row ${zebra}${completed ? ' hub-tasks-table__detail-row--completed' : ''}`}
                         >
                           <td colSpan={9}>
-                            <div className="hub-tasks-table__detail-body">{t.body}</div>
-                            {(t.image_paths?.length ?? 0) > 0 ? (
-                              <TaskThumbnails paths={t.image_paths ?? []} rebel />
-                            ) : null}
+                            <div className="hub-tasks-table__detail-panel">
+                              <div className="hub-tasks-table__detail-body">{t.body}</div>
+                              {(t.image_paths?.length ?? 0) > 0 ? (
+                                <TaskThumbnails paths={t.image_paths ?? []} rebel />
+                              ) : null}
+                            </div>
                           </td>
                         </tr>
                       ) : null}
