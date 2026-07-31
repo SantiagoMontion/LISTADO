@@ -14,6 +14,9 @@ type HubTasksPillSelectProps<T extends string> = {
   disabled?: boolean
   'aria-label': string
   onChange: (value: T) => void
+  /** Base pill class shared by trigger and options. */
+  pillClassName?: string
+  className?: string
 }
 
 type MenuPos = { top: number; left: number; minWidth: number }
@@ -24,6 +27,8 @@ export function HubTasksPillSelect<T extends string>({
   disabled = false,
   'aria-label': ariaLabel,
   onChange,
+  pillClassName = 'hub-tasks-status-select',
+  className,
 }: HubTasksPillSelectProps<T>) {
   const [open, setOpen] = useState(false)
   const [menuPos, setMenuPos] = useState<MenuPos | null>(null)
@@ -44,7 +49,7 @@ export function HubTasksPillSelect<T extends string>({
     setMenuPos({
       top: openUp ? Math.max(8, r.top - estimatedH - gap) : r.bottom + gap,
       left: Math.min(r.left, window.innerWidth - Math.max(r.width, 132) - 8),
-      minWidth: Math.max(r.width, 132),
+      minWidth: Math.max(r.width, 148),
     })
   }
 
@@ -107,7 +112,7 @@ export function HubTasksPillSelect<T extends string>({
                     type="button"
                     role="option"
                     aria-selected={isSelected}
-                    className={`hub-tasks-status-select hub-tasks-pill-select__option ${opt.toneClass}${
+                    className={`${pillClassName} hub-tasks-pill-select__option ${opt.toneClass}${
                       isSelected ? ' hub-tasks-pill-select__option--selected' : ''
                     }`}
                     onClick={() => {
@@ -126,11 +131,14 @@ export function HubTasksPillSelect<T extends string>({
       : null
 
   return (
-    <div className={`hub-tasks-pill-select${open ? ' hub-tasks-pill-select--open' : ''}`} ref={rootRef}>
+    <div
+      className={`hub-tasks-pill-select${open ? ' hub-tasks-pill-select--open' : ''}${className ? ` ${className}` : ''}`}
+      ref={rootRef}
+    >
       <button
         ref={triggerRef}
         type="button"
-        className={`hub-tasks-status-select hub-tasks-pill-select__trigger ${selected.toneClass}`}
+        className={`${pillClassName} hub-tasks-pill-select__trigger ${selected.toneClass}`}
         disabled={disabled}
         aria-label={ariaLabel}
         aria-haspopup="listbox"

@@ -88,6 +88,15 @@ const TASK_FILTER_TYPES: HubTaskCreateType[] = [
   'falta',
 ]
 
+const TASK_TYPE_FILTER_OPTIONS: HubTasksPillOption<HubTaskCreateType | 'all'>[] = [
+  { value: 'all', label: 'Todos los tipos', toneClass: 'hub-tasks-type-pill--all' },
+  ...TASK_FILTER_TYPES.map((type) => ({
+    value: type,
+    label: TASK_TYPE_LABEL[type],
+    toneClass: `task-type-badge--${type}`,
+  })),
+]
+
 type TaskCompletionFilter = 'all' | 'pending' | 'completed'
 
 function taskTypeUsesClientFields(type: HubTaskCreateType | null): boolean {
@@ -1528,24 +1537,14 @@ export function HubTasksApp({
               </div>
 
               <div className="hub-tasks-filter-field">
-                <label className="nm-hub-sr-only" htmlFor="nm-hub-task-type-filter">
-                  Filtrar por tipo
-                </label>
-                <select
-                  id="nm-hub-task-type-filter"
-                  className="hub-tasks-filter-select"
+                <HubTasksPillSelect
                   value={typeFilter}
-                  onChange={(e) =>
-                    setTypeFilter(e.target.value as HubTaskCreateType | 'all')
-                  }
-                >
-                  <option value="all">Todos los tipos</option>
-                  {TASK_FILTER_TYPES.map((type) => (
-                    <option key={type} value={type}>
-                      {TASK_TYPE_LABEL[type]}
-                    </option>
-                  ))}
-                </select>
+                  options={TASK_TYPE_FILTER_OPTIONS}
+                  aria-label="Filtrar por tipo"
+                  onChange={setTypeFilter}
+                  pillClassName="task-type-badge hub-tasks-type-pill"
+                  className="hub-tasks-type-filter"
+                />
               </div>
 
               <div

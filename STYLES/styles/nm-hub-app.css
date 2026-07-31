@@ -3225,6 +3225,94 @@ body:has(.nm-hub-app) {
   color: #dc2626;
 }
 
+/* Type filter menu (portal) — same tones as badges */
+.hub-tasks-type-pill.task-type-badge--falta,
+.hub-tasks-pill-select__option.task-type-badge--falta {
+  background: rgba(180, 83, 9, 0.12);
+  border-color: rgba(180, 83, 9, 0.22);
+  color: #b45309;
+}
+
+.hub-tasks-type-pill.task-type-badge--mayorista,
+.hub-tasks-pill-select__option.task-type-badge--mayorista {
+  background: rgba(15, 159, 110, 0.12);
+  border-color: rgba(15, 159, 110, 0.22);
+  color: #0f9f6e;
+}
+
+.hub-tasks-type-pill.task-type-badge--rehacer,
+.hub-tasks-pill-select__option.task-type-badge--rehacer {
+  background: rgba(194, 65, 12, 0.12);
+  border-color: rgba(194, 65, 12, 0.22);
+  color: #c2410c;
+}
+
+.hub-tasks-type-pill.task-type-badge--canje,
+.hub-tasks-pill-select__option.task-type-badge--canje {
+  background: rgba(124, 58, 237, 0.12);
+  border-color: rgba(124, 58, 237, 0.22);
+  color: #7c3aed;
+}
+
+.hub-tasks-type-pill.task-type-badge--devolucion,
+.hub-tasks-pill-select__option.task-type-badge--devolucion {
+  background: rgba(220, 38, 38, 0.12);
+  border-color: rgba(220, 38, 38, 0.22);
+  color: #dc2626;
+}
+
+.hub-tasks-type-pill.hub-tasks-type-pill--all,
+.hub-tasks-pill-select__option.hub-tasks-type-pill--all {
+  background: #f1f5f9;
+  border-color: rgba(15, 23, 42, 0.12);
+  color: #475569;
+}
+
+.nm-hub-app--tasks .hub-tasks-type-filter {
+  width: auto;
+  min-width: 10.5rem;
+}
+
+.nm-hub-app--tasks .hub-tasks-type-filter .hub-tasks-type-pill.hub-tasks-pill-select__trigger {
+  display: inline-flex;
+  align-items: center;
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.45rem 1.85rem 0.45rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M6 9l6 6 6-6' stroke='%64748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.7rem center;
+  cursor: pointer;
+  justify-content: flex-start;
+  box-sizing: border-box;
+}
+
+.hub-tasks-pill-select__option.hub-tasks-type-pill {
+  display: inline-flex;
+  align-items: center;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  min-height: 2.15rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  background-image: none !important;
+  justify-content: flex-start;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
 .hub-mayorista-client-modal .modal-numeric-input {
   letter-spacing: normal;
 }
