@@ -144,10 +144,12 @@
   width: 100%;
 }
 
-.nm-prod-date-nav .nm-prod-btn:first-child {
+.nm-prod-date-nav .nm-prod-nav-arrow-wrap,
+.nm-prod-date-nav > .hub-period-nav-btn:first-of-type {
   justify-self: start;
 }
 
+.nm-prod-date-nav > .hub-period-nav-btn:last-of-type,
 .nm-prod-date-nav .nm-prod-btn:last-child {
   justify-self: end;
 }

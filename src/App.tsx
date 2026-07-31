@@ -19,6 +19,7 @@ import { HubEntrarRedirect } from './components/HubEntrarRedirect'
 import { HubHome } from './components/HubHome'
 import { HubBrandBar } from './components/HubBrandBar'
 import { HubDesktopNav } from './components/HubDesktopNav'
+import { HubPeriodNavButton } from './components/HubPeriodNavButton'
 import { HubLoadingScreen } from './components/HubLoadingScreen'
 import { HubRoleBlocked } from './components/HubRoleBlocked'
 import { HubTasksApp } from './components/HubTasksApp'
@@ -1373,15 +1374,12 @@ export default function App() {
         <section className="cut-list-container cut-list-date-section" aria-labelledby="nm-prod-history-heading">
           <div className="nm-prod-date-nav cut-list-date-nav" role="group" aria-label="Cambiar día del historial">
             <div className="nm-prod-nav-arrow-wrap">
-              <button
-                type="button"
-                className="nm-prod-btn"
+              <HubPeriodNavButton
+                direction="prev"
                 onClick={() => setSelectedDate((d) => addDays(d, -1))}
                 disabled={!configured}
                 aria-label="Día anterior"
-              >
-                {'<-'}
-              </button>
+              />
               {hasPendingBeforeSelectedDate && (
                 <span className="nm-prod-nav-pending-dot" aria-hidden="true">
                   !
@@ -1389,15 +1387,12 @@ export default function App() {
               )}
             </div>
             <strong className="nm-prod-date-label">{formatDayMonth(selectedDate)}</strong>
-            <button
-              type="button"
-              className="nm-prod-btn"
+            <HubPeriodNavButton
+              direction="next"
               onClick={() => setSelectedDate((d) => addDays(d, 1))}
               disabled={!configured}
               aria-label="Día siguiente"
-            >
-              {'->'}
-            </button>
+            />
           </div>
 
           {reportsForSelectedDate.length === 0 ? (

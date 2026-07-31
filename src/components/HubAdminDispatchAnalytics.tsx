@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { HubBrandBar } from './HubBrandBar'
 import { HubDesktopNav } from './HubDesktopNav'
+import { HubPeriodNavButton } from './HubPeriodNavButton'
 import { hubNavigate } from '../lib/hubNavigate'
 import { todayIsoLocal } from '../lib/date'
 import { formatSupabaseOrError } from '../lib/errors'
@@ -193,7 +194,7 @@ export function HubAdminDispatchAnalytics({
         <HubBrandBar
           integratedDashboard
           adminSignOut={adminSignOut}
-          integratedSubtitle="Analítica de salidas"
+          integratedSubtitle="Analíticas de envío"
           integratedSubtitleTone="muted"
         />
       </header>
@@ -201,29 +202,30 @@ export function HubAdminDispatchAnalytics({
       <HubDesktopNav role={role} />
 
       <div className="admin-analytics-holder">
+        <header className="admin-analytics-holder__head">
+          <h1 className="admin-analytics-holder__title">Analíticas de envío</h1>
+          <p className="admin-analytics-holder__lead">
+            Salidas semanales, ritmo diario y alertas de producción.
+          </p>
+        </header>
+
         <section className="week-pager-rebel" aria-label="Semana de consulta">
-          <button
-            type="button"
-            className="week-pager-btn"
+          <HubPeriodNavButton
+            direction="prev"
             onClick={() => shiftWeek(-1)}
             disabled={!configured || loading}
             aria-label="Semana anterior"
-          >
-            ←
-          </button>
+          />
           <span className="week-range-text" aria-live="polite">
             {weekRangeLabel}
             {loading ? ' …' : null}
           </span>
-          <button
-            type="button"
-            className="week-pager-btn"
+          <HubPeriodNavButton
+            direction="next"
             onClick={() => shiftWeek(1)}
             disabled={!configured || loading || !canGoForward}
             aria-label="Semana siguiente"
-          >
-            →
-          </button>
+          />
         </section>
 
         {error ? (

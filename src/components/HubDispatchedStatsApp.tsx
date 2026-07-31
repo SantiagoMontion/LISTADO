@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { HubBrandBar } from './HubBrandBar'
 import { HubDesktopNav } from './HubDesktopNav'
+import { HubPeriodNavButton } from './HubPeriodNavButton'
 import { HUB_NAV_EVENT, hubNavigate } from '../lib/hubNavigate'
 import {
   addMonthsToYearMonth,
@@ -170,25 +171,19 @@ export function HubDispatchedStatsApp({
       ) : null}
 
       <section className="hub-dispatched-stats-month-bar" aria-label="Mes">
-        <button
-          type="button"
-          className="pager-tactic-btn"
+        <HubPeriodNavButton
+          direction="prev"
           onClick={() => applyMonth(addMonthsToYearMonth(yearMonth, -1))}
           disabled={!configured || loading}
           aria-label="Mes anterior"
-        >
-          ←
-        </button>
+        />
         <h2 className="hub-dispatched-stats-month-title">{formatMonthYearLabel(yearMonth)}</h2>
-        <button
-          type="button"
-          className="pager-tactic-btn"
+        <HubPeriodNavButton
+          direction="next"
           onClick={() => applyMonth(addMonthsToYearMonth(yearMonth, 1))}
           disabled={!configured || loading}
           aria-label="Mes siguiente"
-        >
-          →
-        </button>
+        />
       </section>
 
       <div className="hub-dispatched-stats-total" aria-live="polite">

@@ -262,6 +262,43 @@ body:has(.nm-hub-app) {
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
+@media (max-width: 1023.98px) {
+  .nm-hub-app--tasks .hub-tasks-table-wrap {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-table__row {
+    background: #ffffff !important;
+    border-color: rgba(15, 23, 42, 0.1) !important;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-table__row--completed {
+    background: #fafafa !important;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-table__row td,
+  .nm-hub-app--tasks .hub-tasks-table__row:hover td,
+  .nm-hub-app--tasks .hub-tasks-table__row--completed td,
+  .nm-hub-app--tasks .hub-tasks-table__row--completed:hover td {
+    background: transparent !important;
+    border-bottom-color: transparent !important;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-table__detail-row {
+    background: #ffffff !important;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-table__detail-row--completed {
+    background: #fafafa !important;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-table__detail-row td {
+    background: transparent !important;
+  }
+}
+
 .nm-hub-app--tasks .hub-tasks-table thead th {
   background: #f8fafc !important;
   color: #64748b !important;
@@ -558,13 +595,29 @@ body:has(.nm-hub-app) {
 .nm-hub-app .cut-list-ordenar-merge,
 .nm-hub-app .date-pager-faja-compacta,
 .nm-hub-app .hub-dispatched-hero,
-.nm-hub-app .admin-analytics-holder,
 .nm-hub-app .kpi-card,
 .nm-hub-app .logistica-console,
 .nm-hub-app .logistica-held-table__link {
   background-color: #ffffff !important;
   color: #0f172a !important;
   border-color: rgba(15, 23, 42, 0.1) !important;
+}
+
+.nm-hub-app .admin-analytics-holder {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  color: #0f172a !important;
+}
+
+.nm-hub-app--cut-analytics .admin-analytics-holder__title,
+.nm-hub-app--dispatch-analytics .admin-analytics-holder__title {
+  color: #0f172a !important;
+}
+
+.nm-hub-app--cut-analytics .admin-analytics-holder__lead,
+.nm-hub-app--dispatch-analytics .admin-analytics-holder__lead {
+  color: #5b6573 !important;
 }
 
 /* Analíticas corte / envío — contraste Apple light */
@@ -615,10 +668,40 @@ body:has(.nm-hub-app) {
 }
 
 .nm-hub-app--cut-analytics .week-pager-btn,
-.nm-hub-app--dispatch-analytics .week-pager-btn {
+.nm-hub-app--dispatch-analytics .week-pager-btn,
+.nm-hub-app .hub-period-nav-btn {
   background: #f2f2f7 !important;
   color: #1d1d1f !important;
   border-color: transparent !important;
+}
+
+.nm-hub-app .hub-period-nav-btn:hover:not(:disabled) {
+  background: #e5e5ea !important;
+  color: #000000 !important;
+}
+
+.nm-hub-app .hub-period-nav-btn:active:not(:disabled) {
+  background: #d1d1d6 !important;
+}
+
+.nm-hub-app--cut-list .cut-list-date-nav {
+  background: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  color: #1d1d1f !important;
+}
+
+.nm-hub-app--cut-list .cut-list-date-nav .nm-prod-date-label {
+  color: #1d1d1f !important;
+}
+
+.nm-hub-app--dispatched-stats .hub-dispatched-stats-month-bar {
+  background: #ffffff !important;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  padding: 0.55rem 0.75rem !important;
+}
+
+.nm-hub-app--dispatched-stats .hub-dispatched-stats-month-title {
+  color: #1d1d1f !important;
 }
 
 .nm-hub-app--cut-analytics .kpi-card-rebel.alert-critical .kpi-card-number,

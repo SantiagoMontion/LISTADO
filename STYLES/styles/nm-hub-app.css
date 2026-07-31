@@ -23,6 +23,54 @@
   box-sizing: border-box;
 }
 
+/* Period pager chevrons — Apple HIG style (month / day / week) */
+.hub-period-nav-btn {
+  appearance: none;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #f2f2f7;
+  color: #1d1d1f;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.12s ease;
+}
+
+.hub-period-nav-btn__icon {
+  display: block;
+  flex-shrink: 0;
+}
+
+.hub-period-nav-btn:hover:not(:disabled) {
+  background: #e5e5ea;
+  color: #000000;
+}
+
+.hub-period-nav-btn:active:not(:disabled) {
+  background: #d1d1d6;
+  transform: scale(0.94);
+}
+
+.hub-period-nav-btn:focus-visible {
+  outline: 2px solid #007aff;
+  outline-offset: 2px;
+}
+
+.hub-period-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 .nm-hub-header {
   margin-bottom: 1rem;
 }
@@ -1436,12 +1484,13 @@ a.nm-hub-brand-bar__btn:hover {
   background-color: #ffffff;
   border: 1px solid rgba(15, 23, 42, 0.1);
   border-radius: 14px;
-  padding: 10px 16px;
+  padding: 10px 14px;
   display: flex;
   align-items: center;
   width: 100%;
   box-sizing: border-box;
   margin-bottom: 16px;
+  gap: 0.5rem;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
@@ -1685,7 +1734,7 @@ a.nm-hub-brand-bar__btn:hover {
   justify-content: space-between;
   gap: 0.75rem;
   margin-bottom: 1rem;
-  padding: 0.65rem 0.5rem;
+  padding: 0.55rem 0.65rem;
   background: var(--bg-surface-rebel);
   border-radius: 16px;
 }
@@ -1848,13 +1897,40 @@ a.nm-hub-brand-bar__btn:hover {
 
 .nm-hub-app.nm-hub-app--dispatch-analytics .admin-analytics-holder,
 .nm-hub-app.nm-hub-app--cut-analytics .admin-analytics-holder {
-  padding: 12px 0 28px;
+  padding: 0.85rem 0 2rem;
   display: flex;
   flex-direction: column;
   gap: 14px;
   width: 100%;
-  max-width: 52rem;
+  max-width: none;
   box-sizing: border-box;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.nm-hub-app.nm-hub-app--dispatch-analytics .admin-analytics-holder__head,
+.nm-hub-app.nm-hub-app--cut-analytics .admin-analytics-holder__head {
+  margin: 0 0 0.15rem;
+}
+
+.nm-hub-app.nm-hub-app--dispatch-analytics .admin-analytics-holder__title,
+.nm-hub-app.nm-hub-app--cut-analytics .admin-analytics-holder__title {
+  margin: 0 0 0.35rem;
+  font-size: clamp(1.35rem, 2.4vw, 1.7rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #0f172a;
+  font-family: var(--font-family, 'Plus Jakarta Sans', ui-sans-serif, sans-serif);
+}
+
+.nm-hub-app.nm-hub-app--dispatch-analytics .admin-analytics-holder__lead,
+.nm-hub-app.nm-hub-app--cut-analytics .admin-analytics-holder__lead {
+  margin: 0;
+  max-width: 40rem;
+  font-size: 0.92rem;
+  color: #5b6573;
+  line-height: 1.45;
 }
 
 .nm-hub-app.nm-hub-app--dispatch-analytics .admin-analytics-holder__feedback,
@@ -1867,14 +1943,14 @@ a.nm-hub-brand-bar__btn:hover {
   background-color: #ffffff;
   border: 1px solid rgba(15, 23, 42, 0.1);
   border-radius: 14px;
-  padding: 10px 12px;
+  padding: 10px 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   width: 100%;
   box-sizing: border-box;
   margin-bottom: 0;
-  gap: 10px;
+  gap: 12px;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
@@ -3339,7 +3415,7 @@ body:has(.nm-hub-app) {
   justify-content: space-between;
   gap: 0.75rem;
   margin: 0 0 0.85rem;
-  padding: 0.35rem 0;
+  padding: 0.35rem 0.25rem;
   background: transparent;
   border: 0;
   border-radius: 0;
@@ -4125,6 +4201,250 @@ select.hub-mayorista-client-modal__input {
 .nm-hub-app--tasks .btn-task-notes.hub-tasks-table__action-btn {
   min-width: 5.75rem;
   justify-content: center;
+}
+
+/* ── Tasks list: Apple inset cards on phone / narrow tablet ─────── */
+@media (max-width: 1023.98px) {
+  .nm-hub-app--tasks .hub-tasks-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-filters .tasks-hub-search-wrap {
+    max-width: none;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-filter-field,
+  .nm-hub-app--tasks .hub-tasks-completion-seg {
+    width: 100%;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-completion-seg {
+    display: flex;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-completion-seg__btn {
+    flex: 1 1 0;
+    text-align: center;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-table-wrap {
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-table {
+    display: block;
+    width: 100%;
+    table-layout: auto;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-table thead {
+    display: none;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-table__row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      'tipo created'
+      'title title'
+      'status payment'
+      'detail images'
+      'tracking tracking'
+      'actions actions';
+    gap: 10px 12px;
+    padding: 14px 14px 12px;
+    margin: 0;
+    background: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+
+  .nm-hub-app--tasks .hub-tasks-table__row td {
+    display: block;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    padding: 0;
+    border: 0 !important;
+    background: transparent !important;
+    vertical-align: top;
+    white-space: normal;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-table__row:hover td {
+    background: transparent !important;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-table__row--completed {
+    background: #fafafa;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-table__row--completed td {
+    background: transparent !important;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-table__tipo {
+    grid-area: tipo;
+    align-self: center;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-table__created {
+    grid-area: created;
+    align-self: center;
+    justify-self: end;
+    text-align: right;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #8e8e93;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-table__title {
+    grid-area: title;
+    padding-top: 2px !important;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-table__title-link,
+  .nm-hub-app--tasks .hub-tasks-table__title-text {
+    display: block;
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.3;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-table__status {
+    grid-area: status;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-table__payment {
+    grid-area: payment;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-table__status .hub-tasks-pill-select,
+  .nm-hub-app--tasks .hub-tasks-table__payment .hub-tasks-pill-select,
+  .nm-hub-app--tasks .hub-tasks-table__status .hub-tasks-pill-select__trigger,
+  .nm-hub-app--tasks .hub-tasks-table__payment .hub-tasks-pill-select__trigger {
+    width: 100%;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-table__detail-toggle {
+    grid-area: detail;
+    align-self: center;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-table__images {
+    grid-area: images;
+    align-self: center;
+    justify-self: end;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-table__tracking {
+    grid-area: tracking;
+    padding-top: 4px !important;
+    border-top: 1px solid rgba(60, 60, 67, 0.12) !important;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-tracking-cell {
+    display: flex;
+    align-items: center;
+    min-height: 36px;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-table__col-actions {
+    grid-area: actions;
+    text-align: left;
+    padding-top: 2px !important;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-table__row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-table__row-actions .hub-tasks-table__action-btn,
+  .nm-hub-app--tasks .btn-task-notes.hub-tasks-table__action-btn {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 40px;
+    justify-content: center;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-table__row-actions .btn-delete-task {
+    flex: 0 0 40px;
+    width: 40px;
+    min-width: 40px;
+    padding-inline: 0;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-table__detail-btn {
+    min-height: 36px;
+    padding: 0.35rem 0;
+    font-size: 0.9rem;
+    font-weight: 650;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-table__row:has(+ .hub-tasks-table__detail-row) {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom-color: transparent;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-table__detail-row {
+    display: block;
+    margin-top: -12px;
+    background: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    border-top: 0;
+    border-radius: 0 0 14px 14px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    overflow: hidden;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-table__detail-row--completed {
+    background: #fafafa;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-table__detail-row td {
+    display: block;
+    width: 100%;
+    padding: 0 14px 14px;
+    border: 0 !important;
+    background: transparent !important;
+  }
+
+  .nm-hub-app--tasks .hub-tasks-table__detail-panel {
+    margin: 0;
+    padding-top: 4px;
+    border-top: 1px solid rgba(60, 60, 67, 0.12);
+  }
+
+  .nm-hub-app--tasks .hub-tasks-table__detail-body {
+    font-size: 0.92rem;
+    line-height: 1.45;
+    color: #3a3a3c;
+  }
 }
 
 .nm-hub-app--tasks .hub-tasks-edit-btn {
@@ -5885,16 +6205,17 @@ select.hub-mayorista-client-modal__input {
 }
 
 .nm-hub-app--cut-list .cut-list-date-nav {
-  background-color: var(--bg-form-card);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  background-color: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.1);
   border-radius: 14px;
-  padding: 8px 12px;
+  padding: 10px 14px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .nm-hub-app--cut-list .cut-list-date-nav .nm-prod-btn {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: var(--text-rebel-primary);
+  background: #f2f2f7;
+  border: 0;
+  color: #1d1d1f;
 }
 
 .nm-hub-app--cut-list .cut-list-date-nav .nm-prod-date-label {

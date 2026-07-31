@@ -33,6 +33,7 @@ import type {
 } from '../lib/types'
 import { HubBrandBar } from './HubBrandBar'
 import { HubDesktopNav } from './HubDesktopNav'
+import { HubPeriodNavButton } from './HubPeriodNavButton'
 import { HubImageLightbox } from './HubImageLightbox'
 import { HubTaskNotesPanel } from './HubTaskNotesPanel'
 import { HubTasksPillSelect, type HubTasksPillOption } from './HubTasksPillSelect'
@@ -1542,23 +1543,17 @@ export function HubTasksApp({
 
           <div className="hub-tasks-toolbar">
             <div className="hub-tasks-month-bar" aria-label="Mes">
-              <button
-                type="button"
-                className="nm-hub-btn nm-hub-btn-ghost"
+              <HubPeriodNavButton
+                direction="prev"
                 onClick={() => applyMonth(addMonthsToYearMonth(yearMonth, -1))}
                 aria-label="Mes anterior"
-              >
-                ‹
-              </button>
+              />
               <h2 className="hub-tasks-month-title">{formatMonthYearLabel(yearMonth)}</h2>
-              <button
-                type="button"
-                className="nm-hub-btn nm-hub-btn-ghost"
+              <HubPeriodNavButton
+                direction="next"
                 onClick={() => applyMonth(addMonthsToYearMonth(yearMonth, 1))}
                 aria-label="Mes siguiente"
-              >
-                ›
-              </button>
+              />
             </div>
 
             <div className="hub-tasks-filters" role="search">

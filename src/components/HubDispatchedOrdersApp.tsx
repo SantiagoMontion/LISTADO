@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { HubBrandBar } from './HubBrandBar'
 import { HubDesktopNav } from './HubDesktopNav'
+import { HubPeriodNavButton } from './HubPeriodNavButton'
 import { HUB_NAV_EVENT, hubNavigate } from '../lib/hubNavigate'
 import {
   addDaysToIsoDate,
@@ -219,15 +220,12 @@ export function HubDispatchedOrdersApp({
 
       <section className="date-pager-faja-compacta" aria-label="Día de pedidos despachados">
         <div className="date-pager-compact-side date-pager-compact-side--start">
-          <button
-            type="button"
-            className="pager-tactic-btn"
+          <HubPeriodNavButton
+            direction="prev"
             onClick={() => applyDay(addDaysToIsoDate(day, -1))}
             disabled={!configured || loading || busy}
             aria-label="Día anterior"
-          >
-            ←
-          </button>
+          />
         </div>
         <div className="date-pager-panel-compact nm-hub-date-picker">
           <span className="date-text-accent-number">{formatDayMonthShort(day)}</span>
@@ -241,15 +239,12 @@ export function HubDispatchedOrdersApp({
           />
         </div>
         <div className="date-pager-compact-side date-pager-compact-side--end">
-          <button
-            type="button"
-            className="pager-tactic-btn"
+          <HubPeriodNavButton
+            direction="next"
             onClick={() => applyDay(addDaysToIsoDate(day, 1))}
             disabled={!configured || loading || busy}
             aria-label="Día siguiente"
-          >
-            →
-          </button>
+          />
         </div>
       </section>
 
