@@ -4187,8 +4187,8 @@ select.hub-mayorista-client-modal__input {
 
 .nm-hub-app--tasks .hub-tasks-table__col-images,
 .nm-hub-app--tasks .hub-tasks-table__images {
-  width: 6%;
-  min-width: 3.25rem;
+  width: 8%;
+  min-width: 6.25rem;
 }
 
 .nm-hub-app--tasks .hub-tasks-table__col-tracking,

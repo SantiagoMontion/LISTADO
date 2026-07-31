@@ -258,9 +258,6 @@ function TaskThumbnails({
   if (paths.length === 0) return null
 
   const orderedUrls = paths.map((p) => urls[p]).filter(Boolean) as string[]
-  const firstPath = paths[0]
-  const firstUrl = urls[firstPath]
-  const extraCount = Math.max(0, paths.length - 1)
 
   const wrapCls = [
     rebel ? 'task-media-attachment' : 'nm-hub-task-images',
@@ -282,37 +279,51 @@ function TaskThumbnails({
     setLightboxIndex(Math.min(index, orderedUrls.length - 1))
   }
 
-  // Compacto (tabla tareas): 1 foto + indicador de más en la misma fila.
+  // Compacto (tabla tareas PC): hasta 2 fotos clickeables; desde la 3.ª el “+N”.
   if (compact) {
+    const visibleCount = Math.min(2, paths.length)
+    const moreCount = Math.max(0, paths.length - 2)
+    const morePeekPath = paths[2]
+    const morePeekUrl = morePeekPath ? urls[morePeekPath] : undefined
+
     return (
       <>
         <div className={wrapCls}>
-          {firstUrl ? (
-            <button
-              type="button"
-              className={`${btnCls} task-thumb-hit--primary`}
-              onClick={() => openGallery(0)}
-              aria-label={extraCount > 0 ? `Ampliar imagen (1 de ${paths.length})` : 'Ampliar imagen'}
-            >
-              <img src={firstUrl} alt="" className={imgCls} />
-            </button>
-          ) : (
-            <span className="nm-hub-thumb-placeholder nm-hub-thumb-placeholder--compact" aria-hidden />
-          )}
-          {extraCount > 0 ? (
+          {Array.from({ length: visibleCount }, (_, index) => {
+            const path = paths[index]
+            const url = urls[path]
+            return url ? (
+              <button
+                key={path}
+                type="button"
+                className={`${btnCls}${index === 0 ? ' task-thumb-hit--primary' : ''}`}
+                onClick={() => openGallery(index)}
+                aria-label={`Ampliar imagen (${index + 1} de ${paths.length})`}
+              >
+                <img src={url} alt="" className={imgCls} />
+              </button>
+            ) : (
+              <span
+                key={path}
+                className="nm-hub-thumb-placeholder nm-hub-thumb-placeholder--compact"
+                aria-hidden
+              />
+            )
+          })}
+          {moreCount > 0 ? (
             <button
               type="button"
               className="task-thumb-more"
-              onClick={() => openGallery(0)}
-              aria-label={`Ver ${extraCount} imagen${extraCount === 1 ? '' : 'es'} más`}
+              onClick={() => openGallery(2)}
+              aria-label={`Ver ${moreCount} imagen${moreCount === 1 ? '' : 'es'} más`}
               title={`${paths.length} imágenes`}
             >
-              {urls[paths[1]] ? (
-                <img src={urls[paths[1]]} alt="" className="task-thumb-more__peek" />
+              {morePeekUrl ? (
+                <img src={morePeekUrl} alt="" className="task-thumb-more__peek" />
               ) : (
                 <span className="task-thumb-more__peek task-thumb-more__peek--empty" aria-hidden />
               )}
-              <span className="task-thumb-more__badge">+{extraCount}</span>
+              <span className="task-thumb-more__badge">+{moreCount}</span>
             </button>
           ) : null}
         </div>
