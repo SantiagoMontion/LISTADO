@@ -208,6 +208,9 @@ function BedPrintTimeSelect({ horasCama, minutosCama, onChange }: BedPrintTimeSe
             </option>
           ))}
         </select>
+        <span className="printing3d-field__suffix printing3d-field__suffix--spacer" aria-hidden="true">
+          u
+        </span>
       </div>
     </label>
   )

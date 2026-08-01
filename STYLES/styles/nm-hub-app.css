@@ -9352,6 +9352,10 @@ body:has(.nm-hub-app--logistica-andreani) {
 
 .printing3d-field {
   display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .printing3d-field--full {
@@ -9373,11 +9377,11 @@ body:has(.nm-hub-app--logistica-andreani) {
   gap: 0.5rem;
   width: 100%;
   max-width: 100%;
+  min-width: 0;
   box-sizing: border-box;
 }
 
 .nm-hub-app--3d .printing3d-field__input.nm-hub-input,
-.nm-hub-app--3d .printing3d-slider__number.nm-hub-input,
 .nm-hub-app--3d .printing3d-select.nm-hub-input {
   background: #f2f2f7 !important;
   color: #1d1d1f !important;
@@ -9389,6 +9393,21 @@ body:has(.nm-hub-app--logistica-andreani) {
   width: 100%;
   max-width: 100%;
   min-width: 0;
+  box-sizing: border-box;
+}
+
+.nm-hub-app--3d .printing3d-slider__number.nm-hub-input {
+  background: #f2f2f7 !important;
+  color: #1d1d1f !important;
+  border: 1px solid transparent !important;
+  border-radius: 12px !important;
+  min-height: 2.65rem;
+  padding: 0.55rem 0.75rem;
+  font-weight: 600;
+  width: 4.75rem !important;
+  max-width: 4.75rem !important;
+  min-width: 4.75rem;
+  flex: 0 0 4.75rem;
   box-sizing: border-box;
 }
 
@@ -9418,8 +9437,11 @@ body:has(.nm-hub-app--logistica-andreani) {
   min-width: 0;
 }
 
-.printing3d-field__control .printing3d-select.printing3d-field__input {
+.printing3d-field__control .printing3d-select {
   flex: 1 1 auto;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .printing3d-field__suffix {
@@ -9430,21 +9452,30 @@ body:has(.nm-hub-app--logistica-andreani) {
   min-width: 1.75rem;
 }
 
+.printing3d-field__suffix--spacer {
+  visibility: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+
 .printing3d-slider-row {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  width: 100%;
+  min-width: 0;
 }
 
 .printing3d-slider {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
   accent-color: #1565d8;
   height: 0.35rem;
 }
 
 .printing3d-slider__number {
   width: 4.75rem;
-  flex-shrink: 0;
+  flex: 0 0 4.75rem;
   text-align: right;
 }
 
