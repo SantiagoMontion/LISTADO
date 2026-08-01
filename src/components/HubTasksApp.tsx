@@ -1793,7 +1793,7 @@ export function HubTasksApp({
                         </td>
                         <td className="hub-tasks-table__created">{formatTaskCreatedAt(t.created_at)}</td>
                         <td className="hub-tasks-table__images">
-                          {completed && (t.image_paths?.length ?? 0) > 0 ? (
+                          {(t.image_paths?.length ?? 0) > 0 ? (
                             <TaskThumbnails paths={t.image_paths ?? []} rebel compact />
                           ) : null}
                         </td>
