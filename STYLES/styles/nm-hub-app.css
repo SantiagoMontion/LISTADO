@@ -9295,6 +9295,9 @@ body:has(.nm-hub-app--logistica-andreani) {
 
 .printing3d-select {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   cursor: pointer;
   appearance: none;
   background-color: #f8fafc;
@@ -9368,6 +9371,9 @@ body:has(.nm-hub-app--logistica-andreani) {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .nm-hub-app--3d .printing3d-field__input.nm-hub-input,
@@ -9380,6 +9386,10 @@ body:has(.nm-hub-app--logistica-andreani) {
   min-height: 2.65rem;
   padding: 0.55rem 0.75rem;
   font-weight: 600;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .nm-hub-app--3d input[type='number'] {

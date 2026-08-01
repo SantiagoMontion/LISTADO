@@ -190,23 +190,25 @@ function BedPrintTimeSelect({ horasCama, minutosCama, onChange }: BedPrintTimeSe
   return (
     <label className="printing3d-field" htmlFor="tiempo-cama">
       <span className="printing3d-field__label">Tiempo</span>
-      <select
-        id="tiempo-cama"
-        className="nm-hub-input printing3d-select"
-        value={totalMinutes}
-        onChange={(e) => {
-          const { horasCama: h, minutosCama: m } = totalMinutesToBedTime(
-            Number(e.target.value),
-          )
-          onChange(h, m)
-        }}
-      >
-        {options.map((option) => (
-          <option key={option.totalMinutes} value={option.totalMinutes}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+      <div className="printing3d-field__control">
+        <select
+          id="tiempo-cama"
+          className="nm-hub-input printing3d-select printing3d-field__input"
+          value={totalMinutes}
+          onChange={(e) => {
+            const { horasCama: h, minutosCama: m } = totalMinutesToBedTime(
+              Number(e.target.value),
+            )
+            onChange(h, m)
+          }}
+        >
+          {options.map((option) => (
+            <option key={option.totalMinutes} value={option.totalMinutes}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
     </label>
   )
 }
