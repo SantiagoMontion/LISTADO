@@ -9412,8 +9412,14 @@ body:has(.nm-hub-app--logistica-andreani) {
 }
 
 .printing3d-field__input {
-  flex: 1;
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
+}
+
+.printing3d-field__control .printing3d-select.printing3d-field__input {
+  flex: 1 1 auto;
 }
 
 .printing3d-field__suffix {
