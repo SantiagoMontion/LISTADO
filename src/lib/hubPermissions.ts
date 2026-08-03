@@ -15,6 +15,7 @@ export interface HubPermissions {
   editDispatchedOrders: boolean
   viewLogisticaAndreani: boolean
   view3DCalculator: boolean
+  viewImportadosCalculator: boolean
   viewDashboardSummary: boolean
 }
 
@@ -32,6 +33,7 @@ const FULL_ACCESS: HubPermissions = {
   editDispatchedOrders: true,
   viewLogisticaAndreani: true,
   view3DCalculator: true,
+  viewImportadosCalculator: true,
   viewDashboardSummary: true,
 }
 
@@ -67,6 +69,7 @@ export type HubAppPath =
   | '/lista-corte/analitica'
   | '/logistica-andreani'
   | '/3d'
+  | '/importados'
   | '/entrar'
 
 export function canAccessHubPath(
@@ -100,6 +103,8 @@ export function canAccessHubPath(
       return perms.viewLogisticaAndreani
     case '/3d':
       return perms.view3DCalculator
+    case '/importados':
+      return perms.viewImportadosCalculator
     default:
       return false
   }
@@ -119,6 +124,7 @@ export function normalizeHubPath(path: string): HubAppPath | string {
   if (p === '/pedidos-despachados') return '/pedidos-despachados'
   if (p === '/logistica-andreani') return '/logistica-andreani'
   if (p === '/3d') return '/3d'
+  if (p === '/importados') return '/importados'
   if (p === '' || p === '/') return '/'
   return p
 }
@@ -152,6 +158,9 @@ export function hubPathBlockedMessage(path: string, role: HubUserRole | null | u
   if (p === '/3d') {
     return `El perfil «${label}» no accede a la calculadora 3D.`
   }
+  if (p === '/importados') {
+    return `El perfil «${label}» no accede a la calculadora de importados.`
+  }
   return 'No tenés permiso para esta pantalla.'
 }
 
@@ -169,6 +178,7 @@ export function hubDashboardLinks(day: string = todayIsoLocal()) {
     cutAnalytics: '/lista-corte/analitica',
     logisticaAndreani: '/logistica-andreani',
     printing3d: '/3d',
+    importados: '/importados',
   } as const
 }
 
@@ -225,8 +235,13 @@ export function hubDesktopNavGroups(
     groups.push({ id: 'envios', label: 'Envíos', items: enviosItems })
   }
 
-  if (perms.view3DCalculator) {
-    groups.push({ id: 'herramientas', label: 'Calculadora 3D', href: links.printing3d })
+  if (perms.view3DCalculator || perms.viewImportadosCalculator) {
+    const calcItems: HubDesktopNavItem[] = []
+    if (perms.view3DCalculator) calcItems.push({ href: links.printing3d, label: '3D' })
+    if (perms.viewImportadosCalculator) {
+      calcItems.push({ href: links.importados, label: 'Importados' })
+    }
+    groups.push({ id: 'calculadoras', label: 'Calculadoras', items: calcItems })
   }
 
   return groups
