@@ -3,8 +3,10 @@
 export interface ImportadosInputs {
   /** Costo del producto en EE. UU. (USD) */
   costoProductoUsd: number
-  /** Peso del paquete (kg) */
+  /** Peso del paquete (kg) — Aerobox cobra solo por peso real, no por volumen */
   pesoKg: number
+  /** Tarifa aérea Aerobox (USD por kg) */
+  aeroboxUsdPorKg: number
   /** Flete interno en EE. UU. (USD) */
   fleteInternoUsd: number
   /** Cotización dólar financiero / MEP / CCL (ARS) */
@@ -45,12 +47,13 @@ export interface ImportadosInvalidResults {
 
 export type ImportadosCalcOutput = ImportadosResults | ImportadosInvalidResults
 
-export const AEROBOX_USD_PER_KG = 18
+export const AEROBOX_USD_PER_KG = 17
 export const IMPUESTOS_SA_RATE = 0.32
 
 export const DEFAULT_IMPORTADOS_INPUTS: ImportadosInputs = {
   costoProductoUsd: 0,
   pesoKg: 0.3,
+  aeroboxUsdPorKg: AEROBOX_USD_PER_KG,
   fleteInternoUsd: 0,
   dolarArs: 1350,
   recargoCuotasPct: 20,
@@ -88,6 +91,7 @@ export function computeImportados(inputs: ImportadosInputs): ImportadosCalcOutpu
   const errors: string[] = []
   const costoProductoUsd = nonNegative(inputs.costoProductoUsd, 'Costo del producto', errors)
   const pesoKg = nonNegative(inputs.pesoKg, 'Peso', errors)
+  const aeroboxUsdPorKg = nonNegative(inputs.aeroboxUsdPorKg, 'Tarifa Aerobox', errors)
   const fleteInternoUsd = nonNegative(inputs.fleteInternoUsd, 'Flete interno', errors)
   const dolarArs = nonNegative(inputs.dolarArs, 'Cotización dólar', errors)
   let recargoCuotasPct = inputs.recargoCuotasPct
@@ -103,11 +107,15 @@ export function computeImportados(inputs: ImportadosInputs): ImportadosCalcOutpu
   if (dolarArs <= 0) {
     return { valid: false, errors: ['La cotización del dólar debe ser mayor a 0.'] }
   }
+  if (aeroboxUsdPorKg <= 0) {
+    return { valid: false, errors: ['La tarifa Aerobox debe ser mayor a 0.'] }
+  }
   if (costoProductoUsd <= 0) {
     return { valid: false, errors: ['Ingresá el costo del producto en USD.'] }
   }
 
-  const fleteAeroboxUsd = pesoKg * AEROBOX_USD_PER_KG
+  // Solo peso real (kg). Aerobox no cobra volumen / dimensional weight.
+  const fleteAeroboxUsd = pesoKg * aeroboxUsdPorKg
   const baseImponibleUsd = costoProductoUsd + fleteInternoUsd + fleteAeroboxUsd
   const impuestosSaUsd = baseImponibleUsd * IMPUESTOS_SA_RATE
   const costoLandedUsd = baseImponibleUsd + impuestosSaUsd
@@ -140,7 +148,7 @@ export function computeImportados(inputs: ImportadosInputs): ImportadosCalcOutpu
 
 export type ImportadosPrefs = Pick<
   ImportadosInputs,
-  'pesoKg' | 'fleteInternoUsd' | 'dolarArs' | 'recargoCuotasPct'
+  'pesoKg' | 'aeroboxUsdPorKg' | 'fleteInternoUsd' | 'dolarArs' | 'recargoCuotasPct'
 >
 
 export function coerceImportadosPrefs(raw: unknown): ImportadosPrefs {
@@ -151,39 +159,31 @@ export function coerceImportadosPrefs(raw: unknown): ImportadosPrefs {
   }
   return {
     pesoKg: num('pesoKg', DEFAULT_IMPORTADOS_INPUTS.pesoKg),
+    aeroboxUsdPorKg: num('aeroboxUsdPorKg', DEFAULT_IMPORTADOS_INPUTS.aeroboxUsdPorKg),
     fleteInternoUsd: num('fleteInternoUsd', DEFAULT_IMPORTADOS_INPUTS.fleteInternoUsd),
     dolarArs: num('dolarArs', DEFAULT_IMPORTADOS_INPUTS.dolarArs),
     recargoCuotasPct: num('recargoCuotasPct', DEFAULT_IMPORTADOS_INPUTS.recargoCuotasPct),
   }
 }
 
-export function loadImportadosPrefsLocal(): ImportadosPrefs {
-  if (typeof window === 'undefined') {
-    return {
-      pesoKg: DEFAULT_IMPORTADOS_INPUTS.pesoKg,
-      fleteInternoUsd: DEFAULT_IMPORTADOS_INPUTS.fleteInternoUsd,
-      dolarArs: DEFAULT_IMPORTADOS_INPUTS.dolarArs,
-      recargoCuotasPct: DEFAULT_IMPORTADOS_INPUTS.recargoCuotasPct,
-    }
+function defaultPrefs(): ImportadosPrefs {
+  return {
+    pesoKg: DEFAULT_IMPORTADOS_INPUTS.pesoKg,
+    aeroboxUsdPorKg: DEFAULT_IMPORTADOS_INPUTS.aeroboxUsdPorKg,
+    fleteInternoUsd: DEFAULT_IMPORTADOS_INPUTS.fleteInternoUsd,
+    dolarArs: DEFAULT_IMPORTADOS_INPUTS.dolarArs,
+    recargoCuotasPct: DEFAULT_IMPORTADOS_INPUTS.recargoCuotasPct,
   }
+}
+
+export function loadImportadosPrefsLocal(): ImportadosPrefs {
+  if (typeof window === 'undefined') return defaultPrefs()
   try {
     const raw = window.localStorage.getItem(IMPORTADOS_PREFS_STORAGE_KEY)
-    if (!raw) {
-      return {
-        pesoKg: DEFAULT_IMPORTADOS_INPUTS.pesoKg,
-        fleteInternoUsd: DEFAULT_IMPORTADOS_INPUTS.fleteInternoUsd,
-        dolarArs: DEFAULT_IMPORTADOS_INPUTS.dolarArs,
-        recargoCuotasPct: DEFAULT_IMPORTADOS_INPUTS.recargoCuotasPct,
-      }
-    }
+    if (!raw) return defaultPrefs()
     return coerceImportadosPrefs(JSON.parse(raw))
   } catch {
-    return {
-      pesoKg: DEFAULT_IMPORTADOS_INPUTS.pesoKg,
-      fleteInternoUsd: DEFAULT_IMPORTADOS_INPUTS.fleteInternoUsd,
-      dolarArs: DEFAULT_IMPORTADOS_INPUTS.dolarArs,
-      recargoCuotasPct: DEFAULT_IMPORTADOS_INPUTS.recargoCuotasPct,
-    }
+    return defaultPrefs()
   }
 }
 

@@ -189,11 +189,18 @@ export function HubImportadosApp({
   useEffect(() => {
     saveImportadosPrefsLocal({
       pesoKg: inputs.pesoKg,
+      aeroboxUsdPorKg: inputs.aeroboxUsdPorKg,
       fleteInternoUsd: inputs.fleteInternoUsd,
       dolarArs: inputs.dolarArs,
       recargoCuotasPct: inputs.recargoCuotasPct,
     })
-  }, [inputs.pesoKg, inputs.fleteInternoUsd, inputs.dolarArs, inputs.recargoCuotasPct])
+  }, [
+    inputs.pesoKg,
+    inputs.aeroboxUsdPorKg,
+    inputs.fleteInternoUsd,
+    inputs.dolarArs,
+    inputs.recargoCuotasPct,
+  ])
 
   const result = useMemo(() => computeImportados(inputs), [inputs])
 
@@ -244,6 +251,16 @@ export function HubImportadosApp({
                   onChange={(v) => patch({ pesoKg: v })}
                   step={0.01}
                   suffix="kg"
+                  hint="Aerobox cobra solo peso real (sin volumen)"
+                />
+                <NumberField
+                  id="imp-aerobox"
+                  label="Tarifa Aerobox"
+                  value={inputs.aeroboxUsdPorKg}
+                  onChange={(v) => patch({ aeroboxUsdPorKg: v })}
+                  step={0.5}
+                  suffix="USD/kg"
+                  hint="Cotización actual ~$17–20 / kg"
                 />
                 <NumberField
                   id="imp-flete"

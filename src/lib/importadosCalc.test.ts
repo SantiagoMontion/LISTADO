@@ -72,4 +72,17 @@ describe('importadosCalc', () => {
     if (result.valid) return
     expect(result.errors[0]).toMatch(/costo del producto/i)
   })
+
+  it('uses editable Aerobox USD/kg and ignores volume (weight only)', () => {
+    const result = computeImportados({
+      ...DEFAULT_IMPORTADOS_INPUTS,
+      costoProductoUsd: 40,
+      pesoKg: 2,
+      aeroboxUsdPorKg: 20,
+      dolarArs: 1000,
+    })
+    expect(result.valid).toBe(true)
+    if (!result.valid) return
+    expect(result.fleteAeroboxUsd).toBe(40)
+  })
 })
