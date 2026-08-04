@@ -44,22 +44,35 @@ export interface ImportadosMarginBand {
 
 export interface ImportadosResults {
   valid: true
+  baseImponibleUsd: number
   fleteAeroboxUsd: number
-  impuestosSaUsd: number
+  /** Gastos aduaneros no recuperables (~6% de la base) */
+  gastosNoRecuperablesUsd: number
+  /** Percepciones IVA + Ganancias (~26% de la base), sin margen */
+  percepcionesRecuperablesUsd: number
   envioDomicilioUsd: number
   destinoEnvio: ImportadosDestinoEnvio
-  costoLandedUsd: number
+  /** Base + no recuperables + envío AR (sobre esto va el margen) */
+  costoRealOperativoUsd: number
+  /** Costo real operativo × (1 + margen) [+ fijo] */
+  subtotalConMargenUsd: number
   margin: ImportadosMarginBand
+  /** Subtotal con margen + percepciones (pass-through) */
   precioContadoUsd: number
+  /** Solo sobre el bloque operativo (sin percepciones) */
   gananciaNetaUsd: number
   precioContadoArs: number
   precioCuotasArs: number
   gananciaNetaArs: number
   costoProductoArs: number
+  fleteInternoArs: number
   fleteAeroboxArs: number
-  impuestosSaArs: number
+  baseImponibleArs: number
+  gastosNoRecuperablesArs: number
+  percepcionesRecuperablesArs: number
   envioDomicilioArs: number
-  costoLandedArs: number
+  costoRealOperativoArs: number
+  subtotalConMargenArs: number
 }
 
 export interface ImportadosInvalidResults {
@@ -70,7 +83,10 @@ export interface ImportadosInvalidResults {
 export type ImportadosCalcOutput = ImportadosResults | ImportadosInvalidResults
 
 export const AEROBOX_USD_PER_KG = 17
-export const IMPUESTOS_SA_RATE = 0.32
+/** Gastos aduaneros / S.A.S. no recuperables (sobre base imponible). */
+export const GASTOS_NO_RECUPERABLES_RATE = 0.06
+/** IVA percepción + Ganancias (~26%), crédito fiscal — sin margen encima. */
+export const PERCEPCIONES_RECUPERABLES_RATE = 0.26
 
 export const DEFAULT_IMPORTADOS_INPUTS: ImportadosInputs = {
   costoProductoUsd: 0,
@@ -137,20 +153,29 @@ export function computeImportados(inputs: ImportadosInputs): ImportadosCalcOutpu
     return { valid: false, errors: ['Ingresá el costo del producto en USD.'] }
   }
 
-  // Solo peso real (kg). Aerobox no cobra volumen / dimensional weight.
+  // 1) Base imponible: producto + flete EE.UU. + Aerobox (peso real).
   const fleteAeroboxUsd = pesoKg * aeroboxUsdPorKg
   const baseImponibleUsd = costoProductoUsd + fleteInternoUsd + fleteAeroboxUsd
-  const impuestosSaUsd = baseImponibleUsd * IMPUESTOS_SA_RATE
+
+  // 2) Costo real operativo: base + gastos no recuperables (~6%) + envío AR.
+  const gastosNoRecuperablesUsd = baseImponibleUsd * GASTOS_NO_RECUPERABLES_RATE
   const destinoEnvio = DESTINO_ENVIO_OPTIONS.some((o) => o.id === inputs.destinoEnvio)
     ? inputs.destinoEnvio
     : DEFAULT_IMPORTADOS_INPUTS.destinoEnvio
   const envioDomicilioUsd = envioDomicilioUsdForDestino(destinoEnvio)
-  // Impuestos S.A. no incluyen el envío local AR; se suma después al landed.
-  const costoLandedUsd = baseImponibleUsd + impuestosSaUsd + envioDomicilioUsd
+  const costoRealOperativoUsd = baseImponibleUsd + gastosNoRecuperablesUsd + envioDomicilioUsd
 
+  // 3) Subtotal con margen: solo sobre el costo real operativo.
   const margin = resolveImportadosMargin(costoProductoUsd)
-  const precioContadoUsd = costoLandedUsd * (1 + margin.marginRate) + margin.fixedUsd
-  const gananciaNetaUsd = precioContadoUsd - costoLandedUsd
+  const subtotalConMargenUsd =
+    costoRealOperativoUsd * (1 + margin.marginRate) + margin.fixedUsd
+
+  // 4) Percepciones recuperables (~26%): pass-through, sin margen.
+  const percepcionesRecuperablesUsd = baseImponibleUsd * PERCEPCIONES_RECUPERABLES_RATE
+
+  // 5–6) Precio final USD / ARS.
+  const precioContadoUsd = subtotalConMargenUsd + percepcionesRecuperablesUsd
+  const gananciaNetaUsd = subtotalConMargenUsd - costoRealOperativoUsd
 
   const precioContadoArs = precioContadoUsd * dolarArs
   const precioCuotasArs = precioContadoArs * (1 + recargoCuotasPct / 100)
@@ -158,11 +183,14 @@ export function computeImportados(inputs: ImportadosInputs): ImportadosCalcOutpu
 
   return {
     valid: true,
+    baseImponibleUsd,
     fleteAeroboxUsd,
-    impuestosSaUsd,
+    gastosNoRecuperablesUsd,
+    percepcionesRecuperablesUsd,
     envioDomicilioUsd,
     destinoEnvio,
-    costoLandedUsd,
+    costoRealOperativoUsd,
+    subtotalConMargenUsd,
     margin,
     precioContadoUsd,
     gananciaNetaUsd,
@@ -170,10 +198,14 @@ export function computeImportados(inputs: ImportadosInputs): ImportadosCalcOutpu
     precioCuotasArs,
     gananciaNetaArs,
     costoProductoArs: costoProductoUsd * dolarArs,
+    fleteInternoArs: fleteInternoUsd * dolarArs,
     fleteAeroboxArs: fleteAeroboxUsd * dolarArs,
-    impuestosSaArs: impuestosSaUsd * dolarArs,
+    baseImponibleArs: baseImponibleUsd * dolarArs,
+    gastosNoRecuperablesArs: gastosNoRecuperablesUsd * dolarArs,
+    percepcionesRecuperablesArs: percepcionesRecuperablesUsd * dolarArs,
     envioDomicilioArs: envioDomicilioUsd * dolarArs,
-    costoLandedArs: costoLandedUsd * dolarArs,
+    costoRealOperativoArs: costoRealOperativoUsd * dolarArs,
+    subtotalConMargenArs: subtotalConMargenUsd * dolarArs,
   }
 }
 

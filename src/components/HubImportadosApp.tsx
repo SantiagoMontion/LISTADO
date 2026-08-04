@@ -75,13 +75,15 @@ function BreakdownRow({
 function CostBreakdown({
   result,
   costoProductoUsd,
+  fleteInternoUsd,
 }: {
   result: ImportadosResults
   costoProductoUsd: number
+  fleteInternoUsd: number
 }) {
   return (
     <section className="printing3d-output-block">
-      <h2 className="printing3d-output-block__title">Desglose de costos</h2>
+      <h2 className="printing3d-output-block__title">Desglose</h2>
       <div className="importados-breakdown">
         <div className="importados-breakdown__head">
           <span>Concepto</span>
@@ -93,15 +95,27 @@ function CostBreakdown({
           usd={formatUsd(costoProductoUsd)}
           ars={formatArs(result.costoProductoArs, true)}
         />
+        {fleteInternoUsd > 0 ? (
+          <BreakdownRow
+            label="Flete interno EE. UU."
+            usd={formatUsd(fleteInternoUsd)}
+            ars={formatArs(result.fleteInternoArs, true)}
+          />
+        ) : null}
         <BreakdownRow
           label="Flete Miami (Aerobox)"
           usd={formatUsd(result.fleteAeroboxUsd)}
           ars={formatArs(result.fleteAeroboxArs, true)}
         />
         <BreakdownRow
-          label="Impuestos aduana / S.A."
-          usd={formatUsd(result.impuestosSaUsd)}
-          ars={formatArs(result.impuestosSaArs, true)}
+          label="Base imponible"
+          usd={formatUsd(result.baseImponibleUsd)}
+          ars={formatArs(result.baseImponibleArs, true)}
+        />
+        <BreakdownRow
+          label="Gastos aduana no recuperables (6%)"
+          usd={formatUsd(result.gastosNoRecuperablesUsd)}
+          ars={formatArs(result.gastosNoRecuperablesArs, true)}
         />
         <BreakdownRow
           label={`Envío domicilio (${DESTINO_ENVIO_OPTIONS.find((o) => o.id === result.destinoEnvio)?.label ?? ''})`}
@@ -109,9 +123,25 @@ function CostBreakdown({
           ars={formatArs(result.envioDomicilioArs, true)}
         />
         <BreakdownRow
-          label="Costo landed total"
-          usd={formatUsd(result.costoLandedUsd)}
-          ars={formatArs(result.costoLandedArs, true)}
+          label="Costo real operativo"
+          usd={formatUsd(result.costoRealOperativoUsd)}
+          ars={formatArs(result.costoRealOperativoArs, true)}
+          strong
+        />
+        <BreakdownRow
+          label="Subtotal con margen"
+          usd={formatUsd(result.subtotalConMargenUsd)}
+          ars={formatArs(result.subtotalConMargenArs, true)}
+        />
+        <BreakdownRow
+          label="Percepciones recuperables (26%)"
+          usd={formatUsd(result.percepcionesRecuperablesUsd)}
+          ars={formatArs(result.percepcionesRecuperablesArs, true)}
+        />
+        <BreakdownRow
+          label="Precio final"
+          usd={formatUsd(result.precioContadoUsd)}
+          ars={formatArs(result.precioContadoArs, true)}
           strong
         />
       </div>
@@ -314,7 +344,11 @@ export function HubImportadosApp({
                   </div>
                 </section>
 
-                <CostBreakdown result={result} costoProductoUsd={inputs.costoProductoUsd} />
+                <CostBreakdown
+                  result={result}
+                  costoProductoUsd={inputs.costoProductoUsd}
+                  fleteInternoUsd={inputs.fleteInternoUsd}
+                />
                 <YieldPanel result={result} />
               </>
             )}

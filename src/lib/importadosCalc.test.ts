@@ -3,7 +3,8 @@ import {
   AEROBOX_USD_PER_KG,
   computeImportados,
   DEFAULT_IMPORTADOS_INPUTS,
-  IMPUESTOS_SA_RATE,
+  GASTOS_NO_RECUPERABLES_RATE,
+  PERCEPCIONES_RECUPERABLES_RATE,
   resolveImportadosMargin,
 } from './importadosCalc'
 
@@ -22,7 +23,7 @@ describe('importadosCalc', () => {
     expect(resolveImportadosMargin(251).marginRate).toBe(0.18)
   })
 
-  it('computes landed, margin and ARS prices for a mid-range product', () => {
+  it('applies margin only on operating cost, not on recoverable perceptions', () => {
     const result = computeImportados({
       ...DEFAULT_IMPORTADOS_INPUTS,
       costoProductoUsd: 50,
@@ -30,28 +31,32 @@ describe('importadosCalc', () => {
       fleteInternoUsd: 0,
       dolarArs: 1350,
       recargoCuotasPct: 20,
+      destinoEnvio: 'provincia',
     })
     expect(result.valid).toBe(true)
     if (!result.valid) return
 
     const aerobox = 0.3 * AEROBOX_USD_PER_KG
-    const impuestos = (50 + 0 + aerobox) * IMPUESTOS_SA_RATE
-    const envioDom = 12 // provincia default
-    const landed = 50 + 0 + aerobox + impuestos + envioDom
-    const precioUsd = landed * 1.3
-    expect(result.fleteAeroboxUsd).toBeCloseTo(aerobox, 6)
-    expect(result.impuestosSaUsd).toBeCloseTo(impuestos, 6)
-    expect(result.envioDomicilioUsd).toBe(12)
-    expect(result.costoLandedUsd).toBeCloseTo(landed, 6)
-    expect(result.margin.marginRate).toBe(0.3)
-    expect(result.margin.fixedUsd).toBe(0)
-    expect(result.precioContadoUsd).toBeCloseTo(precioUsd, 6)
-    expect(result.gananciaNetaUsd).toBeCloseTo(precioUsd - landed, 6)
-    expect(result.precioContadoArs).toBeCloseTo(precioUsd * 1350, 4)
-    expect(result.precioCuotasArs).toBeCloseTo(precioUsd * 1350 * 1.2, 4)
+    const base = 50 + aerobox
+    const noRecup = base * GASTOS_NO_RECUPERABLES_RATE
+    const percep = base * PERCEPCIONES_RECUPERABLES_RATE
+    const envioDom = 12
+    const operativo = base + noRecup + envioDom
+    const subtotal = operativo * 1.3
+    const precio = subtotal + percep
+
+    expect(result.baseImponibleUsd).toBeCloseTo(base, 6)
+    expect(result.gastosNoRecuperablesUsd).toBeCloseTo(noRecup, 6)
+    expect(result.percepcionesRecuperablesUsd).toBeCloseTo(percep, 6)
+    expect(result.costoRealOperativoUsd).toBeCloseTo(operativo, 6)
+    expect(result.subtotalConMargenUsd).toBeCloseTo(subtotal, 6)
+    expect(result.precioContadoUsd).toBeCloseTo(precio, 6)
+    expect(result.gananciaNetaUsd).toBeCloseTo(subtotal - operativo, 6)
+    expect(result.precioContadoArs).toBeCloseTo(precio * 1350, 4)
+    expect(result.precioCuotasArs).toBeCloseTo(precio * 1350 * 1.2, 4)
   })
 
-  it('adds $10 fixed margin for products <= $30', () => {
+  it('adds $10 fixed margin for products <= $30 on operating cost only', () => {
     const result = computeImportados({
       ...DEFAULT_IMPORTADOS_INPUTS,
       costoProductoUsd: 25,
@@ -61,14 +66,16 @@ describe('importadosCalc', () => {
     })
     expect(result.valid).toBe(true)
     if (!result.valid) return
-    const aerobox = 0.3 * AEROBOX_USD_PER_KG
-    const impuestos = (25 + aerobox) * IMPUESTOS_SA_RATE
-    const landed = 25 + aerobox + impuestos + 12
-    expect(result.precioContadoUsd).toBeCloseTo(landed * 1.4 + 10, 6)
+    const base = 25 + 0.3 * AEROBOX_USD_PER_KG
+    const operativo = base + base * GASTOS_NO_RECUPERABLES_RATE + 12
+    const subtotal = operativo * 1.4 + 10
+    const precio = subtotal + base * PERCEPCIONES_RECUPERABLES_RATE
+    expect(result.subtotalConMargenUsd).toBeCloseTo(subtotal, 6)
+    expect(result.precioContadoUsd).toBeCloseTo(precio, 6)
     expect(result.margin.fixedUsd).toBe(10)
   })
 
-  it('applies domestic Argentina shipping by destination', () => {
+  it('applies domestic Argentina shipping by destination on operating cost', () => {
     const base = {
       ...DEFAULT_IMPORTADOS_INPUTS,
       costoProductoUsd: 50,
@@ -81,7 +88,7 @@ describe('importadosCalc', () => {
     if (!caba.valid || !interior.valid) return
     expect(caba.envioDomicilioUsd).toBe(8)
     expect(interior.envioDomicilioUsd).toBe(23)
-    expect(interior.costoLandedUsd - caba.costoLandedUsd).toBeCloseTo(15, 6)
+    expect(interior.costoRealOperativoUsd - caba.costoRealOperativoUsd).toBeCloseTo(15, 6)
   })
 
   it('rejects missing product cost', () => {
