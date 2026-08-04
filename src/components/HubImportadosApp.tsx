@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { CalcNumberField } from './CalcNumberField'
 import { HubBrandBar } from './HubBrandBar'
 import { HubDesktopNav } from './HubDesktopNav'
 import {
@@ -49,51 +50,6 @@ function formatArs(value: number, exact = false): string {
 
 function formatPct(rate: number): string {
   return `${(rate * 100).toLocaleString('es-AR', { maximumFractionDigits: 1 })}%`
-}
-
-interface NumberFieldProps {
-  id: string
-  label: string
-  value: number
-  onChange: (value: number) => void
-  min?: number
-  step?: number
-  suffix?: string
-  hint?: string
-}
-
-function NumberField({
-  id,
-  label,
-  value,
-  onChange,
-  min = 0,
-  step = 1,
-  suffix,
-  hint,
-}: NumberFieldProps) {
-  return (
-    <label className="printing3d-field" htmlFor={id}>
-      <span className="printing3d-field__label">{label}</span>
-      <div className="printing3d-field__control">
-        <input
-          id={id}
-          className="nm-hub-input printing3d-field__input"
-          type="number"
-          inputMode="decimal"
-          min={min}
-          step={step}
-          value={Number.isFinite(value) ? value : 0}
-          onChange={(e) => {
-            const parsed = Number.parseFloat(e.target.value)
-            onChange(Number.isFinite(parsed) ? parsed : 0)
-          }}
-        />
-        {suffix ? <span className="printing3d-field__suffix">{suffix}</span> : null}
-      </div>
-      {hint ? <span className="importados-field-hint">{hint}</span> : null}
-    </label>
-  )
 }
 
 function BreakdownRow({
@@ -244,7 +200,7 @@ export function HubImportadosApp({
             <section className="printing3d-section">
               <h2 className="printing3d-section__title">Entrada</h2>
               <div className="printing3d-section__grid">
-                <NumberField
+                <CalcNumberField
                   id="imp-costo"
                   label="Costo producto"
                   value={inputs.costoProductoUsd}
@@ -253,7 +209,7 @@ export function HubImportadosApp({
                   suffix="USD"
                   hint="Campo principal (precio B2B en EE. UU.)"
                 />
-                <NumberField
+                <CalcNumberField
                   id="imp-peso"
                   label="Peso del paquete"
                   value={inputs.pesoKg}
@@ -262,7 +218,7 @@ export function HubImportadosApp({
                   suffix="kg"
                   hint="Aerobox cobra solo peso real (sin volumen)"
                 />
-                <NumberField
+                <CalcNumberField
                   id="imp-aerobox"
                   label="Tarifa Aerobox"
                   value={inputs.aeroboxUsdPorKg}
@@ -271,7 +227,7 @@ export function HubImportadosApp({
                   suffix="USD/kg"
                   hint="Cotización actual ~$17–20 / kg"
                 />
-                <NumberField
+                <CalcNumberField
                   id="imp-flete"
                   label="Flete interno EE. UU."
                   value={inputs.fleteInternoUsd}
@@ -305,7 +261,7 @@ export function HubImportadosApp({
                     Por guía, una vez que el paquete ya está en Argentina
                   </span>
                 </div>
-                <NumberField
+                <CalcNumberField
                   id="imp-dolar"
                   label="Dólar MEP / CCL"
                   value={inputs.dolarArs}
@@ -313,7 +269,7 @@ export function HubImportadosApp({
                   step={1}
                   suffix="ARS"
                 />
-                <NumberField
+                <CalcNumberField
                   id="imp-cuotas"
                   label="Recargo cuotas"
                   value={inputs.recargoCuotasPct}
