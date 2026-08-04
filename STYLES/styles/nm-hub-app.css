@@ -9923,3 +9923,47 @@ body:has(.nm-hub-app--logistica-andreani) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+.importados-destino-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.importados-destino-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0.55rem 0.85rem;
+  border-radius: 980px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  background: #ffffff;
+  color: #5b6573;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 650;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+.importados-destino-pill__price {
+  font-weight: 750;
+  color: #1d1d1f;
+  font-variant-numeric: tabular-nums;
+}
+
+.importados-destino-pill.is-active {
+  background: rgba(21, 101, 216, 0.1);
+  border-color: rgba(21, 101, 216, 0.35);
+  color: #1565d8;
+}
+
+.importados-destino-pill.is-active .importados-destino-pill__price {
+  color: #1565d8;
+}
+
+.importados-destino-pill:hover:not(.is-active) {
+  background: #f2f2f7;
+  color: #1d1d1f;
+}

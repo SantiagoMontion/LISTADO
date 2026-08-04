@@ -1,5 +1,22 @@
 /** Calculadora de nacionalización / importados (USD → ARS). */
 
+/** Envío a domicilio en Argentina (por guía, USD). */
+export type ImportadosDestinoEnvio = 'caba' | 'provincia' | 'interior'
+
+export const DESTINO_ENVIO_OPTIONS: {
+  id: ImportadosDestinoEnvio
+  label: string
+  usd: number
+}[] = [
+  { id: 'caba', label: 'CABA', usd: 8 },
+  { id: 'provincia', label: 'Provincia', usd: 12 },
+  { id: 'interior', label: 'Interior', usd: 23 },
+]
+
+export function envioDomicilioUsdForDestino(destino: ImportadosDestinoEnvio): number {
+  return DESTINO_ENVIO_OPTIONS.find((o) => o.id === destino)?.usd ?? 12
+}
+
 export interface ImportadosInputs {
   /** Costo del producto en EE. UU. (USD) */
   costoProductoUsd: number
@@ -9,6 +26,8 @@ export interface ImportadosInputs {
   aeroboxUsdPorKg: number
   /** Flete interno en EE. UU. (USD) */
   fleteInternoUsd: number
+  /** Destino del envío a domicilio en Argentina */
+  destinoEnvio: ImportadosDestinoEnvio
   /** Cotización dólar financiero / MEP / CCL (ARS) */
   dolarArs: number
   /** Recargo por cuotas / financiación (0–100) */
@@ -27,6 +46,8 @@ export interface ImportadosResults {
   valid: true
   fleteAeroboxUsd: number
   impuestosSaUsd: number
+  envioDomicilioUsd: number
+  destinoEnvio: ImportadosDestinoEnvio
   costoLandedUsd: number
   margin: ImportadosMarginBand
   precioContadoUsd: number
@@ -37,6 +58,7 @@ export interface ImportadosResults {
   costoProductoArs: number
   fleteAeroboxArs: number
   impuestosSaArs: number
+  envioDomicilioArs: number
   costoLandedArs: number
 }
 
@@ -55,6 +77,7 @@ export const DEFAULT_IMPORTADOS_INPUTS: ImportadosInputs = {
   pesoKg: 0.3,
   aeroboxUsdPorKg: AEROBOX_USD_PER_KG,
   fleteInternoUsd: 0,
+  destinoEnvio: 'provincia',
   dolarArs: 1350,
   recargoCuotasPct: 20,
 }
@@ -118,7 +141,12 @@ export function computeImportados(inputs: ImportadosInputs): ImportadosCalcOutpu
   const fleteAeroboxUsd = pesoKg * aeroboxUsdPorKg
   const baseImponibleUsd = costoProductoUsd + fleteInternoUsd + fleteAeroboxUsd
   const impuestosSaUsd = baseImponibleUsd * IMPUESTOS_SA_RATE
-  const costoLandedUsd = baseImponibleUsd + impuestosSaUsd
+  const destinoEnvio = DESTINO_ENVIO_OPTIONS.some((o) => o.id === inputs.destinoEnvio)
+    ? inputs.destinoEnvio
+    : DEFAULT_IMPORTADOS_INPUTS.destinoEnvio
+  const envioDomicilioUsd = envioDomicilioUsdForDestino(destinoEnvio)
+  // Impuestos S.A. no incluyen el envío local AR; se suma después al landed.
+  const costoLandedUsd = baseImponibleUsd + impuestosSaUsd + envioDomicilioUsd
 
   const margin = resolveImportadosMargin(costoProductoUsd)
   const precioContadoUsd = costoLandedUsd * (1 + margin.marginRate) + margin.fixedUsd
@@ -132,6 +160,8 @@ export function computeImportados(inputs: ImportadosInputs): ImportadosCalcOutpu
     valid: true,
     fleteAeroboxUsd,
     impuestosSaUsd,
+    envioDomicilioUsd,
+    destinoEnvio,
     costoLandedUsd,
     margin,
     precioContadoUsd,
@@ -142,25 +172,31 @@ export function computeImportados(inputs: ImportadosInputs): ImportadosCalcOutpu
     costoProductoArs: costoProductoUsd * dolarArs,
     fleteAeroboxArs: fleteAeroboxUsd * dolarArs,
     impuestosSaArs: impuestosSaUsd * dolarArs,
+    envioDomicilioArs: envioDomicilioUsd * dolarArs,
     costoLandedArs: costoLandedUsd * dolarArs,
   }
 }
 
 export type ImportadosPrefs = Pick<
   ImportadosInputs,
-  'pesoKg' | 'aeroboxUsdPorKg' | 'fleteInternoUsd' | 'dolarArs' | 'recargoCuotasPct'
+  'pesoKg' | 'aeroboxUsdPorKg' | 'fleteInternoUsd' | 'destinoEnvio' | 'dolarArs' | 'recargoCuotasPct'
 >
 
 export function coerceImportadosPrefs(raw: unknown): ImportadosPrefs {
   const obj = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {}
-  const num = (key: keyof ImportadosPrefs, fallback: number): number => {
+  const num = (key: Exclude<keyof ImportadosPrefs, 'destinoEnvio'>, fallback: number): number => {
     const value = Number(obj[key])
     return Number.isFinite(value) && value >= 0 ? value : fallback
   }
+  const destinoRaw = String(obj.destinoEnvio ?? '')
+  const destinoEnvio = DESTINO_ENVIO_OPTIONS.some((o) => o.id === destinoRaw)
+    ? (destinoRaw as ImportadosDestinoEnvio)
+    : DEFAULT_IMPORTADOS_INPUTS.destinoEnvio
   return {
     pesoKg: num('pesoKg', DEFAULT_IMPORTADOS_INPUTS.pesoKg),
     aeroboxUsdPorKg: num('aeroboxUsdPorKg', DEFAULT_IMPORTADOS_INPUTS.aeroboxUsdPorKg),
     fleteInternoUsd: num('fleteInternoUsd', DEFAULT_IMPORTADOS_INPUTS.fleteInternoUsd),
+    destinoEnvio,
     dolarArs: num('dolarArs', DEFAULT_IMPORTADOS_INPUTS.dolarArs),
     recargoCuotasPct: num('recargoCuotasPct', DEFAULT_IMPORTADOS_INPUTS.recargoCuotasPct),
   }
@@ -171,6 +207,7 @@ function defaultPrefs(): ImportadosPrefs {
     pesoKg: DEFAULT_IMPORTADOS_INPUTS.pesoKg,
     aeroboxUsdPorKg: DEFAULT_IMPORTADOS_INPUTS.aeroboxUsdPorKg,
     fleteInternoUsd: DEFAULT_IMPORTADOS_INPUTS.fleteInternoUsd,
+    destinoEnvio: DEFAULT_IMPORTADOS_INPUTS.destinoEnvio,
     dolarArs: DEFAULT_IMPORTADOS_INPUTS.dolarArs,
     recargoCuotasPct: DEFAULT_IMPORTADOS_INPUTS.recargoCuotasPct,
   }

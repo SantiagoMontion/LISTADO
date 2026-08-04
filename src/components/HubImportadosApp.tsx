@@ -4,8 +4,10 @@ import { HubDesktopNav } from './HubDesktopNav'
 import {
   computeImportados,
   DEFAULT_IMPORTADOS_INPUTS,
+  DESTINO_ENVIO_OPTIONS,
   loadImportadosPrefsLocal,
   saveImportadosPrefsLocal,
+  type ImportadosDestinoEnvio,
   type ImportadosInputs,
   type ImportadosResults,
 } from '../lib/importadosCalc'
@@ -146,6 +148,11 @@ function CostBreakdown({
           ars={formatArs(result.impuestosSaArs, true)}
         />
         <BreakdownRow
+          label={`Envío domicilio (${DESTINO_ENVIO_OPTIONS.find((o) => o.id === result.destinoEnvio)?.label ?? ''})`}
+          usd={formatUsd(result.envioDomicilioUsd)}
+          ars={formatArs(result.envioDomicilioArs, true)}
+        />
+        <BreakdownRow
           label="Costo landed total"
           usd={formatUsd(result.costoLandedUsd)}
           ars={formatArs(result.costoLandedArs, true)}
@@ -191,6 +198,7 @@ export function HubImportadosApp({
       pesoKg: inputs.pesoKg,
       aeroboxUsdPorKg: inputs.aeroboxUsdPorKg,
       fleteInternoUsd: inputs.fleteInternoUsd,
+      destinoEnvio: inputs.destinoEnvio,
       dolarArs: inputs.dolarArs,
       recargoCuotasPct: inputs.recargoCuotasPct,
     })
@@ -198,6 +206,7 @@ export function HubImportadosApp({
     inputs.pesoKg,
     inputs.aeroboxUsdPorKg,
     inputs.fleteInternoUsd,
+    inputs.destinoEnvio,
     inputs.dolarArs,
     inputs.recargoCuotasPct,
   ])
@@ -226,7 +235,7 @@ export function HubImportadosApp({
             <h1 className="printing3d-page__title">Importados</h1>
           </div>
           <p className="printing3d-page__lead importados-page__lead">
-            Nacionalización B2B EE. UU. → precio sugerido en ARS (contado y cuotas).
+            Precio B2B + peso → Aerobox + impuestos 32% + envío AR + margen → precio ARS.
           </p>
         </header>
 
@@ -270,6 +279,32 @@ export function HubImportadosApp({
                   step={0.01}
                   suffix="USD"
                 />
+                <div className="printing3d-field printing3d-field--full">
+                  <span className="printing3d-field__label" id="imp-destino-label">
+                    Envío a domicilio (AR)
+                  </span>
+                  <div
+                    className="importados-destino-pills"
+                    role="group"
+                    aria-labelledby="imp-destino-label"
+                  >
+                    {DESTINO_ENVIO_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        className={`importados-destino-pill${inputs.destinoEnvio === opt.id ? ' is-active' : ''}`}
+                        aria-pressed={inputs.destinoEnvio === opt.id}
+                        onClick={() => patch({ destinoEnvio: opt.id as ImportadosDestinoEnvio })}
+                      >
+                        <span className="importados-destino-pill__label">{opt.label}</span>
+                        <span className="importados-destino-pill__price">${opt.usd}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <span className="importados-field-hint">
+                    Por guía, una vez que el paquete ya está en Argentina
+                  </span>
+                </div>
                 <NumberField
                   id="imp-dolar"
                   label="Dólar MEP / CCL"

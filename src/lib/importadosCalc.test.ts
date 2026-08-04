@@ -36,10 +36,12 @@ describe('importadosCalc', () => {
 
     const aerobox = 0.3 * AEROBOX_USD_PER_KG
     const impuestos = (50 + 0 + aerobox) * IMPUESTOS_SA_RATE
-    const landed = 50 + 0 + aerobox + impuestos
+    const envioDom = 12 // provincia default
+    const landed = 50 + 0 + aerobox + impuestos + envioDom
     const precioUsd = landed * 1.3
     expect(result.fleteAeroboxUsd).toBeCloseTo(aerobox, 6)
     expect(result.impuestosSaUsd).toBeCloseTo(impuestos, 6)
+    expect(result.envioDomicilioUsd).toBe(12)
     expect(result.costoLandedUsd).toBeCloseTo(landed, 6)
     expect(result.margin.marginRate).toBe(0.3)
     expect(result.margin.fixedUsd).toBe(0)
@@ -61,9 +63,25 @@ describe('importadosCalc', () => {
     if (!result.valid) return
     const aerobox = 0.3 * AEROBOX_USD_PER_KG
     const impuestos = (25 + aerobox) * IMPUESTOS_SA_RATE
-    const landed = 25 + aerobox + impuestos
+    const landed = 25 + aerobox + impuestos + 12
     expect(result.precioContadoUsd).toBeCloseTo(landed * 1.4 + 10, 6)
     expect(result.margin.fixedUsd).toBe(10)
+  })
+
+  it('applies domestic Argentina shipping by destination', () => {
+    const base = {
+      ...DEFAULT_IMPORTADOS_INPUTS,
+      costoProductoUsd: 50,
+      pesoKg: 0.3,
+      dolarArs: 1000,
+    }
+    const caba = computeImportados({ ...base, destinoEnvio: 'caba' })
+    const interior = computeImportados({ ...base, destinoEnvio: 'interior' })
+    expect(caba.valid && interior.valid).toBe(true)
+    if (!caba.valid || !interior.valid) return
+    expect(caba.envioDomicilioUsd).toBe(8)
+    expect(interior.envioDomicilioUsd).toBe(23)
+    expect(interior.costoLandedUsd - caba.costoLandedUsd).toBeCloseTo(15, 6)
   })
 
   it('rejects missing product cost', () => {
