@@ -32,7 +32,6 @@ export function CalcNumberField({
   value,
   onChange,
   min = 0,
-  step = 1,
   suffix,
   hint,
 }: CalcNumberFieldProps) {
