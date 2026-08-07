@@ -12,6 +12,7 @@ import {
   updateHubTaskWorkflowStatus,
   updateHubTaskPaymentStatus,
   updateHubTaskTrackingUrl,
+  updateHubTaskTrackingSentStatus,
   replaceHubTaskImages,
   validateHubTaskImageFile,
 } from '../lib/hubTasksApi'
@@ -27,6 +28,7 @@ import { supabase } from '../lib/supabase'
 import type {
   HubImportance,
   HubTaskPaymentStatus,
+  HubTaskTrackingSentStatus,
   HubTaskWorkflowStatus,
   HubUserRole,
   NmHubTask,
@@ -74,6 +76,11 @@ const WORKFLOW_STATUS_OPTIONS: HubTasksPillOption<HubTaskWorkflowStatus>[] = [
 const PAYMENT_STATUS_OPTIONS: HubTasksPillOption<HubTaskPaymentStatus>[] = [
   { value: 'sin_pagar', label: 'Sin pagar', toneClass: 'hub-tasks-payment-select--sin_pagar' },
   { value: 'pago', label: 'Pago', toneClass: 'hub-tasks-payment-select--pago' },
+]
+
+const TRACKING_SENT_STATUS_OPTIONS: HubTasksPillOption<HubTaskTrackingSentStatus>[] = [
+  { value: 'pendiente', label: 'Pendiente', toneClass: 'hub-tasks-tracking-sent-select--pendiente' },
+  { value: 'enviado', label: 'Enviado', toneClass: 'hub-tasks-tracking-sent-select--enviado' },
 ]
 
 const TASK_CREATE_TYPES: HubTaskCreateType[] = [
@@ -217,9 +224,13 @@ function replaceListPanelUrl() {
   window.dispatchEvent(new CustomEvent(HUB_NAV_EVENT))
 }
 
-/** Completada: enviado + pago. */
+/** Completada: estado enviado + pago + aviso de seguimiento enviado. */
 function isHubTaskCompleted(t: NmHubTask): boolean {
-  return (t.workflow_status ?? 'sin_ingresar') === 'enviado' && (t.payment_status ?? 'sin_pagar') === 'pago'
+  return (
+    (t.workflow_status ?? 'sin_ingresar') === 'enviado' &&
+    (t.payment_status ?? 'sin_pagar') === 'pago' &&
+    (t.tracking_sent_status ?? 'pendiente') === 'enviado'
+  )
 }
 
 /** Pendientes arriba (más nuevas primero); completadas abajo (más nuevas primero). */
@@ -430,6 +441,7 @@ export function HubTasksApp({
   const [noteCounts, setNoteCounts] = useState<Record<string, number>>({})
   const [trackingEditTask, setTrackingEditTask] = useState<NmHubTask | null>(null)
   const [trackingDraft, setTrackingDraft] = useState('')
+  const [copiedTrackingId, setCopiedTrackingId] = useState<string | null>(null)
   const [editTask, setEditTask] = useState<NmHubTask | null>(null)
   const [editTitle, setEditTitle] = useState('')
   const [editBody, setEditBody] = useState('')
@@ -856,6 +868,36 @@ export function HubTasksApp({
       setBusy(false)
     }
   }
+
+  const onTrackingSentChange = async (t: NmHubTask, status: HubTaskTrackingSentStatus) => {
+    if (readOnly) return
+    setBusy(true)
+    setError(null)
+    markLocalHubMutation()
+    try {
+      const updated = await updateHubTaskTrackingSentStatus(t.id, status)
+      patchTaskLocal(updated)
+    } catch (err: unknown) {
+      setError(formatSupabaseOrError(err))
+      await loadSilent()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const copyTrackingLink = useCallback(async (t: NmHubTask) => {
+    const href = trackingHref(t.tracking_url)
+    if (!href) return
+    try {
+      await navigator.clipboard.writeText(href)
+      setCopiedTrackingId(t.id)
+      window.setTimeout(() => {
+        setCopiedTrackingId((cur) => (cur === t.id ? null : cur))
+      }, 1600)
+    } catch {
+      setError('No se pudo copiar el link. Copialo manualmente desde Seguimiento.')
+    }
+  }, [])
 
   const openTrackingEditor = useCallback((t: NmHubTask) => {
     setTrackingEditTask(t)
@@ -1745,6 +1787,12 @@ export function HubTasksApp({
                   <th scope="col" className="hub-tasks-table__col-tracking">
                     Seguimiento
                   </th>
+                  <th scope="col" className="hub-tasks-table__col-copy-tracking">
+                    Copiar
+                  </th>
+                  <th scope="col" className="hub-tasks-table__col-tracking-sent">
+                    Aviso
+                  </th>
                   <th scope="col" className="hub-tasks-table__col-actions">
                     <span className="nm-hub-sr-only">Acciones</span>
                   </th>
@@ -1756,6 +1804,7 @@ export function HubTasksApp({
                   const mobileOpen = expandedMobileCardIds.has(t.id)
                   const workflow = t.workflow_status ?? 'sin_ingresar'
                   const payment = t.payment_status ?? 'sin_pagar'
+                  const trackingSent = t.tracking_sent_status ?? 'pendiente'
                   const completed = isHubTaskCompleted(t)
                   const orderNumber = parseShopifyOrderNumberFromTitle(t.title)
                   const shopifyUrl = orderNumber ? (shopifyUrlsByOrder[orderNumber] ?? null) : null
@@ -1901,6 +1950,31 @@ export function HubTasksApp({
                             )
                           })()}
                         </td>
+                        <td className="hub-tasks-table__copy-tracking">
+                          {trackingHref(t.tracking_url) ? (
+                            <button
+                              type="button"
+                              className={`hub-tasks-copy-tracking-btn${copiedTrackingId === t.id ? ' hub-tasks-copy-tracking-btn--done' : ''}`}
+                              disabled={busy}
+                              onClick={() => void copyTrackingLink(t)}
+                              title="Copiar link de seguimiento"
+                            >
+                              {copiedTrackingId === t.id ? 'Copiado' : 'Copiar'}
+                            </button>
+                          ) : (
+                            <span className="hub-tasks-table__copy-tracking-empty">—</span>
+                          )}
+                        </td>
+                        <td className="hub-tasks-table__tracking-sent">
+                          <HubTasksPillSelect
+                            value={trackingSent}
+                            options={TRACKING_SENT_STATUS_OPTIONS}
+                            disabled={busy || readOnly}
+                            aria-label={`Aviso de seguimiento de ${t.title}`}
+                            pillClassName="hub-tasks-tracking-sent-select"
+                            onChange={(status) => void onTrackingSentChange(t, status)}
+                          />
+                        </td>
                         <td className="hub-tasks-table__col-actions">
                           <div className="hub-tasks-table__row-actions">
                             {!readOnly ? (
@@ -1971,7 +2045,7 @@ export function HubTasksApp({
                         <tr
                           className={`hub-tasks-table__detail-row${completed ? ' hub-tasks-table__detail-row--completed' : ''}`}
                         >
-                          <td colSpan={9}>
+                          <td colSpan={11}>
                             <div className="hub-tasks-table__detail-panel">
                               <div className="hub-tasks-table__detail-body">{t.body}</div>
                               {(t.image_paths?.length ?? 0) > 0 ? (

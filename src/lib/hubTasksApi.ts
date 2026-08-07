@@ -10,6 +10,7 @@ import type {
   HubUserRole,
   HubTaskCreateType,
   HubTaskPaymentStatus,
+  HubTaskTrackingSentStatus,
   HubTaskWorkflowStatus,
   NmHubTask,
   NmHubTaskNote,
@@ -54,6 +55,12 @@ function normalizePaymentStatus(raw: unknown): HubTaskPaymentStatus {
   return 'sin_pagar'
 }
 
+function normalizeTrackingSentStatus(raw: unknown): HubTaskTrackingSentStatus {
+  const s = typeof raw === 'string' ? raw.trim().toLowerCase() : ''
+  if (s === 'pendiente' || s === 'enviado') return s
+  return 'pendiente'
+}
+
 function normalizeTrackingUrl(raw: unknown): string | null {
   if (typeof raw !== 'string') return null
   const t = raw.trim()
@@ -68,6 +75,7 @@ function coerceHubTask(row: Record<string, unknown>): NmHubTask {
     workflow_status: normalizeWorkflowStatus(row.workflow_status),
     payment_status: normalizePaymentStatus(row.payment_status),
     tracking_url: normalizeTrackingUrl(row.tracking_url),
+    tracking_sent_status: normalizeTrackingSentStatus(row.tracking_sent_status),
   }
 }
 
@@ -220,6 +228,21 @@ export async function updateHubTaskTrackingUrl(
   if (error) throw error
   const parsed = parseRpcTaskRow(data)
   if (!parsed) throw new Error('No se pudo guardar el link de seguimiento.')
+  return parsed
+}
+
+export async function updateHubTaskTrackingSentStatus(
+  taskId: string,
+  trackingSentStatus: HubTaskTrackingSentStatus,
+): Promise<NmHubTask> {
+  const sb = requireClient()
+  const { data, error } = await sb.rpc('nm_hub_set_task_tracking_sent_status', {
+    p_task_id: taskId,
+    p_tracking_sent_status: trackingSentStatus,
+  })
+  if (error) throw error
+  const parsed = parseRpcTaskRow(data)
+  if (!parsed) throw new Error('No se pudo actualizar el aviso de seguimiento.')
   return parsed
 }
 

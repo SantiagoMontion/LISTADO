@@ -92,6 +92,9 @@ export type HubTaskWorkflowStatus = 'enviado' | 'listo' | 'fabricacion' | 'sin_i
 
 export type HubTaskPaymentStatus = 'pago' | 'sin_pagar'
 
+/** Si ya se envió el link de seguimiento al cliente. */
+export type HubTaskTrackingSentStatus = 'pendiente' | 'enviado'
+
 export interface NmHubMayoristaClient {
   id: string
   full_name: string
@@ -126,6 +129,8 @@ export interface NmHubTask {
   payment_status?: HubTaskPaymentStatus
   /** URL de seguimiento (Andreani u otro). */
   tracking_url?: string | null
+  /** Si el seguimiento ya se avisó/envió al cliente (pendiente / enviado). */
+  tracking_sent_status?: HubTaskTrackingSentStatus
   importance: HubImportance
   /** Día calendario (YYYY-MM-DD) al que pertenece la tarea en el taller. */
   for_date?: string
