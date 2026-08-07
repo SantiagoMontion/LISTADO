@@ -2996,6 +2996,10 @@ body:has(.nm-hub-app) {
   line-height: 1.15;
 }
 
+.nm-hub-app--tasks form#nm-hub-tareas-nueva .hub-page-head--create .hub-page-primary-action {
+  flex: 0 0 auto;
+}
+
 .nm-hub-app--tasks form#nm-hub-tareas-nueva .form-container-clean {
   padding: 0;
   display: flex;
@@ -3083,15 +3087,15 @@ body:has(.nm-hub-app) {
 }
 
 .nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-btn--reenviar {
-  border-color: rgba(2, 132, 199, 0.4);
-  background-color: rgba(2, 132, 199, 0.1);
-  color: #0284c7;
+  border-color: rgba(202, 138, 4, 0.45);
+  background-color: rgba(234, 179, 8, 0.14);
+  color: #ca8a04;
 }
 
 .nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-btn--muestra {
-  border-color: rgba(219, 39, 119, 0.4);
-  background-color: rgba(219, 39, 119, 0.1);
-  color: #db2777;
+  border-color: rgba(56, 189, 248, 0.5);
+  background-color: rgba(56, 189, 248, 0.14);
+  color: #0284c7;
 }
 
 .nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-btn:hover:not(:disabled) {
@@ -3131,13 +3135,15 @@ body:has(.nm-hub-app) {
 }
 
 .nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-btn--reenviar:hover:not(:disabled) {
-  background-color: rgba(2, 132, 199, 0.16);
-  border-color: rgba(2, 132, 199, 0.55);
+  background-color: rgba(234, 179, 8, 0.22);
+  border-color: rgba(202, 138, 4, 0.6);
+  color: #a16207;
 }
 
 .nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-btn--muestra:hover:not(:disabled) {
-  background-color: rgba(219, 39, 119, 0.16);
-  border-color: rgba(219, 39, 119, 0.55);
+  background-color: rgba(56, 189, 248, 0.22);
+  border-color: rgba(14, 165, 233, 0.55);
+  color: #0369a1;
 }
 
 .nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-btn:focus-visible {
@@ -3203,17 +3209,17 @@ body:has(.nm-hub-app) {
 }
 
 .nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-btn--reenviar.task-create-preset-btn--active {
-  background-color: rgba(2, 132, 199, 0.2);
-  border-color: #0284c7;
-  color: #075985;
-  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.3);
+  background-color: rgba(234, 179, 8, 0.28);
+  border-color: #ca8a04;
+  color: #854d0e;
+  box-shadow: 0 0 0 2px rgba(202, 138, 4, 0.3);
 }
 
 .nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-btn--muestra.task-create-preset-btn--active {
-  background-color: rgba(219, 39, 119, 0.2);
-  border-color: #db2777;
-  color: #9d174d;
-  box-shadow: 0 0 0 2px rgba(219, 39, 119, 0.3);
+  background-color: rgba(56, 189, 248, 0.28);
+  border-color: #0ea5e9;
+  color: #075985;
+  box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.3);
 }
 
 .nm-hub-app--tasks .hub-tasks-table__tracking {
@@ -3346,32 +3352,14 @@ body:has(.nm-hub-app) {
 }
 
 .nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-type-hint {
-  margin: 0 0 0.55rem;
-  padding: 0.65rem 0.8rem;
-  border-radius: 10px;
-  border: 1px solid rgba(180, 83, 9, 0.28);
-  background: rgba(251, 191, 36, 0.14);
-  color: #92400e;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #64748b;
   font-size: 0.86rem;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.35;
-}
-
-.nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-preset-row--needs-selection {
-  outline: 2px solid rgba(180, 83, 9, 0.35);
-  outline-offset: 4px;
-  border-radius: 14px;
-}
-
-.nm-hub-app--tasks form#nm-hub-tareas-nueva .field-group--awaiting-type {
-  opacity: 0.72;
-}
-
-.nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-field-gate {
-  margin: 0.4rem 0 0;
-  color: #b45309;
-  font-size: 0.78rem;
-  font-weight: 600;
 }
 
 .nm-hub-app--tasks form#nm-hub-tareas-nueva .task-create-client-fields {
@@ -3435,15 +3423,15 @@ body:has(.nm-hub-app) {
 }
 
 .nm-hub-app--tasks .task-type-badge--reenviar {
-  background: rgba(2, 132, 199, 0.12);
-  border-color: rgba(2, 132, 199, 0.22);
-  color: #0284c7;
+  background: rgba(234, 179, 8, 0.14);
+  border-color: rgba(202, 138, 4, 0.28);
+  color: #ca8a04;
 }
 
 .nm-hub-app--tasks .task-type-badge--muestra {
-  background: rgba(219, 39, 119, 0.12);
-  border-color: rgba(219, 39, 119, 0.22);
-  color: #db2777;
+  background: rgba(56, 189, 248, 0.14);
+  border-color: rgba(14, 165, 233, 0.28);
+  color: #0284c7;
 }
 
 /* Type filter menu (portal) — same tones as badges */
@@ -3484,16 +3472,16 @@ body:has(.nm-hub-app) {
 
 .hub-tasks-type-pill.task-type-badge--reenviar,
 .hub-tasks-pill-select__option.task-type-badge--reenviar {
-  background: rgba(2, 132, 199, 0.12);
-  border-color: rgba(2, 132, 199, 0.22);
-  color: #0284c7;
+  background: rgba(234, 179, 8, 0.14);
+  border-color: rgba(202, 138, 4, 0.28);
+  color: #ca8a04;
 }
 
 .hub-tasks-type-pill.task-type-badge--muestra,
 .hub-tasks-pill-select__option.task-type-badge--muestra {
-  background: rgba(219, 39, 119, 0.12);
-  border-color: rgba(219, 39, 119, 0.22);
-  color: #db2777;
+  background: rgba(56, 189, 248, 0.14);
+  border-color: rgba(14, 165, 233, 0.28);
+  color: #0284c7;
 }
 
 .hub-tasks-type-pill.hub-tasks-type-pill--all,

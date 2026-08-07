@@ -1256,8 +1256,18 @@ export function HubTasksApp({
 
       {!readOnly && panel === 'create' ? (
         <form id="nm-hub-tareas-nueva" className="nm-hub-card nm-hub-card--task-create" onSubmit={(e) => void onCreate(e)}>
-          <header className="hub-page-head hub-page-head--create">
-            <h1 className="hub-page-head__title">Nueva tarea</h1>
+          <header className="hub-page-head hub-page-head--with-action hub-page-head--create">
+            <div className="hub-page-head__main">
+              <h1 className="hub-page-head__title">Nueva tarea</h1>
+            </div>
+            <button
+              type="button"
+              className="hub-page-primary-action"
+              onClick={() => setClientModalOpen(true)}
+              disabled={busy}
+            >
+              Crear cliente
+            </button>
           </header>
           <div className="form-container-clean">
           <div className="field-group">
@@ -1266,11 +1276,11 @@ export function HubTasksApp({
             </span>
             {!taskCreateType ? (
               <p className="task-create-type-hint" role="status">
-                Primero seleccioná el tipo de tarea para poder cargar el resto de los datos.
+                Primero seleccioná el tipo de tarea
               </p>
             ) : null}
             <div
-              className={`task-create-preset-row${!taskCreateType ? ' task-create-preset-row--needs-selection' : ''}${taskCreateType ? ' task-create-preset-row--has-selection' : ''}`}
+              className={`task-create-preset-row${taskCreateType ? ' task-create-preset-row--has-selection' : ''}`}
               role="group"
               aria-labelledby="nm-hub-t-type-label"
             >
@@ -1286,18 +1296,10 @@ export function HubTasksApp({
                   {TASK_TYPE_LABEL[type]}
                 </button>
               ))}
-              <button
-                type="button"
-                className={`task-create-preset-btn task-create-preset-btn--crear-cliente${taskCreateType ? ' task-create-preset-btn--dimmed' : ''}`}
-                onClick={() => setClientModalOpen(true)}
-                disabled={busy}
-              >
-                Cliente
-              </button>
             </div>
           </div>
 
-          <div className={`field-group${!taskCreateType ? ' field-group--awaiting-type' : ''}`}>
+          <div className="field-group">
             <label className="field-label" htmlFor="nm-hub-t-title">
               {createFormTitleLabel(taskCreateType)}
             </label>
@@ -1324,14 +1326,7 @@ export function HubTasksApp({
                 required
                 disabled={!taskCreateType || busy}
                 autoComplete="off"
-                placeholder={!taskCreateType ? 'Seleccioná un tipo arriba…' : undefined}
-                aria-describedby={!taskCreateType ? 'nm-hub-t-type-gate' : undefined}
               />
-              {!taskCreateType ? (
-                <p id="nm-hub-t-type-gate" className="task-create-field-gate" role="note">
-                  Bloqueado hasta elegir el tipo de tarea.
-                </p>
-              ) : null}
               {taskTypeUsesClientFields(taskCreateType) && clientSuggestOpen && clientSuggestions.length > 0 ? (
                 <div ref={clientSuggestRef} className="task-create-client-suggest" role="listbox">
                   {clientSuggestions.map((client) => (
@@ -1479,7 +1474,7 @@ export function HubTasksApp({
             </div>
           ) : null}
 
-          <div className={`field-group${!taskCreateType ? ' field-group--awaiting-type' : ''}`}>
+          <div className="field-group">
             <label className="field-label" htmlFor="nm-hub-t-body">
               Detalle
             </label>
@@ -1492,15 +1487,13 @@ export function HubTasksApp({
               required={taskTypeUsesOrderNumber(taskCreateType)}
               disabled={!taskCreateType || busy}
               placeholder={
-                !taskCreateType
-                  ? 'Seleccioná un tipo de tarea arriba…'
-                  : taskCreateType === 'rehacer'
-                    ? 'Indicá por qué hay que rehacer esta tarea'
-                    : taskCreateType === 'devolucion'
-                      ? 'Indicá el motivo de la devolución'
-                      : taskCreateType === 'reenviar'
-                        ? 'Indicá el motivo del reenvío'
-                        : undefined
+                taskCreateType === 'rehacer'
+                  ? 'Indicá por qué hay que rehacer esta tarea'
+                  : taskCreateType === 'devolucion'
+                    ? 'Indicá el motivo de la devolución'
+                    : taskCreateType === 'reenviar'
+                      ? 'Indicá el motivo del reenvío'
+                      : undefined
               }
             />
           </div>
