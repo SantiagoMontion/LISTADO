@@ -352,6 +352,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     console.error('[importados-sync/create-product]', message)
-    sendJson(res, 500, { ok: false, error: message })
+    const rateLimited = /\b429\b|limitando las consultas|too many requests/i.test(message)
+    sendJson(res, rateLimited ? 429 : 500, { ok: false, error: message })
   }
 }

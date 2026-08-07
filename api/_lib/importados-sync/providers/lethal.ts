@@ -2,7 +2,7 @@ import type { TrackedProduct } from '../supabase.js'
 import {
   BROWSER_HEADERS,
   fail,
-  fetchWithTimeout,
+  fetchWithRetries,
   parsePrice,
   type ProviderResult,
 } from './types.js'
@@ -48,13 +48,17 @@ export async function fetchLethalSnapshot(product: TrackedProduct): Promise<Prov
     const handle = resolveHandle(product)
     const url = `https://lethal.gg/products/${encodeURIComponent(handle)}.js`
 
-    const resp = await fetchWithTimeout(url, {
-      method: 'GET',
-      headers: {
-        ...BROWSER_HEADERS,
-        Accept: 'application/json',
+    const resp = await fetchWithRetries(
+      url,
+      {
+        method: 'GET',
+        headers: {
+          ...BROWSER_HEADERS,
+          Accept: 'application/json',
+        },
       },
-    })
+      { attempts: 3, waitsMs: [2000, 6000] },
+    )
 
     if (!resp.ok) return fail(`Lethal fetch failed (${resp.status}) for ${url}`)
 

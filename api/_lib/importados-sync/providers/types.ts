@@ -42,6 +42,49 @@ export async function fetchWithTimeout(
   }
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/**
+ * Misma petición con reintentos ante rate-limit / errores temporales.
+ * Lethal (Cloudflare) suele devolver 429 si el cron o varios creates pegan seguido.
+ */
+export async function fetchWithRetries(
+  url: string,
+  init: RequestInit = {},
+  options: {
+    timeoutMs?: number
+    attempts?: number
+    /** Esperas entre intentos (ms). Default: 2s, 5s, 12s */
+    waitsMs?: number[]
+  } = {},
+): Promise<Response> {
+  const attempts = Math.max(1, options.attempts ?? 4)
+  const waits = options.waitsMs ?? [2000, 5000, 12000]
+  let last: Response | null = null
+
+  for (let i = 0; i < attempts; i += 1) {
+    last = await fetchWithTimeout(url, init, options.timeoutMs)
+    const retryable =
+      last.status === 429 ||
+      last.status === 503 ||
+      last.status === 502 ||
+      last.status === 408
+    if (!retryable || i === attempts - 1) return last
+
+    const retryAfterRaw = last.headers.get('retry-after')
+    const retryAfterSec = retryAfterRaw ? Number(retryAfterRaw) : NaN
+    const waitMs =
+      Number.isFinite(retryAfterSec) && retryAfterSec > 0
+        ? Math.min(Math.ceil(retryAfterSec * 1000), 20_000)
+        : waits[Math.min(i, waits.length - 1)]
+    await sleep(waitMs)
+  }
+
+  return last as Response
+}
+
 export function parsePrice(raw: unknown): number | null {
   if (typeof raw === 'number' && Number.isFinite(raw)) return raw
   if (typeof raw !== 'string') return null

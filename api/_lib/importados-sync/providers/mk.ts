@@ -1,7 +1,7 @@
 import {
   BROWSER_HEADERS,
   fail,
-  fetchWithTimeout,
+  fetchWithRetries,
   parsePrice,
   type ProviderResult,
 } from './types.js'
@@ -28,10 +28,14 @@ export async function fetchMkSnapshot(product: TrackedProduct): Promise<Provider
     const handle = extractHandle(product)
     const origin = new URL(product.product_url).origin
     const url = `${origin}/products/${encodeURIComponent(handle)}.js`
-    const resp = await fetchWithTimeout(url, {
-      method: 'GET',
-      headers: { ...BROWSER_HEADERS, Accept: 'application/json' },
-    })
+    const resp = await fetchWithRetries(
+      url,
+      {
+        method: 'GET',
+        headers: { ...BROWSER_HEADERS, Accept: 'application/json' },
+      },
+      { attempts: 3, waitsMs: [2000, 6000] },
+    )
     if (!resp.ok) return fail(`MK fetch failed (${resp.status}) for ${url}`)
 
     const json = (await resp.json()) as {

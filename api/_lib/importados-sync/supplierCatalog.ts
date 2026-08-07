@@ -1,7 +1,7 @@
 import * as cheerio from 'cheerio'
 import type { Provider } from './env.js'
 import { lethalSafeNotmidQtyThrottled } from './lethalCartStock.js'
-import { BROWSER_HEADERS, fetchWithTimeout, parsePrice } from './providers/types.js'
+import { BROWSER_HEADERS, fetchWithRetries, fetchWithTimeout, parsePrice } from './providers/types.js'
 
 export type SupplierVariant = {
   id: string
@@ -103,14 +103,55 @@ async function fetchShopifyProductJs(productUrl: string): Promise<{
   const handle = extractHandleFromUrl(productUrl)
   if (!handle) throw new Error('No pude leer el handle del producto desde el link')
   const origin = new URL(productUrl).origin
-  const jsUrl = `${origin}/products/${encodeURIComponent(handle)}.js`
-  const resp = await fetchWithTimeout(jsUrl, {
-    method: 'GET',
-    headers: { ...BROWSER_HEADERS, Accept: 'application/json' },
-  })
-  if (!resp.ok) throw new Error(`No pude leer ${jsUrl} (${resp.status})`)
-  const json = (await resp.json()) as ShopifyStorefrontProduct
-  return { json, handle, origin }
+  const candidates = [
+    `${origin}/products/${encodeURIComponent(handle)}.js`,
+    `${origin}/products/${encodeURIComponent(handle)}.json`,
+  ]
+
+  let lastStatus = 0
+  let lastUrl = candidates[0]
+  for (const url of candidates) {
+    lastUrl = url
+    const resp = await fetchWithRetries(
+      url,
+      {
+        method: 'GET',
+        headers: { ...BROWSER_HEADERS, Accept: 'application/json' },
+      },
+      { attempts: 4, waitsMs: [2500, 6000, 12000], timeoutMs: 15_000 },
+    )
+    lastStatus = resp.status
+    if (!resp.ok) continue
+
+    const text = await resp.text()
+    if (!text.trim().startsWith('{') && !text.trim().startsWith('[')) {
+      // Cloudflare challenge HTML / bot wall
+      if (/just a moment|cf-browser-verification|verifying your connection/i.test(text)) {
+        lastStatus = 429
+        continue
+      }
+      continue
+    }
+
+    try {
+      const parsed = JSON.parse(text) as ShopifyStorefrontProduct & {
+        product?: ShopifyStorefrontProduct
+      }
+      // .json envuelve el producto en { product: {...} }
+      const json = parsed.product ?? parsed
+      if (!json.title && !json.variants?.length) continue
+      return { json, handle, origin }
+    } catch {
+      continue
+    }
+  }
+
+  if (lastStatus === 429) {
+    throw new Error(
+      `Lethal/MK está limitando las consultas (429). Esperá ~1 minuto y volvé a intentar: ${lastUrl}`,
+    )
+  }
+  throw new Error(`No pude leer ${lastUrl} (${lastStatus || 'sin respuesta'})`)
 }
 
 async function scrapeVariantInventoryQty(
@@ -182,12 +223,13 @@ async function fetchVariantFeaturedFromProductJson(
   variantIdToOption: Record<string, string>,
 ): Promise<Record<string, string>> {
   try {
-    const resp = await fetchWithTimeout(
+    const resp = await fetchWithRetries(
       `${origin}/products/${encodeURIComponent(handle)}.json`,
       {
         method: 'GET',
         headers: { ...BROWSER_HEADERS, Accept: 'application/json' },
       },
+      { attempts: 3, waitsMs: [2000, 5000] },
     )
     if (!resp.ok) return {}
     const data = (await resp.json()) as {
