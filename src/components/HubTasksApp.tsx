@@ -1950,9 +1950,43 @@ export function HubTasksApp({
                               className={`hub-tasks-copy-tracking-btn${copiedTrackingId === t.id ? ' hub-tasks-copy-tracking-btn--done' : ''}`}
                               disabled={busy}
                               onClick={() => void copyTrackingLink(t)}
-                              title="Copiar link de seguimiento"
+                              title={copiedTrackingId === t.id ? 'Link copiado' : 'Copiar link de seguimiento'}
+                              aria-label={
+                                copiedTrackingId === t.id
+                                  ? `Link de seguimiento de ${t.title} copiado`
+                                  : `Copiar link de seguimiento de ${t.title}`
+                              }
                             >
-                              {copiedTrackingId === t.id ? 'Copiado' : 'Copiar'}
+                              {copiedTrackingId === t.id ? (
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                  <path
+                                    d="M5 13l4 4L19 7"
+                                    stroke="currentColor"
+                                    strokeWidth="2.25"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                </svg>
+                              ) : (
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                  <rect
+                                    x="9"
+                                    y="9"
+                                    width="11"
+                                    height="11"
+                                    rx="2"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                  />
+                                  <path
+                                    d="M5 15V5a2 2 0 012-2h10"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                </svg>
+                              )}
                             </button>
                           ) : (
                             <span className="hub-tasks-table__copy-tracking-empty">—</span>
@@ -1964,7 +1998,6 @@ export function HubTasksApp({
                             options={TRACKING_SENT_STATUS_OPTIONS}
                             disabled={busy || readOnly}
                             aria-label={`Aviso de seguimiento de ${t.title}`}
-                            pillClassName="hub-tasks-tracking-sent-select"
                             onChange={(status) => void onTrackingSentChange(t, status)}
                           />
                         </td>

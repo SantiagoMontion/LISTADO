@@ -4126,7 +4126,6 @@ select.hub-mayorista-client-modal__input {
 .nm-hub-app--tasks .hub-tasks-table__row--completed .hub-tasks-tracking-link,
 .nm-hub-app--tasks .hub-tasks-table__row--completed .hub-tasks-tracking-edit,
 .nm-hub-app--tasks .hub-tasks-table__row--completed .hub-tasks-copy-tracking-btn,
-.nm-hub-app--tasks .hub-tasks-table__row--completed .hub-tasks-tracking-sent-select,
 .nm-hub-app--tasks .hub-tasks-table__row--completed .btn-task-notes,
 .nm-hub-app--tasks .hub-tasks-table__row--completed .btn-delete-task,
 .nm-hub-app--tasks .hub-tasks-table__row--completed .hub-tasks-edit-btn {
@@ -4329,9 +4328,10 @@ select.hub-mayorista-client-modal__input {
 
 .nm-hub-app--tasks .hub-tasks-table__col-copy-tracking,
 .nm-hub-app--tasks .hub-tasks-table__copy-tracking {
-  width: 6%;
-  min-width: 4.5rem;
+  width: 3.5%;
+  min-width: 2.5rem;
   white-space: nowrap;
+  text-align: center;
 }
 
 .nm-hub-app--tasks .hub-tasks-table__col-tracking-sent,
@@ -4342,22 +4342,25 @@ select.hub-mayorista-client-modal__input {
 
 .nm-hub-app--tasks .hub-tasks-copy-tracking-btn {
   appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
   margin: 0;
-  padding: 0.35rem 0.65rem;
-  border: 1px solid rgba(21, 101, 216, 0.28);
-  border-radius: 999px;
-  background: rgba(21, 101, 216, 0.08);
-  color: #1565d8;
-  font: inherit;
-  font-size: 0.72rem;
-  font-weight: 700;
+  padding: 0;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 8px;
+  background: #ffffff;
+  color: #64748b;
   cursor: pointer;
-  line-height: 1.2;
+  line-height: 0;
 }
 
 .nm-hub-app--tasks .hub-tasks-copy-tracking-btn:hover:not(:disabled) {
-  background: rgba(21, 101, 216, 0.14);
-  border-color: rgba(21, 101, 216, 0.42);
+  background: #f8fafc;
+  border-color: rgba(15, 23, 42, 0.2);
+  color: #0f172a;
 }
 
 .nm-hub-app--tasks .hub-tasks-copy-tracking-btn:disabled {
@@ -4367,7 +4370,7 @@ select.hub-mayorista-client-modal__input {
 
 .nm-hub-app--tasks .hub-tasks-copy-tracking-btn--done {
   border-color: rgba(15, 159, 110, 0.35);
-  background: rgba(15, 159, 110, 0.12);
+  background: rgba(15, 159, 110, 0.1);
   color: #0f9f6e;
 }
 
