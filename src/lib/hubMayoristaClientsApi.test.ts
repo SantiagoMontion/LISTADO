@@ -33,9 +33,13 @@ describe('appendClientToTaskBody', () => {
       phone: '1123456789',
       email: 'juan@test.com',
       address: 'Calle 123',
+      postal_code: '1405',
+      city: 'CABA',
     })
     expect(out).toContain('Pedido urgente')
     expect(out).toContain('Cliente: Juan Pérez')
     expect(out).toContain('DNI: 12345678')
+    expect(out).toContain('CP: 1405')
+    expect(out).toContain('Ciudad: CABA')
   })
 })

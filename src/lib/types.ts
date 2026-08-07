@@ -79,7 +79,14 @@ export interface NmHubProfile {
 
 export type HubImportance = 'low' | 'normal' | 'high' | 'urgent'
 
-export type HubTaskCreateType = 'falta' | 'mayorista' | 'rehacer' | 'canje' | 'devolucion'
+export type HubTaskCreateType =
+  | 'falta'
+  | 'mayorista'
+  | 'rehacer'
+  | 'canje'
+  | 'devolucion'
+  | 'reenviar'
+  | 'muestra'
 
 export type HubTaskWorkflowStatus = 'enviado' | 'listo' | 'fabricacion' | 'sin_ingresar'
 
@@ -92,6 +99,8 @@ export interface NmHubMayoristaClient {
   phone: string
   email: string
   address: string
+  postal_code: string
+  city: string
   created_at: string
   updated_at: string
 }
@@ -109,7 +118,7 @@ export interface NmHubTask {
   id: string
   title: string
   body: string | null
-  /** Tipo de tarea hub (falta, mayorista, rehacer, canje, devolucion). */
+  /** Tipo de tarea hub (falta, mayorista, rehacer, canje, devolucion, reenviar, muestra). */
   task_type?: HubTaskCreateType | null
   /** Estado operativo (enviado / listo / fabricacion / sin_ingresar). */
   workflow_status?: HubTaskWorkflowStatus

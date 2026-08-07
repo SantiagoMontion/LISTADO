@@ -14,6 +14,8 @@ function coerceClient(row: Record<string, unknown>): NmHubMayoristaClient {
     phone: String(row.phone ?? ''),
     email: String(row.email ?? ''),
     address: String(row.address ?? ''),
+    postal_code: String(row.postal_code ?? ''),
+    city: String(row.city ?? ''),
     created_at: String(row.created_at ?? ''),
     updated_at: String(row.updated_at ?? ''),
   }
@@ -37,6 +39,8 @@ export type MayoristaClientInput = {
   phone: string
   email: string
   address: string
+  postal_code: string
+  city: string
 }
 
 function prepareClientPayload(input: MayoristaClientInput) {
@@ -46,6 +50,8 @@ function prepareClientPayload(input: MayoristaClientInput) {
     phone: normalizeMayoristaPhone(input.phone),
     email: input.email.trim(),
     address: input.address.trim(),
+    postal_code: input.postal_code.trim(),
+    city: input.city.trim(),
   }
 }
 
@@ -189,6 +195,8 @@ export function formatMayoristaClientBlock(client: MayoristaClientInput): string
     `Tel: ${c.phone}`,
     `Email: ${c.email}`,
     `Dirección: ${c.address}`,
+    `CP: ${c.postal_code}`,
+    `Ciudad: ${c.city}`,
   ].join('\n')
 }
 

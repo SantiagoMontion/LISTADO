@@ -28,7 +28,17 @@ function normalizeAssignedRole(raw: unknown): HubTaskAssignableRole {
 
 function normalizeTaskType(raw: unknown): HubTaskCreateType | null {
   const s = typeof raw === 'string' ? raw.trim().toLowerCase() : ''
-  if (s === 'falta' || s === 'mayorista' || s === 'rehacer' || s === 'canje' || s === 'devolucion') return s
+  if (
+    s === 'falta' ||
+    s === 'mayorista' ||
+    s === 'rehacer' ||
+    s === 'canje' ||
+    s === 'devolucion' ||
+    s === 'reenviar' ||
+    s === 'muestra'
+  ) {
+    return s
+  }
   return null
 }
 

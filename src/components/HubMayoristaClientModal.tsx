@@ -32,6 +32,8 @@ export function HubMayoristaClientModal({
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [address, setAddress] = useState('')
+  const [postalCode, setPostalCode] = useState('')
+  const [city, setCity] = useState('')
   const [localError, setLocalError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -45,6 +47,8 @@ export function HubMayoristaClientModal({
     setPhone('')
     setEmail('')
     setAddress('')
+    setPostalCode('')
+    setCity('')
     setLocalError(null)
     setSaving(false)
     setDeleting(false)
@@ -77,6 +81,8 @@ export function HubMayoristaClientModal({
     setPhone(client.phone)
     setEmail(client.email)
     setAddress(client.address)
+    setPostalCode(client.postal_code)
+    setCity(client.city)
     setLocalError(null)
   }
 
@@ -89,6 +95,8 @@ export function HubMayoristaClientModal({
       setPhone('')
       setEmail('')
       setAddress('')
+      setPostalCode('')
+      setCity('')
       setLocalError(null)
       return
     }
@@ -132,13 +140,22 @@ export function HubMayoristaClientModal({
       phone,
       email: email.trim(),
       address: address.trim(),
+      postal_code: postalCode.trim(),
+      city: city.trim(),
     }
     if (!payload.full_name.trim()) {
       setLocalError('El nombre completo es obligatorio.')
       return
     }
-    if (!payload.dni || !payload.phone.trim() || !payload.email || !payload.address) {
-      setLocalError('Completá DNI, teléfono, email y dirección.')
+    if (
+      !payload.dni ||
+      !payload.phone.trim() ||
+      !payload.email ||
+      !payload.address ||
+      !payload.postal_code ||
+      !payload.city
+    ) {
+      setLocalError('Completá DNI, teléfono, email, dirección, código postal y ciudad.')
       return
     }
     setSaving(true)
@@ -286,8 +303,40 @@ export function HubMayoristaClientModal({
               onChange={(e) => setAddress(e.target.value)}
               autoComplete="street-address"
               disabled={disabled}
-              placeholder="Calle, número, localidad"
+              placeholder="Calle y número"
             />
+          </div>
+
+          <div className="hub-mayorista-client-modal__row">
+            <div className="hub-mayorista-client-modal__field">
+              <label className="hub-mayorista-client-modal__label" htmlFor={`${titleId}-postal`}>
+                Código postal
+              </label>
+              <input
+                id={`${titleId}-postal`}
+                className="hub-mayorista-client-modal__input"
+                value={postalCode}
+                onChange={(e) => setPostalCode(e.target.value)}
+                autoComplete="postal-code"
+                inputMode="numeric"
+                disabled={disabled}
+                placeholder="Ej. 1405"
+              />
+            </div>
+            <div className="hub-mayorista-client-modal__field">
+              <label className="hub-mayorista-client-modal__label" htmlFor={`${titleId}-city`}>
+                Ciudad
+              </label>
+              <input
+                id={`${titleId}-city`}
+                className="hub-mayorista-client-modal__input"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                autoComplete="address-level2"
+                disabled={disabled}
+                placeholder="Localidad"
+              />
+            </div>
           </div>
 
           {displayError ? (

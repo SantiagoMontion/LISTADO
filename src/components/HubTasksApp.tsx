@@ -60,6 +60,8 @@ const TASK_TYPE_LABEL: Record<HubTaskCreateType, string> = {
   rehacer: 'Rehacer',
   canje: 'Canje',
   devolucion: 'Devolución',
+  reenviar: 'Reenviar',
+  muestra: 'Muestra',
 }
 
 const WORKFLOW_STATUS_OPTIONS: HubTasksPillOption<HubTaskWorkflowStatus>[] = [
@@ -79,6 +81,8 @@ const TASK_CREATE_TYPES: HubTaskCreateType[] = [
   'rehacer',
   'canje',
   'devolucion',
+  'reenviar',
+  'muestra',
 ]
 
 const TASK_FILTER_TYPES: HubTaskCreateType[] = [
@@ -86,6 +90,8 @@ const TASK_FILTER_TYPES: HubTaskCreateType[] = [
   'rehacer',
   'canje',
   'devolucion',
+  'reenviar',
+  'muestra',
   'falta',
 ]
 
@@ -101,11 +107,11 @@ const TASK_TYPE_FILTER_OPTIONS: HubTasksPillOption<HubTaskCreateType | 'all'>[] 
 type TaskCompletionFilter = 'all' | 'pending' | 'completed'
 
 function taskTypeUsesClientFields(type: HubTaskCreateType | null): boolean {
-  return type === 'mayorista' || type === 'canje'
+  return type === 'mayorista' || type === 'canje' || type === 'muestra'
 }
 
 function taskTypeUsesOrderNumber(type: HubTaskCreateType | null): boolean {
-  return type === 'rehacer' || type === 'devolucion'
+  return type === 'rehacer' || type === 'devolucion' || type === 'reenviar'
 }
 
 function createFormTitleLabel(type: HubTaskCreateType | null): string {
@@ -456,6 +462,8 @@ export function HubTasksApp({
   const [clientPhone, setClientPhone] = useState('')
   const [clientEmail, setClientEmail] = useState('')
   const [clientAddress, setClientAddress] = useState('')
+  const [clientPostalCode, setClientPostalCode] = useState('')
+  const [clientCity, setClientCity] = useState('')
   const [clientSuggestions, setClientSuggestions] = useState<NmHubMayoristaClient[]>([])
   const [clientSuggestOpen, setClientSuggestOpen] = useState(false)
   const [clientModalOpen, setClientModalOpen] = useState(false)
@@ -741,49 +749,58 @@ export function HubTasksApp({
     setPanel('create')
   }, [readOnly])
 
-  const resetCreateForm = useCallback(() => {
-    setTitle('')
-    setBody('')
-    setTaskCreateType(null)
+  const clearClientFields = useCallback(() => {
     setClientDni('')
     setClientPhone('')
     setClientEmail('')
     setClientAddress('')
+    setClientPostalCode('')
+    setClientCity('')
+  }, [])
+
+  const fillClientFields = useCallback((client: NmHubMayoristaClient) => {
+    setClientDni(client.dni)
+    setClientPhone(client.phone)
+    setClientEmail(client.email)
+    setClientAddress(client.address)
+    setClientPostalCode(client.postal_code)
+    setClientCity(client.city)
+  }, [])
+
+  const resetCreateForm = useCallback(() => {
+    setTitle('')
+    setBody('')
+    setTaskCreateType(null)
+    clearClientFields()
     setClientSuggestions([])
     setClientSuggestOpen(false)
     setLoadClientData(null)
     setPendingClient(null)
     setFiles([])
-  }, [])
+  }, [clearClientFields])
 
-  const applyClientSelection = useCallback((client: NmHubMayoristaClient) => {
-    setTitle(client.full_name)
-    setPendingClient(client)
-    setClientDni('')
-    setClientPhone('')
-    setClientEmail('')
-    setClientAddress('')
-    setLoadClientData(null)
-    setClientSuggestOpen(false)
-  }, [])
+  const applyClientSelection = useCallback(
+    (client: NmHubMayoristaClient) => {
+      setTitle(client.full_name)
+      setPendingClient(client)
+      fillClientFields(client)
+      setLoadClientData('yes')
+      setClientSuggestOpen(false)
+    },
+    [fillClientFields],
+  )
 
   const chooseLoadClientData = useCallback(
     (choice: 'yes' | 'no') => {
       setLoadClientData(choice)
       if (choice === 'yes' && pendingClient) {
-        setClientDni(pendingClient.dni)
-        setClientPhone(pendingClient.phone)
-        setClientEmail(pendingClient.email)
-        setClientAddress(pendingClient.address)
+        fillClientFields(pendingClient)
       }
       if (choice === 'no') {
-        setClientDni('')
-        setClientPhone('')
-        setClientEmail('')
-        setClientAddress('')
+        clearClientFields()
       }
     },
-    [pendingClient],
+    [pendingClient, fillClientFields, clearClientFields],
   )
 
   const toggleDetail = useCallback((taskId: string) => {
@@ -968,19 +985,19 @@ export function HubTasksApp({
     }
   }
 
-  const applyTaskType = useCallback((type: HubTaskCreateType) => {
-    setTaskCreateType(type)
-    setClientDni('')
-    setClientPhone('')
-    setClientEmail('')
-    setClientAddress('')
-    setClientSuggestions([])
-    setClientSuggestOpen(false)
-    setLoadClientData(null)
-    setPendingClient(null)
-    setError(null)
-    setTitle('')
-  }, [])
+  const applyTaskType = useCallback(
+    (type: HubTaskCreateType) => {
+      setTaskCreateType(type)
+      clearClientFields()
+      setClientSuggestions([])
+      setClientSuggestOpen(false)
+      setLoadClientData(null)
+      setPendingClient(null)
+      setError(null)
+      setTitle('')
+    },
+    [clearClientFields],
+  )
 
   useEffect(() => {
     if (!taskTypeUsesClientFields(taskCreateType)) {
@@ -1035,7 +1052,9 @@ export function HubTasksApp({
       setError(
         taskCreateType === 'devolucion'
           ? 'Indicá el motivo de la devolución.'
-          : 'Indicá el motivo del rehacer.',
+          : taskCreateType === 'reenviar'
+            ? 'Indicá el motivo del reenvío.'
+            : 'Indicá el motivo del rehacer.',
       )
       setBusy(false)
       return
@@ -1056,14 +1075,18 @@ export function HubTasksApp({
           phone: normalizeMayoristaPhone(clientPhone),
           email: clientEmail.trim(),
           address: clientAddress.trim(),
+          postal_code: clientPostalCode.trim(),
+          city: clientCity.trim(),
         }
         if (
           !clientPayload.dni ||
           !clientPayload.phone ||
           !clientPayload.email ||
-          !clientPayload.address
+          !clientPayload.address ||
+          !clientPayload.postal_code ||
+          !clientPayload.city
         ) {
-          setError('Completá todos los datos del cliente.')
+          setError('Completá todos los datos del cliente (incluí CP y ciudad).')
           setBusy(false)
           return
         }
@@ -1199,8 +1222,13 @@ export function HubTasksApp({
             <span className="field-label" id="nm-hub-t-type-label">
               Tipo
             </span>
+            {!taskCreateType ? (
+              <p className="task-create-type-hint" role="status">
+                Primero seleccioná el tipo de tarea para poder cargar el resto de los datos.
+              </p>
+            ) : null}
             <div
-              className={`task-create-preset-row${taskCreateType ? ' task-create-preset-row--has-selection' : ''}`}
+              className={`task-create-preset-row${!taskCreateType ? ' task-create-preset-row--needs-selection' : ''}${taskCreateType ? ' task-create-preset-row--has-selection' : ''}`}
               role="group"
               aria-labelledby="nm-hub-t-type-label"
             >
@@ -1227,7 +1255,7 @@ export function HubTasksApp({
             </div>
           </div>
 
-          <div className="field-group">
+          <div className={`field-group${!taskCreateType ? ' field-group--awaiting-type' : ''}`}>
             <label className="field-label" htmlFor="nm-hub-t-title">
               {createFormTitleLabel(taskCreateType)}
             </label>
@@ -1243,10 +1271,7 @@ export function HubTasksApp({
                   if (!next.trim()) {
                     setLoadClientData(null)
                     setPendingClient(null)
-                    setClientDni('')
-                    setClientPhone('')
-                    setClientEmail('')
-                    setClientAddress('')
+                    clearClientFields()
                   }
                 }}
                 onFocus={() => {
@@ -1257,7 +1282,14 @@ export function HubTasksApp({
                 required
                 disabled={!taskCreateType || busy}
                 autoComplete="off"
+                placeholder={!taskCreateType ? 'Seleccioná un tipo arriba…' : undefined}
+                aria-describedby={!taskCreateType ? 'nm-hub-t-type-gate' : undefined}
               />
+              {!taskCreateType ? (
+                <p id="nm-hub-t-type-gate" className="task-create-field-gate" role="note">
+                  Bloqueado hasta elegir el tipo de tarea.
+                </p>
+              ) : null}
               {taskTypeUsesClientFields(taskCreateType) && clientSuggestOpen && clientSuggestions.length > 0 ? (
                 <div ref={clientSuggestRef} className="task-create-client-suggest" role="listbox">
                   {clientSuggestions.map((client) => (
@@ -1268,7 +1300,12 @@ export function HubTasksApp({
                       className="task-create-client-suggest__item"
                       onClick={() => applyClientSelection(client)}
                     >
-                      {client.full_name}
+                      <span className="task-create-client-suggest__name">{client.full_name}</span>
+                      {client.city || client.postal_code ? (
+                        <span className="task-create-client-suggest__meta">
+                          {[client.city, client.postal_code].filter(Boolean).join(' · ')}
+                        </span>
+                      ) : null}
                     </button>
                   ))}
                 </div>
@@ -1363,12 +1400,44 @@ export function HubTasksApp({
                   onChange={(e) => setClientAddress(e.target.value)}
                   disabled={busy}
                   required
+                  autoComplete="street-address"
                 />
+              </div>
+              <div className="task-create-client-fields__row">
+                <div className="field-group">
+                  <label className="field-label" htmlFor="nm-hub-t-client-postal">
+                    Código postal
+                  </label>
+                  <input
+                    id="nm-hub-t-client-postal"
+                    className="nm-hub-input field-input"
+                    value={clientPostalCode}
+                    onChange={(e) => setClientPostalCode(e.target.value)}
+                    disabled={busy}
+                    required
+                    autoComplete="postal-code"
+                    inputMode="numeric"
+                  />
+                </div>
+                <div className="field-group">
+                  <label className="field-label" htmlFor="nm-hub-t-client-city">
+                    Ciudad
+                  </label>
+                  <input
+                    id="nm-hub-t-client-city"
+                    className="nm-hub-input field-input"
+                    value={clientCity}
+                    onChange={(e) => setClientCity(e.target.value)}
+                    disabled={busy}
+                    required
+                    autoComplete="address-level2"
+                  />
+                </div>
               </div>
             </div>
           ) : null}
 
-          <div className="field-group">
+          <div className={`field-group${!taskCreateType ? ' field-group--awaiting-type' : ''}`}>
             <label className="field-label" htmlFor="nm-hub-t-body">
               Detalle
             </label>
@@ -1381,11 +1450,15 @@ export function HubTasksApp({
               required={taskTypeUsesOrderNumber(taskCreateType)}
               disabled={!taskCreateType || busy}
               placeholder={
-                taskCreateType === 'rehacer'
-                  ? 'Indicá por qué hay que rehacer esta tarea'
-                  : taskCreateType === 'devolucion'
-                    ? 'Indicá el motivo de la devolución'
-                    : undefined
+                !taskCreateType
+                  ? 'Seleccioná un tipo de tarea arriba…'
+                  : taskCreateType === 'rehacer'
+                    ? 'Indicá por qué hay que rehacer esta tarea'
+                    : taskCreateType === 'devolucion'
+                      ? 'Indicá el motivo de la devolución'
+                      : taskCreateType === 'reenviar'
+                        ? 'Indicá el motivo del reenvío'
+                        : undefined
               }
             />
           </div>
