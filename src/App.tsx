@@ -5,6 +5,7 @@ import { HubDispatchedOrdersApp } from './components/HubDispatchedOrdersApp'
 import { HubLogisticaAndreaniApp } from './components/HubLogisticaAndreaniApp'
 import { Hub3DApp } from './components/Hub3DApp'
 import { HubImportadosApp } from './components/HubImportadosApp'
+import { HubImportadosSyncApp } from './components/HubImportadosSyncApp'
 import { HubAdminCutAnalytics } from './components/HubAdminCutAnalytics'
 import { HubAdminDispatchAnalytics } from './components/HubAdminDispatchAnalytics'
 import { HubDispatchedStatsApp } from './components/HubDispatchedStatsApp'
@@ -187,6 +188,7 @@ export default function App() {
   const isLogisticaAndreani = path === '/logistica-andreani'
   const isHub3D = path === '/3d'
   const isHubImportados = path === '/importados'
+  const isHubImportadosSync = path === '/importados-sync'
   const isHubHome = path === '/' || path === ''
 
   const [reports, setReports] = useState<NmProdReport[]>([])
@@ -1054,7 +1056,8 @@ export default function App() {
       isHubCutAnalytics ||
       isLogisticaAndreani ||
       isHub3D ||
-      isHubImportados) &&
+      isHubImportados ||
+      isHubImportadosSync) &&
     !profileReady
   ) {
     return <HubLoadingScreen label="Cargando perfil…" />
@@ -1086,7 +1089,8 @@ export default function App() {
       isHubCutAnalytics ||
       isLogisticaAndreani ||
       isHub3D ||
-      isHubImportados) &&
+      isHubImportados ||
+      isHubImportadosSync) &&
     profileReady &&
     !profile
   ) {
@@ -1147,6 +1151,18 @@ export default function App() {
     getHubPermissions(profile.role)?.viewImportadosCalculator
   ) {
     return <HubImportadosApp profileRole={profile.role} adminSignOut />
+  }
+
+  if (
+    authEnabled &&
+    authReady &&
+    session &&
+    isHubImportadosSync &&
+    profileReady &&
+    profile &&
+    getHubPermissions(profile.role)?.viewImportadosSync
+  ) {
+    return <HubImportadosSyncApp profileRole={profile.role} adminSignOut />
   }
 
   if (
@@ -1226,7 +1242,7 @@ export default function App() {
 
   if (
     !authEnabled &&
-    (isHubDispatchedCalendar || isHubDispatchedCargar || isHubDispatchedAnalytics || isHubCutAnalytics || isLogisticaAndreani || isHub3D || isHubImportados)
+    (isHubDispatchedCalendar || isHubDispatchedCargar || isHubDispatchedAnalytics || isHubCutAnalytics || isLogisticaAndreani || isHub3D || isHubImportados || isHubImportadosSync)
   ) {
     return (
       <div className="nm-hub-app">

@@ -5,10 +5,8 @@ import { HubDesktopNav } from './HubDesktopNav'
 import {
   computeImportados,
   DEFAULT_IMPORTADOS_INPUTS,
-  DESTINO_ENVIO_OPTIONS,
   loadImportadosPrefsLocal,
   saveImportadosPrefsLocal,
-  type ImportadosDestinoEnvio,
   type ImportadosInputs,
   type ImportadosResults,
 } from '../lib/importadosCalc'
@@ -113,20 +111,35 @@ function CostBreakdown({
           ars={formatArs(result.baseImponibleArs, true)}
         />
         <BreakdownRow
+          label="Handling Aerobox"
+          usd={formatUsd(result.handlingAeroboxUsd)}
+          ars={formatArs(result.handlingAeroboxArs, true)}
+        />
+        <BreakdownRow
           label="Gastos aduana no recuperables (6%)"
           usd={formatUsd(result.gastosNoRecuperablesUsd)}
           ars={formatArs(result.gastosNoRecuperablesArs, true)}
         />
         <BreakdownRow
-          label={`Envío domicilio (${DESTINO_ENVIO_OPTIONS.find((o) => o.id === result.destinoEnvio)?.label ?? ''})`}
+          label="Envío domicilio (AR)"
           usd={formatUsd(result.envioDomicilioUsd)}
           ars={formatArs(result.envioDomicilioArs, true)}
         />
         <BreakdownRow
-          label="Costo real operativo"
-          usd={formatUsd(result.costoRealOperativoUsd)}
-          ars={formatArs(result.costoRealOperativoArs, true)}
+          label="Costo landed"
+          usd={formatUsd(result.costoLandedUsd)}
+          ars={formatArs(result.costoLandedArs, true)}
           strong
+        />
+        <BreakdownRow
+          label="Impuestos transaccionales (6.5%)"
+          usd={formatUsd(result.impuestosTransaccionalesUsd)}
+          ars={formatArs(result.impuestosTransaccionalesArs, true)}
+        />
+        <BreakdownRow
+          label="Costo con fricción"
+          usd={formatUsd(result.costoConFriccionUsd)}
+          ars={formatArs(result.costoConFriccionArs, true)}
         />
         <BreakdownRow
           label="Subtotal con margen"
@@ -134,14 +147,14 @@ function CostBreakdown({
           ars={formatArs(result.subtotalConMargenArs, true)}
         />
         <BreakdownRow
-          label="Percepciones recuperables (26%)"
-          usd={formatUsd(result.percepcionesRecuperablesUsd)}
-          ars={formatArs(result.percepcionesRecuperablesArs, true)}
+          label="Buffer financiero percepciones (7.5%)"
+          usd={formatUsd(result.bufferFinancieroUsd)}
+          ars={formatArs(result.bufferFinancieroArs, true)}
         />
         <BreakdownRow
           label="Precio final"
           usd={formatUsd(result.precioContadoUsd)}
-          ars={formatArs(result.precioContadoArs, true)}
+          ars={formatArs(result.precioContadoArs)}
           strong
         />
       </div>
@@ -178,23 +191,53 @@ export function HubImportadosApp({
     ...DEFAULT_IMPORTADOS_INPUTS,
     ...prefs,
   })
+  const [mepStatus, setMepStatus] = useState<'loading' | 'live' | 'fallback'>('loading')
+
+  useEffect(() => {
+    let cancelled = false
+    void fetch('/api/importados-sync/dolar-mep', {
+      headers: { Accept: 'application/json' },
+    })
+      .then(async (resp) => {
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+        return (await resp.json()) as {
+          venta?: number
+          source?: 'dolarapi' | 'fallback'
+        }
+      })
+      .then((quote) => {
+        if (cancelled) return
+        const venta = Number(quote.venta)
+        if (quote.source === 'dolarapi' && Number.isFinite(venta) && venta > 0) {
+          setInputs((prev) => ({ ...prev, dolarArs: venta }))
+          setMepStatus('live')
+          return
+        }
+        setMepStatus('fallback')
+      })
+      .catch(() => {
+        if (!cancelled) setMepStatus('fallback')
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     saveImportadosPrefsLocal({
       pesoKg: inputs.pesoKg,
       aeroboxUsdPorKg: inputs.aeroboxUsdPorKg,
       fleteInternoUsd: inputs.fleteInternoUsd,
-      destinoEnvio: inputs.destinoEnvio,
+      envioDomicilioUsd: inputs.envioDomicilioUsd,
       dolarArs: inputs.dolarArs,
-      recargoCuotasPct: inputs.recargoCuotasPct,
     })
   }, [
     inputs.pesoKg,
     inputs.aeroboxUsdPorKg,
     inputs.fleteInternoUsd,
-    inputs.destinoEnvio,
+    inputs.envioDomicilioUsd,
     inputs.dolarArs,
-    inputs.recargoCuotasPct,
   ])
 
   const result = useMemo(() => computeImportados(inputs), [inputs])
@@ -221,7 +264,7 @@ export function HubImportadosApp({
             <h1 className="printing3d-page__title">Importados</h1>
           </div>
           <p className="printing3d-page__lead importados-page__lead">
-            Precio B2B + peso → Aerobox + impuestos 32% + envío AR + margen → precio ARS.
+            Contado (MEP +2%) y cuotas blindadas al peor caso Mercado Pago 6 cuotas.
           </p>
         </header>
 
@@ -265,47 +308,29 @@ export function HubImportadosApp({
                   step={0.01}
                   suffix="USD"
                 />
-                <div className="printing3d-field printing3d-field--full">
-                  <span className="printing3d-field__label" id="imp-destino-label">
-                    Envío a domicilio (AR)
-                  </span>
-                  <div
-                    className="importados-destino-pills"
-                    role="group"
-                    aria-labelledby="imp-destino-label"
-                  >
-                    {DESTINO_ENVIO_OPTIONS.map((opt) => (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        className={`importados-destino-pill${inputs.destinoEnvio === opt.id ? ' is-active' : ''}`}
-                        aria-pressed={inputs.destinoEnvio === opt.id}
-                        onClick={() => patch({ destinoEnvio: opt.id as ImportadosDestinoEnvio })}
-                      >
-                        <span className="importados-destino-pill__label">{opt.label}</span>
-                        <span className="importados-destino-pill__price">${opt.usd}</span>
-                      </button>
-                    ))}
-                  </div>
-                  <span className="importados-field-hint">
-                    Por guía, una vez que el paquete ya está en Argentina
-                  </span>
-                </div>
+                <CalcNumberField
+                  id="imp-envio"
+                  label="Envío a domicilio (AR)"
+                  value={inputs.envioDomicilioUsd}
+                  onChange={(v) => patch({ envioDomicilioUsd: v })}
+                  step={0.5}
+                  suffix="USD"
+                  hint="Monto fijo por guía en Argentina (editable)"
+                />
                 <CalcNumberField
                   id="imp-dolar"
-                  label="Dólar MEP / CCL"
+                  label="Dólar MEP"
                   value={inputs.dolarArs}
                   onChange={(v) => patch({ dolarArs: v })}
                   step={1}
                   suffix="ARS"
-                />
-                <CalcNumberField
-                  id="imp-cuotas"
-                  label="Recargo cuotas"
-                  value={inputs.recargoCuotasPct}
-                  onChange={(v) => patch({ recargoCuotasPct: v })}
-                  step={1}
-                  suffix="%"
+                  hint={
+                    mepStatus === 'loading'
+                      ? 'Consultando DólarAPI…'
+                      : mepStatus === 'live'
+                        ? 'Cotización automática de DólarAPI; se aplica +2%'
+                        : 'Fallback manual: DólarAPI no disponible; se aplica +2%'
+                  }
                 />
               </div>
             </section>
@@ -324,22 +349,24 @@ export function HubImportadosApp({
             ) : (
               <>
                 <section className="printing3d-output-block printing3d-summary importados-hero-card">
-                  <h2 className="printing3d-output-block__title">Precio final sugerido</h2>
+                  <h2 className="printing3d-output-block__title">Precios finales</h2>
                   <div className="importados-hero">
                     <div className="importados-hero__main">
-                      <span className="importados-hero__label">Transferencia / Contado</span>
+                      <span className="importados-hero__label">Contado / Transferencia</span>
                       <strong className="importados-hero__value">
                         {formatArs(result.precioContadoArs)}
                       </strong>
                       <span className="importados-hero__sub">
-                        {formatUsd(result.precioContadoUsd)}
+                        {formatUsd(result.precioContadoUsd)} · MEP{' '}
+                        {formatArs(result.dolarMepConvertido, true)} (+2%)
                       </span>
                     </div>
                     <div className="importados-hero__side">
-                      <span className="importados-hero__label">Cuotas</span>
+                      <span className="importados-hero__label">Cuotas / Tarjeta</span>
                       <strong className="importados-hero__cuotas">
                         {formatArs(result.precioCuotasArs)}
                       </strong>
+                      <span className="importados-hero__sub">Blindado MP 6 cuotas</span>
                     </div>
                   </div>
                 </section>

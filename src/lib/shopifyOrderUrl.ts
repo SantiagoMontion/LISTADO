@@ -19,7 +19,7 @@ export function parseShopifyOrderNumberFromTitle(title: string): string | null {
 }
 
 /** Handle admin.shopify.com/store/{slug} — igual que NOT-ANDREANI `shopify_admin_order_url`. */
-function resolveShopifyStoreHandle(): string {
+export function resolveShopifyStoreHandle(): string {
   const handle = (import.meta.env.VITE_SHOPIFY_STORE_HANDLE ?? '').trim()
   if (handle) return handle
 
@@ -34,6 +34,13 @@ function resolveShopifyStoreHandle(): string {
 
   // Default alineado con NOT-ANDREANI (SHOPIFY_STORE_DOMAIN=kw0f4u-ji.myshopify.com)
   return 'kw0f4u-ji'
+}
+
+/** Link al producto en el admin de Shopify. */
+export function shopifyProductAdminUrl(productId: string): string | null {
+  const id = (productId ?? '').trim()
+  if (!id || !/^\d+$/.test(id)) return null
+  return `https://admin.shopify.com/store/${resolveShopifyStoreHandle()}/products/${id}`
 }
 
 /** Arma el link de admin usando solo el nº de orden parseado del título. */

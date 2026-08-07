@@ -1,4 +1,21 @@
 {
+  "crons": [
+    {
+      "path": "/api/cron/sync-inventory",
+      "schedule": "*/5 * * * *"
+    }
+  ],
+  "functions": {
+    "api/cron/sync-inventory.ts": {
+      "maxDuration": 60
+    },
+    "api/importados-sync/products.ts": {
+      "maxDuration": 30
+    },
+    "api/importados-sync/create-product.ts": {
+      "maxDuration": 120
+    }
+  },
   "rewrites": [
     {
       "source": "/api/logistics/:path*",
