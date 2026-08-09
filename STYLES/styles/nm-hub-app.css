@@ -10395,6 +10395,7 @@ a.importados-orders-card__order:hover {
   align-items: center;
   gap: 0.65rem;
   flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .importados-orders-card--demo {
@@ -10421,10 +10422,71 @@ a.importados-orders-card__order:hover {
   font-weight: 700;
 }
 
+.importados-orders-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem 1.25rem;
+  align-items: flex-end;
+}
+
+.importados-orders-filter {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 10.5rem;
+}
+
+.importados-orders-filter__label {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.importados-orders-filter__select .hub-tasks-pill-select__trigger {
+  min-width: 10.5rem;
+  width: 100%;
+}
+
 .importados-orders-aviso {
   display: grid;
   gap: 0.25rem;
   justify-items: start;
+}
+
+.importados-orders-realizado {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-left: auto;
+  padding: 0.35rem 0.55rem;
+  border-radius: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: #fff;
+  font-size: 0.8rem;
+  font-weight: 750;
+  color: #334155;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.importados-orders-realizado input {
+  width: 1.05rem;
+  height: 1.05rem;
+  accent-color: #0f9f6e;
+  cursor: pointer;
+}
+
+.importados-orders-card--realizado {
+  border-color: rgba(15, 159, 110, 0.28);
+  background: linear-gradient(180deg, #f3fdf7 0%, #fff 50%);
+}
+
+.importados-orders-card--realizado .importados-orders-realizado {
+  border-color: rgba(15, 159, 110, 0.35);
+  background: rgba(15, 159, 110, 0.08);
+  color: #0f9f6e;
 }
 
 .importados-orders-aviso__label {
@@ -10475,6 +10537,28 @@ a.importados-orders-card__order:hover {
   border-color: rgba(15, 159, 110, 0.4);
   background-color: rgba(15, 159, 110, 0.1);
   color: #0f9f6e;
+}
+
+.nm-hub-app--importados .hub-tasks-type-pill--all {
+  border-color: rgba(15, 23, 42, 0.12);
+  background-color: #f1f5f9;
+  color: #475569;
+}
+
+.nm-hub-app--importados .importados-orders-card__actions {
+  width: 100%;
+  justify-content: flex-end;
+}
+
+@media (min-width: 900px) {
+  .nm-hub-app--importados .importados-orders-card__actions {
+    width: auto;
+    max-width: none;
+  }
+
+  .nm-hub-app--importados .importados-orders-realizado {
+    margin-left: 0.25rem;
+  }
 }
 
 .importados-orders-hacer {

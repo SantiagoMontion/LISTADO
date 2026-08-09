@@ -15,7 +15,9 @@ interface HubImportadosPedidosAppProps {
   adminSignOut?: boolean
 }
 
-type CourierAviso = 'pendiente' | 'cargado'
+type CourierAviso = 'pendiente' | 'completo'
+type CourierAvisoFilter = 'all' | CourierAviso
+type CompraFilter = 'all' | 'sin_comprar' | 'comprados'
 
 const COURIER_AVISO_OPTIONS: HubTasksPillOption<CourierAviso>[] = [
   {
@@ -24,8 +26,36 @@ const COURIER_AVISO_OPTIONS: HubTasksPillOption<CourierAviso>[] = [
     toneClass: 'hub-tasks-tracking-sent-select--pendiente',
   },
   {
-    value: 'cargado',
-    label: 'Cargado',
+    value: 'completo',
+    label: 'Completo',
+    toneClass: 'hub-tasks-tracking-sent-select--enviado',
+  },
+]
+
+const COURIER_FILTER_OPTIONS: HubTasksPillOption<CourierAvisoFilter>[] = [
+  { value: 'all', label: 'Todos', toneClass: 'hub-tasks-type-pill--all' },
+  {
+    value: 'pendiente',
+    label: 'Pendientes',
+    toneClass: 'hub-tasks-tracking-sent-select--pendiente',
+  },
+  {
+    value: 'completo',
+    label: 'Completo',
+    toneClass: 'hub-tasks-tracking-sent-select--enviado',
+  },
+]
+
+const COMPRA_FILTER_OPTIONS: HubTasksPillOption<CompraFilter>[] = [
+  { value: 'all', label: 'Todas', toneClass: 'hub-tasks-type-pill--all' },
+  {
+    value: 'sin_comprar',
+    label: 'Sin comprar',
+    toneClass: 'hub-tasks-tracking-sent-select--pendiente',
+  },
+  {
+    value: 'comprados',
+    label: 'Comprados',
     toneClass: 'hub-tasks-tracking-sent-select--enviado',
   },
 ]
@@ -103,6 +133,11 @@ export function HubImportadosPedidosApp({
   const [courierAvisoByOrder, setCourierAvisoByOrder] = useState<Record<string, CourierAviso>>({
     [DEMO_ORDER.orderId]: 'pendiente',
   })
+  const [realizadoByOrder, setRealizadoByOrder] = useState<Record<string, boolean>>({
+    [DEMO_ORDER.orderId]: false,
+  })
+  const [avisoFilter, setAvisoFilter] = useState<CourierAvisoFilter>('all')
+  const [compraFilter, setCompraFilter] = useState<CompraFilter>('all')
 
   const reload = useCallback(async () => {
     setLoading(true)
@@ -122,14 +157,34 @@ export function HubImportadosPedidosApp({
     void reload()
   }, [reload])
 
-  const displayOrders = useMemo(() => {
+  const allOrders = useMemo(() => {
     const withoutDemo = orders.filter((o) => o.orderId !== DEMO_ORDER.orderId)
     return [DEMO_ORDER, ...withoutDemo]
   }, [orders])
 
+  function courierAvisoFor(orderId: string): CourierAviso {
+    return courierAvisoByOrder[orderId] ?? 'pendiente'
+  }
+
+  function realizadoFor(orderId: string): boolean {
+    return Boolean(realizadoByOrder[orderId])
+  }
+
+  const filteredOrders = useMemo(() => {
+    return allOrders.filter((order) => {
+      const aviso = courierAvisoByOrder[order.orderId] ?? 'pendiente'
+      const realizado = Boolean(realizadoByOrder[order.orderId])
+
+      if (avisoFilter !== 'all' && aviso !== avisoFilter) return false
+      if (compraFilter === 'sin_comprar' && realizado) return false
+      if (compraFilter === 'comprados' && !realizado) return false
+      return true
+    })
+  }, [allOrders, avisoFilter, compraFilter, courierAvisoByOrder, realizadoByOrder])
+
   const units = useMemo(
-    () => displayOrders.reduce((sum, o) => sum + o.allSupplierUrls.length, 0),
-    [displayOrders],
+    () => filteredOrders.reduce((sum, o) => sum + o.allSupplierUrls.length, 0),
+    [filteredOrders],
   )
 
   function onHacerPedido(order: ImportadosOrderRow, urls: string[]) {
@@ -156,10 +211,6 @@ export function HubImportadosPedidosApp({
         ? 'Se abrió 1 producto del proveedor.'
         : `Se abrieron ${opened} productos del proveedor (una pestaña por unidad).`,
     )
-  }
-
-  function courierAvisoFor(orderId: string): CourierAviso {
-    return courierAvisoByOrder[orderId] ?? 'pendiente'
   }
 
   return (
@@ -192,10 +243,35 @@ export function HubImportadosPedidosApp({
           </p>
         </header>
 
+        <div className="importados-orders-filters" role="search">
+          <div className="importados-orders-filter">
+            <span className="importados-orders-filter__label">Aviso de Currier</span>
+            <HubTasksPillSelect
+              value={avisoFilter}
+              options={COURIER_FILTER_OPTIONS}
+              aria-label="Filtrar por aviso de currier"
+              pillClassName="hub-tasks-status-select"
+              className="importados-orders-filter__select"
+              onChange={setAvisoFilter}
+            />
+          </div>
+          <div className="importados-orders-filter">
+            <span className="importados-orders-filter__label">Compra pendiente</span>
+            <HubTasksPillSelect
+              value={compraFilter}
+              options={COMPRA_FILTER_OPTIONS}
+              aria-label="Filtrar por estado de compra"
+              pillClassName="hub-tasks-status-select"
+              className="importados-orders-filter__select"
+              onChange={setCompraFilter}
+            />
+          </div>
+        </div>
+
         {!loading && (
           <p className="importados-orders-meta">
-            {displayOrders.length} pedido{displayOrders.length === 1 ? '' : 's'} · {units}{' '}
-            unidad{units === 1 ? '' : 'es'} a pedir
+            {filteredOrders.length} pedido{filteredOrders.length === 1 ? '' : 's'} · {units}{' '}
+            unidad{units === 1 ? '' : 'es'}
             <span className="importados-orders-meta__demo"> · 1 ejemplo en preview</span>
           </p>
         )}
@@ -213,14 +289,21 @@ export function HubImportadosPedidosApp({
 
         {loading ? (
           <p className="importados-orders-empty">Cargando pedidos…</p>
+        ) : filteredOrders.length === 0 ? (
+          <p className="importados-orders-empty">
+            No hay pedidos con esos filtros.
+          </p>
         ) : (
           <ul className="importados-orders-list">
-            {displayOrders.map((order) => {
+            {filteredOrders.map((order) => {
               const demo = isDemoOrder(order)
+              const realizado = realizadoFor(order.orderId)
               return (
                 <li
                   key={order.orderId}
-                  className={`importados-orders-card${demo ? ' importados-orders-card--demo' : ''}`}
+                  className={`importados-orders-card${demo ? ' importados-orders-card--demo' : ''}${
+                    realizado ? ' importados-orders-card--realizado' : ''
+                  }`}
                 >
                   <div className="importados-orders-card__head">
                     <div>
@@ -273,6 +356,20 @@ export function HubImportadosPedidosApp({
                           ? ` (${order.allSupplierUrls.length})`
                           : ''}
                       </button>
+                      <label className="importados-orders-realizado">
+                        <input
+                          type="checkbox"
+                          checked={realizado}
+                          onChange={(e) => {
+                            const checked = e.target.checked
+                            setRealizadoByOrder((prev) => ({
+                              ...prev,
+                              [order.orderId]: checked,
+                            }))
+                          }}
+                        />
+                        <span>Realizado?</span>
+                      </label>
                     </div>
                   </div>
 
