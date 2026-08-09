@@ -45,7 +45,8 @@ export function AdminDashboard({ stats }: RoleDashboardProps) {
       />
       <DashboardCard href={links.uploadList} accent="create" icon="↑" title="Subir lista" />
       <DashboardCard href={links.printing3d} accent="create" icon="◈" title="Calculadora 3D" />
-      <DashboardCard href={links.importados} accent="create" icon="◎" title="Importados" />
+      <DashboardCard href={links.importadosPedidos} accent="pending" icon="▤" title="Pedidos importados" />
+      <DashboardCard href={links.importados} accent="create" icon="◎" title="Calculadora importados" />
       <DashboardCard href={links.importadosSync} accent="create" icon="↻" title="Sync importados" />
     </nav>
   )

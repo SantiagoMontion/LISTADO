@@ -10295,3 +10295,158 @@ body:has(.nm-hub-app--logistica-andreani) {
   word-break: break-word;
 }
 
+.importados-orders-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.importados-orders-page .printing3d-page__head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.importados-orders-refresh {
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  background: #fff;
+  color: #0f172a;
+  border-radius: 10px;
+  padding: 0.55rem 0.85rem;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.importados-orders-refresh:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.importados-orders-meta {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 650;
+  color: #475569;
+}
+
+.importados-orders-empty {
+  margin: 0;
+  padding: 1.25rem 1rem;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px dashed rgba(15, 23, 42, 0.14);
+  color: #64748b;
+}
+
+.importados-orders-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.importados-orders-card {
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 14px;
+  background: #fff;
+  padding: 0.95rem 1rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.importados-orders-card__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.importados-orders-card__order {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+  text-decoration: none;
+}
+
+.importados-orders-card__order:hover {
+  color: #1565d8;
+  text-decoration: underline;
+}
+
+.importados-orders-card__when {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.importados-orders-hacer {
+  border: 0;
+  background: #0f172a;
+  color: #fff;
+  border-radius: 10px;
+  padding: 0.6rem 0.95rem;
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.importados-orders-hacer:hover {
+  background: #1e293b;
+}
+
+.importados-orders-hacer--ghost {
+  background: #fff;
+  color: #0f172a;
+  border: 1px solid rgba(15, 23, 42, 0.16);
+}
+
+.importados-orders-hacer--ghost:hover {
+  background: #f8fafc;
+}
+
+.importados-orders-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.importados-orders-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.importados-orders-line__info {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.importados-orders-line__info strong {
+  font-size: 0.92rem;
+  color: #0f172a;
+}
+
+.importados-orders-line__variant,
+.importados-orders-line__meta {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.importados-orders-line__variant {
+  font-weight: 650;
+  color: #334155;
+}
+

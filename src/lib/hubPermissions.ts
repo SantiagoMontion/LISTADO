@@ -17,6 +17,7 @@ export interface HubPermissions {
   view3DCalculator: boolean
   viewImportadosCalculator: boolean
   viewImportadosSync: boolean
+  viewImportadosOrders: boolean
   viewDashboardSummary: boolean
 }
 
@@ -36,6 +37,7 @@ const FULL_ACCESS: HubPermissions = {
   view3DCalculator: true,
   viewImportadosCalculator: true,
   viewImportadosSync: true,
+  viewImportadosOrders: true,
   viewDashboardSummary: true,
 }
 
@@ -73,6 +75,7 @@ export type HubAppPath =
   | '/3d'
   | '/importados'
   | '/importados-sync'
+  | '/importados-pedidos'
   | '/entrar'
 
 export function canAccessHubPath(
@@ -110,6 +113,8 @@ export function canAccessHubPath(
       return perms.viewImportadosCalculator
     case '/importados-sync':
       return perms.viewImportadosSync
+    case '/importados-pedidos':
+      return perms.viewImportadosOrders
     default:
       return false
   }
@@ -131,6 +136,7 @@ export function normalizeHubPath(path: string): HubAppPath | string {
   if (p === '/3d') return '/3d'
   if (p === '/importados') return '/importados'
   if (p === '/importados-sync') return '/importados-sync'
+  if (p === '/importados-pedidos') return '/importados-pedidos'
   if (p === '' || p === '/') return '/'
   return p
 }
@@ -170,6 +176,9 @@ export function hubPathBlockedMessage(path: string, role: HubUserRole | null | u
   if (p === '/importados-sync') {
     return `El perfil «${label}» no accede al sync de importados.`
   }
+  if (p === '/importados-pedidos') {
+    return `El perfil «${label}» no accede a los pedidos de importados.`
+  }
   return 'No tenés permiso para esta pantalla.'
 }
 
@@ -189,6 +198,7 @@ export function hubDashboardLinks(day: string = todayIsoLocal()) {
     printing3d: '/3d',
     importados: '/importados',
     importadosSync: '/importados-sync',
+    importadosPedidos: '/importados-pedidos',
   } as const
 }
 
@@ -245,16 +255,28 @@ export function hubDesktopNavGroups(
     groups.push({ id: 'envios', label: 'Envíos', items: enviosItems })
   }
 
-  if (perms.view3DCalculator || perms.viewImportadosCalculator || perms.viewImportadosSync) {
-    const calcItems: HubDesktopNavItem[] = []
-    if (perms.view3DCalculator) calcItems.push({ href: links.printing3d, label: '3D' })
+  if (perms.view3DCalculator) {
+    groups.push({ id: 'calculadoras', label: 'Calculadoras', items: [
+      { href: links.printing3d, label: '3D' },
+    ] })
+  }
+
+  if (
+    perms.viewImportadosCalculator ||
+    perms.viewImportadosSync ||
+    perms.viewImportadosOrders
+  ) {
+    const importadosItems: HubDesktopNavItem[] = []
+    if (perms.viewImportadosOrders) {
+      importadosItems.push({ href: links.importadosPedidos, label: 'Pedidos' })
+    }
     if (perms.viewImportadosCalculator) {
-      calcItems.push({ href: links.importados, label: 'Importados' })
+      importadosItems.push({ href: links.importados, label: 'Calculadora' })
     }
     if (perms.viewImportadosSync) {
-      calcItems.push({ href: links.importadosSync, label: 'Sync importados' })
+      importadosItems.push({ href: links.importadosSync, label: 'Sync' })
     }
-    groups.push({ id: 'calculadoras', label: 'Calculadoras', items: calcItems })
+    groups.push({ id: 'importados', label: 'Importados', items: importadosItems })
   }
 
   return groups

@@ -14,6 +14,9 @@
     },
     "api/importados-sync/create-product.ts": {
       "maxDuration": 120
+    },
+    "api/importados-sync/orders.ts": {
+      "maxDuration": 60
     }
   },
   "rewrites": [
