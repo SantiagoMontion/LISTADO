@@ -10365,6 +10365,13 @@ body:has(.nm-hub-app--logistica-andreani) {
   flex-wrap: wrap;
 }
 
+.importados-orders-card__title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 .importados-orders-card__order {
   font-size: 1.05rem;
   font-weight: 800;
@@ -10372,7 +10379,7 @@ body:has(.nm-hub-app--logistica-andreani) {
   text-decoration: none;
 }
 
-.importados-orders-card__order:hover {
+a.importados-orders-card__order:hover {
   color: #1565d8;
   text-decoration: underline;
 }
@@ -10381,6 +10388,93 @@ body:has(.nm-hub-app--logistica-andreani) {
   margin: 0.2rem 0 0;
   font-size: 0.8rem;
   color: #64748b;
+}
+
+.importados-orders-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.importados-orders-card--demo {
+  border-style: dashed;
+  background: linear-gradient(180deg, #fcfcff 0%, #fff 55%);
+}
+
+.importados-orders-demo-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #7c3aed;
+  background: rgba(124, 58, 237, 0.1);
+  border: 1px solid rgba(124, 58, 237, 0.22);
+}
+
+.importados-orders-meta__demo {
+  color: #7c3aed;
+  font-weight: 700;
+}
+
+.importados-orders-aviso {
+  display: grid;
+  gap: 0.25rem;
+  justify-items: start;
+}
+
+.importados-orders-aviso__label {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+/* Mismo look del pill-select de Tareas, fuera de nm-hub-app--tasks */
+.nm-hub-app--importados .hub-tasks-pill-select__trigger {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  padding: 5px 22px 5px 8px;
+  border-radius: 14px;
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  background-color: #ffffff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M6 9l6 6 6-6' stroke='%64748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 12px;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #0f172a;
+  cursor: pointer;
+  min-width: 7.5rem;
+  text-align: left;
+}
+
+.nm-hub-app--importados .hub-tasks-pill-select__label {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nm-hub-app--importados .hub-tasks-tracking-sent-select--pendiente {
+  border-color: rgba(220, 38, 38, 0.4);
+  background-color: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+}
+
+.nm-hub-app--importados .hub-tasks-tracking-sent-select--enviado {
+  border-color: rgba(15, 159, 110, 0.4);
+  background-color: rgba(15, 159, 110, 0.1);
+  color: #0f9f6e;
 }
 
 .importados-orders-hacer {

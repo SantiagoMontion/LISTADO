@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { HubBrandBar } from './HubBrandBar'
 import { HubDesktopNav } from './HubDesktopNav'
+import { HubTasksPillSelect, type HubTasksPillOption } from './HubTasksPillSelect'
 import { formatSupabaseOrError } from '../lib/errors'
 import {
   listImportadosOrders,
@@ -12,6 +13,63 @@ import type { HubUserRole } from '../lib/types'
 interface HubImportadosPedidosAppProps {
   profileRole?: HubUserRole | null
   adminSignOut?: boolean
+}
+
+type CourierAviso = 'pendiente' | 'cargado'
+
+const COURIER_AVISO_OPTIONS: HubTasksPillOption<CourierAviso>[] = [
+  {
+    value: 'pendiente',
+    label: 'Pendiente',
+    toneClass: 'hub-tasks-tracking-sent-select--pendiente',
+  },
+  {
+    value: 'cargado',
+    label: 'Cargado',
+    toneClass: 'hub-tasks-tracking-sent-select--enviado',
+  },
+]
+
+/** Solo front: no se crea en Shopify. Sirve para ver layout y el dropdown. */
+const DEMO_ORDER: ImportadosOrderRow = {
+  orderId: 'demo-importados-1',
+  orderName: '#15999',
+  createdAt: new Date().toISOString(),
+  financialStatus: 'paid',
+  fulfillmentStatus: null,
+  adminUrl: '#',
+  lines: [
+    {
+      lineItemId: 'demo-line-1',
+      title: 'Teclado 60% | Importados',
+      variantTitle: 'Negro / 60%',
+      quantity: 2,
+      supplierUrls: [
+        'https://lethal.gg/products/demo-60-keyboard?variant=111',
+        'https://lethal.gg/products/demo-60-keyboard?variant=111',
+      ],
+      provider: 'lethal',
+      trackedProductId: 'demo-tracked-1',
+      notmidVariantId: 'demo-variant-1',
+      supplierVariantId: '111',
+    },
+    {
+      lineItemId: 'demo-line-2',
+      title: 'Mousepad PRO Custom | Importados',
+      variantTitle: null,
+      quantity: 1,
+      supplierUrls: ['https://mechanicalkeyboards.com/products/demo-mousepad'],
+      provider: 'mk',
+      trackedProductId: 'demo-tracked-2',
+      notmidVariantId: 'demo-variant-2',
+      supplierVariantId: null,
+    },
+  ],
+  allSupplierUrls: [
+    'https://lethal.gg/products/demo-60-keyboard?variant=111',
+    'https://lethal.gg/products/demo-60-keyboard?variant=111',
+    'https://mechanicalkeyboards.com/products/demo-mousepad',
+  ],
 }
 
 function formatWhen(iso: string): string {
@@ -30,15 +88,21 @@ function providerLabel(provider: 'lethal' | 'mk'): string {
   return provider === 'lethal' ? 'Lethal' : 'MK'
 }
 
+function isDemoOrder(order: ImportadosOrderRow): boolean {
+  return order.orderId === DEMO_ORDER.orderId
+}
+
 export function HubImportadosPedidosApp({
   profileRole,
   adminSignOut = false,
 }: HubImportadosPedidosAppProps) {
   const [orders, setOrders] = useState<ImportadosOrderRow[]>([])
-  const [units, setUnits] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [courierAvisoByOrder, setCourierAvisoByOrder] = useState<Record<string, CourierAviso>>({
+    [DEMO_ORDER.orderId]: 'pendiente',
+  })
 
   const reload = useCallback(async () => {
     setLoading(true)
@@ -46,9 +110,9 @@ export function HubImportadosPedidosApp({
     try {
       const data = await listImportadosOrders()
       setOrders(data.orders)
-      setUnits(data.units)
     } catch (e) {
       setError(formatSupabaseOrError(e))
+      setOrders([])
     } finally {
       setLoading(false)
     }
@@ -58,8 +122,24 @@ export function HubImportadosPedidosApp({
     void reload()
   }, [reload])
 
-  function onHacerPedido(urls: string[]) {
+  const displayOrders = useMemo(() => {
+    const withoutDemo = orders.filter((o) => o.orderId !== DEMO_ORDER.orderId)
+    return [DEMO_ORDER, ...withoutDemo]
+  }, [orders])
+
+  const units = useMemo(
+    () => displayOrders.reduce((sum, o) => sum + o.allSupplierUrls.length, 0),
+    [displayOrders],
+  )
+
+  function onHacerPedido(order: ImportadosOrderRow, urls: string[]) {
     setNotice(null)
+    if (isDemoOrder(order)) {
+      setNotice(
+        'Este es un pedido de ejemplo (solo preview). No se abre nada en el proveedor.',
+      )
+      return
+    }
     if (!urls.length) {
       setNotice('No hay links de proveedor para este pedido.')
       return
@@ -76,6 +156,10 @@ export function HubImportadosPedidosApp({
         ? 'Se abrió 1 producto del proveedor.'
         : `Se abrieron ${opened} productos del proveedor (una pestaña por unidad).`,
     )
+  }
+
+  function courierAvisoFor(orderId: string): CourierAviso {
+    return courierAvisoByOrder[orderId] ?? 'pendiente'
   }
 
   return (
@@ -110,8 +194,9 @@ export function HubImportadosPedidosApp({
 
         {!loading && (
           <p className="importados-orders-meta">
-            {orders.length} pedido{orders.length === 1 ? '' : 's'} · {units} unidad
-            {units === 1 ? '' : 'es'} a pedir
+            {displayOrders.length} pedido{displayOrders.length === 1 ? '' : 's'} · {units}{' '}
+            unidad{units === 1 ? '' : 'es'} a pedir
+            <span className="importados-orders-meta__demo"> · 1 ejemplo en preview</span>
           </p>
         )}
 
@@ -128,65 +213,97 @@ export function HubImportadosPedidosApp({
 
         {loading ? (
           <p className="importados-orders-empty">Cargando pedidos…</p>
-        ) : orders.length === 0 ? (
-          <p className="importados-orders-empty">
-            No hay pedidos pagados con importados pendientes de preparar.
-          </p>
         ) : (
           <ul className="importados-orders-list">
-            {orders.map((order) => (
-              <li key={order.orderId} className="importados-orders-card">
-                <div className="importados-orders-card__head">
-                  <div>
-                    <a
-                      className="importados-orders-card__order"
-                      href={order.adminUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {order.orderName}
-                    </a>
-                    <p className="importados-orders-card__when">{formatWhen(order.createdAt)}</p>
-                  </div>
-                  <button
-                    type="button"
-                    className="importados-orders-hacer"
-                    onClick={() => onHacerPedido(order.allSupplierUrls)}
-                  >
-                    Hacer pedido
-                    {order.allSupplierUrls.length > 1
-                      ? ` (${order.allSupplierUrls.length})`
-                      : ''}
-                  </button>
-                </div>
-
-                <ul className="importados-orders-lines">
-                  {order.lines.map((line) => (
-                    <li key={line.lineItemId} className="importados-orders-line">
-                      <div className="importados-orders-line__info">
-                        <strong>{line.title}</strong>
-                        {line.variantTitle ? (
-                          <span className="importados-orders-line__variant">
-                            {line.variantTitle}
+            {displayOrders.map((order) => {
+              const demo = isDemoOrder(order)
+              return (
+                <li
+                  key={order.orderId}
+                  className={`importados-orders-card${demo ? ' importados-orders-card--demo' : ''}`}
+                >
+                  <div className="importados-orders-card__head">
+                    <div>
+                      <div className="importados-orders-card__title-row">
+                        {demo ? (
+                          <span className="importados-orders-card__order">
+                            {order.orderName}
                           </span>
+                        ) : (
+                          <a
+                            className="importados-orders-card__order"
+                            href={order.adminUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {order.orderName}
+                          </a>
+                        )}
+                        {demo ? (
+                          <span className="importados-orders-demo-badge">Ejemplo</span>
                         ) : null}
-                        <span className="importados-orders-line__meta">
-                          ×{line.quantity} · {providerLabel(line.provider)}
-                        </span>
+                      </div>
+                      <p className="importados-orders-card__when">
+                        {formatWhen(order.createdAt)}
+                      </p>
+                    </div>
+                    <div className="importados-orders-card__actions">
+                      <div className="importados-orders-aviso">
+                        <span className="importados-orders-aviso__label">Aviso Currier</span>
+                        <HubTasksPillSelect
+                          value={courierAvisoFor(order.orderId)}
+                          options={COURIER_AVISO_OPTIONS}
+                          aria-label={`Aviso Currier ${order.orderName}`}
+                          pillClassName="hub-tasks-status-select"
+                          onChange={(value) => {
+                            setCourierAvisoByOrder((prev) => ({
+                              ...prev,
+                              [order.orderId]: value,
+                            }))
+                          }}
+                        />
                       </div>
                       <button
                         type="button"
-                        className="importados-orders-hacer importados-orders-hacer--ghost"
-                        onClick={() => onHacerPedido(line.supplierUrls)}
+                        className="importados-orders-hacer"
+                        onClick={() => onHacerPedido(order, order.allSupplierUrls)}
                       >
                         Hacer pedido
-                        {line.quantity > 1 ? ` (${line.quantity})` : ''}
+                        {order.allSupplierUrls.length > 1
+                          ? ` (${order.allSupplierUrls.length})`
+                          : ''}
                       </button>
-                    </li>
-                  ))}
-                </ul>
-              </li>
-            ))}
+                    </div>
+                  </div>
+
+                  <ul className="importados-orders-lines">
+                    {order.lines.map((line) => (
+                      <li key={line.lineItemId} className="importados-orders-line">
+                        <div className="importados-orders-line__info">
+                          <strong>{line.title}</strong>
+                          {line.variantTitle ? (
+                            <span className="importados-orders-line__variant">
+                              {line.variantTitle}
+                            </span>
+                          ) : null}
+                          <span className="importados-orders-line__meta">
+                            ×{line.quantity} · {providerLabel(line.provider)}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          className="importados-orders-hacer importados-orders-hacer--ghost"
+                          onClick={() => onHacerPedido(order, line.supplierUrls)}
+                        >
+                          Hacer pedido
+                          {line.quantity > 1 ? ` (${line.quantity})` : ''}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              )
+            })}
           </ul>
         )}
       </div>
