@@ -274,7 +274,7 @@ export function hubDesktopNavGroups(
 
   if (perms.view3DCalculator) {
     groups.push({ id: 'calculadoras', label: '3D', items: [
-      { href: links.printing3d, label: 'Calculadoras' },
+      { href: links.printing3d, label: 'Calculadora' },
     ] })
   }
 
