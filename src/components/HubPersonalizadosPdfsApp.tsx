@@ -75,6 +75,7 @@ export function HubPersonalizadosPdfsApp({
   const [expandedMobileIds, setExpandedMobileIds] = useState<Set<string>>(() => new Set())
   const [manualOkIds, setManualOkIds] = useState<Set<string>>(() => new Set())
   const [manualBusyId, setManualBusyId] = useState<string | null>(null)
+  const [copiedTitleId, setCopiedTitleId] = useState<string | null>(null)
 
   const reload = useCallback(async () => {
     setLoading(true)
@@ -138,6 +139,21 @@ export function HubPersonalizadosPdfsApp({
       else next.add(id)
       return next
     })
+  }
+
+  async function copyLineTitle(row: PersonalizadosPdfRow) {
+    const text = (row.lineTitle || '').trim()
+    if (!text) return
+    const id = rowKey(row)
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedTitleId(id)
+      window.setTimeout(() => {
+        setCopiedTitleId((prev) => (prev === id ? null : prev))
+      }, 1400)
+    } catch {
+      setWarning(`No se pudo copiar el título de ${row.orderName}.`)
+    }
   }
 
   /**
@@ -443,7 +459,7 @@ export function HubPersonalizadosPdfsApp({
                   Pedido
                 </th>
                 <th scope="col" className="hub-pdfs-table__col-line">
-                  Línea
+                  Título
                 </th>
                 <th scope="col" className="hub-tasks-table__col-status">
                   Estado
@@ -514,12 +530,33 @@ export function HubPersonalizadosPdfsApp({
                       </div>
                     </td>
                     <td className="hub-pdfs-table__line">
-                      <span className="hub-pdfs-line-title">
-                        {row.lineTitle}
-                        {row.quantity > 1 ? (
-                          <span className="nm-hub-muted"> ×{row.quantity}</span>
+                      <button
+                        type="button"
+                        className={`hub-pdfs-line-title hub-pdfs-line-title--copy${
+                          copiedTitleId === id ? ' hub-pdfs-line-title--copied' : ''
+                        }`}
+                        onClick={() => void copyLineTitle(row)}
+                        title={
+                          copiedTitleId === id
+                            ? 'Título copiado'
+                            : 'Clic para copiar el título'
+                        }
+                        aria-label={
+                          copiedTitleId === id
+                            ? `Título de ${row.orderName} copiado`
+                            : `Copiar título: ${row.lineTitle}`
+                        }
+                      >
+                        <span className="hub-pdfs-line-title__text">
+                          {row.lineTitle}
+                          {row.quantity > 1 ? (
+                            <span className="nm-hub-muted"> ×{row.quantity}</span>
+                          ) : null}
+                        </span>
+                        {copiedTitleId === id ? (
+                          <span className="hub-pdfs-line-title__hint">Copiado</span>
                         ) : null}
-                      </span>
+                      </button>
                     </td>
                     <td className="hub-tasks-table__status">
                       {ok ? (

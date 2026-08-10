@@ -10808,12 +10808,46 @@ a.importados-orders-card__order:hover {
 }
 
 .nm-hub-app--pdfs .hub-pdfs-line-title {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  vertical-align: bottom;
+}
+
+.nm-hub-app--pdfs .hub-pdfs-line-title__text {
   display: inline-block;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  vertical-align: bottom;
+  border-bottom: 1px dashed rgba(15, 23, 42, 0.28);
+}
+
+.nm-hub-app--pdfs .hub-pdfs-line-title:hover .hub-pdfs-line-title__text {
+  border-bottom-color: rgba(21, 101, 216, 0.55);
+  color: #1565d8;
+}
+
+.nm-hub-app--pdfs .hub-pdfs-line-title--copied .hub-pdfs-line-title__text {
+  border-bottom-color: rgba(10, 122, 50, 0.45);
+  color: #0a7a32;
+}
+
+.nm-hub-app--pdfs .hub-pdfs-line-title__hint {
+  flex: 0 0 auto;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #0a7a32;
 }
 
 .nm-hub-app--pdfs .hub-pdfs-status {
