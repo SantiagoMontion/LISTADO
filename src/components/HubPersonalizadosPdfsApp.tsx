@@ -575,14 +575,9 @@ export function HubPersonalizadosPdfsApp({
                           }`}
                           disabled={Boolean(manualBusyId) || zipBusy}
                           onClick={() => void onManualOk(row)}
-                          title="Clic para marcar OK (Papel si el pedido queda completo)"
+                          title="Clic para marcar OK"
                         >
-                          <span className="hub-pdfs-status__label">
-                            {manualBusyId === id ? 'Aplicando…' : skipReasonLabel(row.reason)}
-                          </span>
-                          {manualBusyId === id ? null : (
-                            <span className="hub-pdfs-status__cta">→ OK</span>
-                          )}
+                          {manualBusyId === id ? 'Aplicando…' : skipReasonLabel(row.reason)}
                         </button>
                       ) : null}
                     </td>
