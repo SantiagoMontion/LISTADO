@@ -74,8 +74,6 @@ export function HubPersonalizadosPdfsApp({
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [expandedMobileIds, setExpandedMobileIds] = useState<Set<string>>(() => new Set())
-  const [copiedFileId, setCopiedFileId] = useState<string | null>(null)
-  /** Líneas que eran «Revisar manual» y el usuario pasó a OK. */
   const [manualOkIds, setManualOkIds] = useState<Set<string>>(() => new Set())
   const [manualBusyId, setManualBusyId] = useState<string | null>(null)
 
@@ -141,21 +139,6 @@ export function HubPersonalizadosPdfsApp({
       else next.add(id)
       return next
     })
-  }
-
-  async function copyFileName(row: PersonalizadosPdfRow) {
-    const text = (row.fileName || row.filePath || '').trim()
-    if (!text) return
-    const id = rowKey(row)
-    try {
-      await navigator.clipboard.writeText(text)
-      setCopiedFileId(id)
-      window.setTimeout(() => {
-        setCopiedFileId((prev) => (prev === id ? null : prev))
-      }, 1600)
-    } catch {
-      setWarning(`No se pudo copiar el archivo de ${row.orderName}.`)
-    }
   }
 
   /**
@@ -468,9 +451,6 @@ export function HubPersonalizadosPdfsApp({
                 <th scope="col" className="hub-tasks-table__col-status">
                   Estado
                 </th>
-                <th scope="col" className="hub-tasks-table__col-copy-tracking">
-                  Copiar
-                </th>
               </tr>
             </thead>
             <tbody>
@@ -480,7 +460,6 @@ export function HubPersonalizadosPdfsApp({
                 const isManualOk = manualOkIds.has(id)
                 const ok = row.status === 'matched' || isManualOk
                 const canManualOk = isRevisarManual(row) && !isManualOk
-                const fileText = (row.fileName || row.filePath || '').trim()
                 const shopifyUrl = shopifyOrderAdminUrl(row.orderName)
                 const rowClass = `hub-tasks-table__row${
                   ok ? ' hub-tasks-table__row--pending' : ' hub-tasks-table__row--completed'
@@ -573,59 +552,6 @@ export function HubPersonalizadosPdfsApp({
                         >
                           {skipReasonLabel(row.reason)}
                         </span>
-                      )}
-                    </td>
-                    <td className="hub-tasks-table__copy-tracking">
-                      {fileText ? (
-                        <button
-                          type="button"
-                          className={`hub-tasks-copy-tracking-btn${
-                            copiedFileId === id ? ' hub-tasks-copy-tracking-btn--done' : ''
-                          }`}
-                          onClick={() => void copyFileName(row)}
-                          title={
-                            copiedFileId === id
-                              ? 'Nombre copiado'
-                              : `Copiar nombre de archivo: ${fileText}`
-                          }
-                          aria-label={
-                            copiedFileId === id
-                              ? `Archivo de ${row.orderName} copiado`
-                              : `Copiar nombre de archivo de ${row.orderName}`
-                          }
-                        >
-                          {copiedFileId === id ? (
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                              <path
-                                d="M5 13l4 4L19 7"
-                                stroke="currentColor"
-                                strokeWidth="2.25"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
-                          ) : (
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                              <rect
-                                x="9"
-                                y="9"
-                                width="11"
-                                height="11"
-                                rx="2"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                              />
-                              <path
-                                d="M5 15V5a2 2 0 012-2h10"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                              />
-                            </svg>
-                          )}
-                        </button>
-                      ) : (
-                        <span className="hub-tasks-table__copy-tracking-empty">—</span>
                       )}
                     </td>
                   </tr>
