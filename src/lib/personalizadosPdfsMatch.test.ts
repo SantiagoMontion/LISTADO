@@ -3,6 +3,7 @@ import {
   normalizeShopifyLineTitle,
   pickUniqueDesignNameMatch,
 } from '../../api/_lib/personalizados-pdfs/pendingPdfs'
+import { copyablePersonalizadosTitle } from './personalizadosPdfsApi'
 
 describe('pickUniqueDesignNameMatch', () => {
   it('acepta un único match por título de producto', () => {
@@ -30,5 +31,23 @@ describe('pickUniqueDesignNameMatch', () => {
 
   it('normaliza el sufijo | Custom del título de Shopify', () => {
     expect(normalizeShopifyLineTitle('Minecraft 90x40 | Custom')).toBe('Minecraft 90x40')
+  })
+})
+
+describe('copyablePersonalizadosTitle', () => {
+  it('saca Mousepad y | Custom', () => {
+    expect(copyablePersonalizadosTitle('Mousepad SuperNegro 50x40 PRO | Custom')).toBe(
+      'SuperNegro 50x40 PRO',
+    )
+  })
+
+  it('saca Glasspad y | Custom', () => {
+    expect(copyablePersonalizadosTitle('Glasspad Neon 90x40 | Custom')).toBe('Neon 90x40')
+  })
+
+  it('si no hay prefijo, igual limpia Custom', () => {
+    expect(copyablePersonalizadosTitle('Choso 100x50 Classic | Custom')).toBe(
+      'Choso 100x50 Classic',
+    )
   })
 })

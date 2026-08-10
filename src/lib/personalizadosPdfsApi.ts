@@ -25,6 +25,21 @@ export type PersonalizadosPdfsPendingResponse = {
   count: number
 }
 
+/**
+ * Texto limpio para copiar: sin prefijo Mousepad/Glasspad/Alfombra
+ * ni sufijo "| Custom".
+ * Ej: "Mousepad SuperNegro 50x40 PRO | Custom" → "SuperNegro 50x40 PRO"
+ */
+export function copyablePersonalizadosTitle(raw: string): string {
+  let text = String(raw || '').trim()
+  if (!text) return ''
+
+  text = text.replace(/\s*\|\s*Custom\b.*$/i, '').trim()
+  text = text.replace(/^(Mousepad|Glasspad|Alfombra)\s+/i, '').trim()
+
+  return text
+}
+
 async function accessToken(): Promise<string> {
   if (!supabase) throw new Error('Supabase no está configurado')
   const { data, error } = await supabase.auth.getSession()

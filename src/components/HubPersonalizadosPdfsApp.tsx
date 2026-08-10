@@ -8,6 +8,7 @@ import {
   listPendingPersonalizadosPdfs,
   partitionOrdersForPapelTag,
   tagOrdersWithPapel,
+  copyablePersonalizadosTitle,
   type PersonalizadosPdfRow,
 } from '../lib/personalizadosPdfsApi'
 import { shopifyOrderAdminUrlById } from '../lib/shopifyOrderUrl'
@@ -142,7 +143,7 @@ export function HubPersonalizadosPdfsApp({
   }
 
   async function copyLineTitle(row: PersonalizadosPdfRow) {
-    const text = (row.lineTitle || '').trim()
+    const text = copyablePersonalizadosTitle(row.lineTitle)
     if (!text) return
     const id = rowKey(row)
     try {
