@@ -36,6 +36,12 @@ function skipReasonLabel(reason: string | null): string {
   return reason
 }
 
+/** Solo estos se pueden pasar a OK a mano (y gatillan Papel). */
+function isRevisarManual(row: PersonalizadosPdfRow): boolean {
+  if (row.status !== 'skipped') return false
+  return !row.reason || row.reason === 'print_not_found'
+}
+
 function uniqueMatchedForZip(rows: PersonalizadosPdfRow[]): PersonalizadosPdfRow[] {
   const seen = new Set<string>()
   const out: PersonalizadosPdfRow[] = []
@@ -69,12 +75,17 @@ export function HubPersonalizadosPdfsApp({
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [expandedMobileIds, setExpandedMobileIds] = useState<Set<string>>(() => new Set())
   const [copiedFileId, setCopiedFileId] = useState<string | null>(null)
+  /** Líneas que eran «Revisar manual» y el usuario pasó a OK. */
+  const [manualOkIds, setManualOkIds] = useState<Set<string>>(() => new Set())
+  const [manualBusyId, setManualBusyId] = useState<string | null>(null)
 
   const reload = useCallback(async () => {
     setLoading(true)
     setError(null)
     setNotice(null)
     setWarning(null)
+    setManualOkIds(new Set())
+    setManualBusyId(null)
     try {
       const data = await listPendingPersonalizadosPdfs()
       setRows(data.rows)
@@ -96,11 +107,17 @@ export function HubPersonalizadosPdfsApp({
 
   const zipTargets = useMemo(() => uniqueMatchedForZip(rows), [rows])
 
+  const displayMatched = matched + manualOkIds.size
+  const displaySkipped = Math.max(0, skipped - manualOkIds.size)
+
   const filteredRows = useMemo(() => {
     const q = query.trim().toLowerCase()
     return rows.filter((row) => {
-      if (statusFilter === 'matched' && row.status !== 'matched') return false
-      if (statusFilter === 'skipped' && row.status !== 'skipped') return false
+      const id = rowKey(row)
+      const isManualOk = manualOkIds.has(id)
+      const looksOk = row.status === 'matched' || isManualOk
+      if (statusFilter === 'matched' && !looksOk) return false
+      if (statusFilter === 'skipped' && looksOk) return false
       if (!q) return true
       const hay = [
         row.orderName,
@@ -108,12 +125,14 @@ export function HubPersonalizadosPdfsApp({
         row.jobId || '',
         row.fileName || '',
         row.reason || '',
+        looksOk ? 'ok' : '',
+        isRevisarManual(row) && !isManualOk ? 'revisar manual' : '',
       ]
         .join(' ')
         .toLowerCase()
       return hay.includes(q)
     })
-  }, [query, rows, statusFilter])
+  }, [manualOkIds, query, rows, statusFilter])
 
   function toggleMobileCard(id: string) {
     setExpandedMobileIds((prev) => {
@@ -136,6 +155,70 @@ export function HubPersonalizadosPdfsApp({
       }, 1600)
     } catch {
       setWarning(`No se pudo copiar el archivo de ${row.orderName}.`)
+    }
+  }
+
+  /**
+   * Revisar manual → OK. Etiqueta Papel solo si el pedido queda completo
+   * (todas las líneas matched o pasadas a OK a mano). Los OK automáticos del match
+   * no gatillan Papel por este camino.
+   */
+  async function onManualOk(row: PersonalizadosPdfRow) {
+    const id = rowKey(row)
+    if (!isRevisarManual(row) || manualOkIds.has(id) || manualBusyId) return
+
+    const nextManual = new Set(manualOkIds)
+    nextManual.add(id)
+    setManualOkIds(nextManual)
+    setManualBusyId(id)
+    setWarning(null)
+
+    const orderRows = rows.filter((r) => r.orderId === row.orderId)
+    const orderComplete = orderRows.every((r) => {
+      const key = rowKey(r)
+      return r.status === 'matched' || nextManual.has(key)
+    })
+
+    if (!orderComplete) {
+      setManualBusyId(null)
+      setNotice(
+        `${row.orderName}: marcado OK. Falta revisar otra línea del mismo pedido antes de «Papel».`,
+      )
+      return
+    }
+
+    try {
+      const tagResult = await tagOrdersWithPapel([row.orderId])
+      const result = tagResult.results[0]
+      if (!result?.ok) {
+        throw new Error(result?.error || 'No se pudo etiquetar Papel')
+      }
+      setRows((prev) => prev.filter((r) => r.orderId !== row.orderId))
+      setManualOkIds((prev) => {
+        const cleaned = new Set<string>()
+        for (const key of prev) {
+          if (!key.startsWith(`${row.orderId}-`)) cleaned.add(key)
+        }
+        return cleaned
+      })
+      setMatched((n) => Math.max(0, n - orderRows.filter((r) => r.status === 'matched').length))
+      setSkipped((n) =>
+        Math.max(0, n - orderRows.filter((r) => r.status === 'skipped').length),
+      )
+      setNotice(
+        `${row.orderName}: OK manual → etiqueta «Papel» aplicada. Sale del listado.`,
+      )
+    } catch (e) {
+      setManualOkIds((prev) => {
+        const reverted = new Set(prev)
+        reverted.delete(id)
+        return reverted
+      })
+      setWarning(
+        `${row.orderName}: no se pudo etiquetar «Papel»: ${formatSupabaseOrError(e)}`,
+      )
+    } finally {
+      setManualBusyId(null)
     }
   }
 
@@ -341,9 +424,9 @@ export function HubPersonalizadosPdfsApp({
           </div>
 
           <p className="hub-pdfs-counts nm-hub-muted">
-            Matcheados: <strong>{matched}</strong>
+            Matcheados: <strong>{displayMatched}</strong>
             {' · '}
-            Salteados: <strong>{skipped}</strong>
+            Salteados: <strong>{displaySkipped}</strong>
             {' · '}
             En ZIP: <strong>{zipTargets.length}</strong>
           </p>
@@ -394,12 +477,16 @@ export function HubPersonalizadosPdfsApp({
               {filteredRows.map((row) => {
                 const id = rowKey(row)
                 const mobileOpen = expandedMobileIds.has(id)
-                const ok = row.status === 'matched'
+                const isManualOk = manualOkIds.has(id)
+                const ok = row.status === 'matched' || isManualOk
+                const canManualOk = isRevisarManual(row) && !isManualOk
                 const fileText = (row.fileName || row.filePath || '').trim()
                 const shopifyUrl = shopifyOrderAdminUrl(row.orderName)
                 const rowClass = `hub-tasks-table__row${
                   ok ? ' hub-tasks-table__row--pending' : ' hub-tasks-table__row--completed'
-                }${mobileOpen ? ' hub-tasks-table__row--mobile-open' : ''}`
+                }${mobileOpen ? ' hub-tasks-table__row--mobile-open' : ''}${
+                  isManualOk ? ' hub-pdfs-row--manual-ok' : ''
+                }`
 
                 return (
                   <tr key={id} className={rowClass}>
@@ -460,7 +547,25 @@ export function HubPersonalizadosPdfsApp({
                     </td>
                     <td className="hub-tasks-table__status">
                       {ok ? (
-                        <span className="hub-pdfs-status hub-pdfs-status--ok">OK</span>
+                        <span
+                          className={`hub-pdfs-status hub-pdfs-status--ok${
+                            isManualOk ? ' hub-pdfs-status--ok-manual' : ''
+                          }`}
+                        >
+                          OK
+                        </span>
+                      ) : canManualOk ? (
+                        <button
+                          type="button"
+                          className={`hub-pdfs-status hub-pdfs-status--skip hub-pdfs-status--action${
+                            manualBusyId === id ? ' hub-pdfs-status--busy' : ''
+                          }`}
+                          disabled={Boolean(manualBusyId) || zipBusy}
+                          onClick={() => void onManualOk(row)}
+                          title="Marcar como OK y etiquetar Papel si el pedido queda completo"
+                        >
+                          {manualBusyId === id ? 'Aplicando…' : 'Revisar manual'}
+                        </button>
                       ) : (
                         <span
                           className="hub-pdfs-status hub-pdfs-status--skip"
