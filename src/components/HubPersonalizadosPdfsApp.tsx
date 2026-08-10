@@ -458,10 +458,10 @@ export function HubPersonalizadosPdfsApp({
                 const ok = row.status === 'matched' || isManualOk
                 const canManualOk = canMarkManualOk(row) && !isManualOk
                 const shopifyUrl = shopifyOrderAdminUrlById(row.orderId)
-                const rowClass = `hub-tasks-table__row${
-                  ok ? ' hub-tasks-table__row--pending' : ' hub-tasks-table__row--completed'
-                }${mobileOpen ? ' hub-tasks-table__row--mobile-open' : ''}${
-                  isManualOk ? ' hub-pdfs-row--manual-ok' : ''
+                const rowClass = `hub-tasks-table__row hub-tasks-table__row--pending${
+                  mobileOpen ? ' hub-tasks-table__row--mobile-open' : ''
+                }${isManualOk ? ' hub-pdfs-row--manual-ok' : ''}${
+                  canManualOk ? ' hub-pdfs-row--needs-review' : ''
                 }`
 
                 return (
@@ -538,9 +538,14 @@ export function HubPersonalizadosPdfsApp({
                           }`}
                           disabled={Boolean(manualBusyId) || zipBusy}
                           onClick={() => void onManualOk(row)}
-                          title="Marcar como OK y etiquetar Papel si el pedido queda completo"
+                          title="Clic para marcar OK (Papel si el pedido queda completo)"
                         >
-                          {manualBusyId === id ? 'Aplicando…' : skipReasonLabel(row.reason)}
+                          <span className="hub-pdfs-status__label">
+                            {manualBusyId === id ? 'Aplicando…' : skipReasonLabel(row.reason)}
+                          </span>
+                          {manualBusyId === id ? null : (
+                            <span className="hub-pdfs-status__cta">→ OK</span>
+                          )}
                         </button>
                       ) : null}
                     </td>

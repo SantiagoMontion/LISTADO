@@ -36,6 +36,21 @@ describe('taskHasOrderNumber', () => {
   })
 })
 
+describe('shopifyOrderAdminUrl', () => {
+  it('sin número de orden en el título, no hay URL', () => {
+    expect(shopifyOrderAdminUrl('')).toBeNull()
+    expect(shopifyOrderAdminUrl('Juan Perez')).toBeNull()
+    expect(shopifyOrderAdminUrl('Juan 15000')).toBeNull()
+  })
+
+  it('con nº de orden, arma URL con handle Andreani (kw0f4u-ji) y query #número', () => {
+    const url = shopifyOrderAdminUrl('15704 Juan')
+    expect(url).toBe(
+      `https://admin.shopify.com/store/kw0f4u-ji/orders?query=${encodeURIComponent('#15704')}`,
+    )
+  })
+})
+
 describe('shopifyOrderAdminUrlById', () => {
   it('arma URL directa al admin de la orden', () => {
     expect(shopifyOrderAdminUrlById('12544439550324')).toBe(
