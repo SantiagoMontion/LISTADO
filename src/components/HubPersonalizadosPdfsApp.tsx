@@ -406,11 +406,9 @@ export function HubPersonalizadosPdfsApp({
           </div>
 
           <p className="hub-pdfs-counts nm-hub-muted">
-            Matcheados: <strong>{displayMatched}</strong>
-            {' · '}
-            Salteados: <strong>{displaySkipped}</strong>
-            {' · '}
-            En ZIP: <strong>{zipTargets.length}</strong>
+            OK: <strong>{displayMatched}</strong>
+            {' - '}
+            Revisar: <strong>{displaySkipped}</strong>
           </p>
         </div>
 
