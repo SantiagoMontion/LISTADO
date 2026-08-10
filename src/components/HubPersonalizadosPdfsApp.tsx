@@ -36,10 +36,9 @@ function skipReasonLabel(reason: string | null): string {
   return reason
 }
 
-/** Solo estos se pueden pasar a OK a mano (y gatillan Papel). */
-function isRevisarManual(row: PersonalizadosPdfRow): boolean {
-  if (row.status !== 'skipped') return false
-  return !row.reason || row.reason === 'print_not_found'
+/** Cualquier salteado se puede pasar a OK a mano (y gatillar Papel). */
+function canMarkManualOk(row: PersonalizadosPdfRow): boolean {
+  return row.status === 'skipped'
 }
 
 function uniqueMatchedForZip(rows: PersonalizadosPdfRow[]): PersonalizadosPdfRow[] {
@@ -123,8 +122,8 @@ export function HubPersonalizadosPdfsApp({
         row.jobId || '',
         row.fileName || '',
         row.reason || '',
-        looksOk ? 'ok' : '',
-        isRevisarManual(row) && !isManualOk ? 'revisar manual' : '',
+        isManualOk ? 'ok' : '',
+        canMarkManualOk(row) && !isManualOk ? skipReasonLabel(row.reason) : '',
       ]
         .join(' ')
         .toLowerCase()
@@ -142,13 +141,13 @@ export function HubPersonalizadosPdfsApp({
   }
 
   /**
-   * Revisar manual → OK. Etiqueta Papel solo si el pedido queda completo
+   * Salteado → OK. Etiqueta Papel solo si el pedido queda completo
    * (todas las líneas matched o pasadas a OK a mano). Los OK automáticos del match
    * no gatillan Papel por este camino.
    */
   async function onManualOk(row: PersonalizadosPdfRow) {
     const id = rowKey(row)
-    if (!isRevisarManual(row) || manualOkIds.has(id) || manualBusyId) return
+    if (!canMarkManualOk(row) || manualOkIds.has(id) || manualBusyId) return
 
     const nextManual = new Set(manualOkIds)
     nextManual.add(id)
@@ -459,7 +458,7 @@ export function HubPersonalizadosPdfsApp({
                 const mobileOpen = expandedMobileIds.has(id)
                 const isManualOk = manualOkIds.has(id)
                 const ok = row.status === 'matched' || isManualOk
-                const canManualOk = isRevisarManual(row) && !isManualOk
+                const canManualOk = canMarkManualOk(row) && !isManualOk
                 const shopifyUrl = shopifyOrderAdminUrlById(row.orderId)
                 const rowClass = `hub-tasks-table__row${
                   ok ? ' hub-tasks-table__row--pending' : ' hub-tasks-table__row--completed'
@@ -543,16 +542,9 @@ export function HubPersonalizadosPdfsApp({
                           onClick={() => void onManualOk(row)}
                           title="Marcar como OK y etiquetar Papel si el pedido queda completo"
                         >
-                          {manualBusyId === id ? 'Aplicando…' : 'Revisar manual'}
+                          {manualBusyId === id ? 'Aplicando…' : skipReasonLabel(row.reason)}
                         </button>
-                      ) : (
-                        <span
-                          className="hub-pdfs-status hub-pdfs-status--skip"
-                          title={row.reason || undefined}
-                        >
-                          {skipReasonLabel(row.reason)}
-                        </span>
-                      )}
+                      ) : null}
                     </td>
                   </tr>
                 )
