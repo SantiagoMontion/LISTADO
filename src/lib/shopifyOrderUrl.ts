@@ -43,7 +43,14 @@ export function shopifyProductAdminUrl(productId: string): string | null {
   return `https://admin.shopify.com/store/${resolveShopifyStoreHandle()}/products/${id}`
 }
 
-/** Arma el link de admin usando solo el nº de orden parseado del título. */
+/** Link directo al admin de la orden por ID numérico de Shopify. */
+export function shopifyOrderAdminUrlById(orderId: string | number | null | undefined): string | null {
+  const id = String(orderId ?? '').trim()
+  if (!id || !/^\d+$/.test(id)) return null
+  return `https://admin.shopify.com/store/${resolveShopifyStoreHandle()}/orders/${id}`
+}
+
+/** Arma el link de admin usando solo el nº de orden parseado del título (búsqueda). */
 export function shopifyOrderAdminUrl(orderRaw: string): string | null {
   const orderQuery = parseShopifyOrderNumberFromTitle(orderRaw)
   if (!orderQuery) return null

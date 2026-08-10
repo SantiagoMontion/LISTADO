@@ -10,7 +10,7 @@ import {
   tagOrdersWithPapel,
   type PersonalizadosPdfRow,
 } from '../lib/personalizadosPdfsApi'
-import { shopifyOrderAdminUrl } from '../lib/shopifyOrderUrl'
+import { shopifyOrderAdminUrlById } from '../lib/shopifyOrderUrl'
 import type { HubUserRole } from '../lib/types'
 
 interface HubPersonalizadosPdfsAppProps {
@@ -460,7 +460,7 @@ export function HubPersonalizadosPdfsApp({
                 const isManualOk = manualOkIds.has(id)
                 const ok = row.status === 'matched' || isManualOk
                 const canManualOk = isRevisarManual(row) && !isManualOk
-                const shopifyUrl = shopifyOrderAdminUrl(row.orderName)
+                const shopifyUrl = shopifyOrderAdminUrlById(row.orderId)
                 const rowClass = `hub-tasks-table__row${
                   ok ? ' hub-tasks-table__row--pending' : ' hub-tasks-table__row--completed'
                 }${mobileOpen ? ' hub-tasks-table__row--mobile-open' : ''}${
