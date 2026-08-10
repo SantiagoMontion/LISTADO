@@ -1,4 +1,4 @@
-/* NOTMID Hub — shell full-width (panel + tareas + login) */
+/* NOTMID Hub ? shell full-width (panel + tareas + login) */
 .nm-hub-app {
   --nm-hub-rail-max: 100%;
   --nm-hub-padding-x: var(--nm-shell-gutter, clamp(1rem, 2.2vw, 2.5rem));
@@ -23,7 +23,7 @@
   box-sizing: border-box;
 }
 
-/* Period pager chevrons — Apple HIG style (month / day / week) */
+/* Period pager chevrons ? Apple HIG style (month / day / week) */
 .hub-period-nav-btn {
   appearance: none;
   flex-shrink: 0;
@@ -1086,7 +1086,7 @@ a.nm-hub-brand-bar__btn:hover {
   margin: 0 0 0.65rem;
 }
 
-/* Tareas: paginador día full-width — extremos flechas + fecha centrada */
+/* Tareas: paginador d?a full-width ? extremos flechas + fecha centrada */
 .nm-hub-app--tasks .nm-hub-date-strip.date-pager-fullwidth {
   background-color: var(--bg-surface-rebel);
   border-radius: 16px;
@@ -1182,7 +1182,7 @@ a.nm-hub-brand-bar__btn:hover {
   white-space: nowrap;
 }
 
-/* Bloque central de fecha (+ input nativo) — solo vista tareas hub */
+/* Bloque central de fecha (+ input nativo) ? solo vista tareas hub */
 .nm-hub-app--tasks .date-pager-center {
   display: flex;
   flex-direction: column;
@@ -1269,7 +1269,7 @@ a.nm-hub-brand-bar__btn:hover {
   width: 100%;
 }
 
-/* Archivos impresos (/archivos-impresos) — feed visual + fecha compacta */
+/* Archivos impresos (/archivos-impresos) ? feed visual + fecha compacta */
 .nm-hub-app.nm-hub-app--printed-files .dashboard-navbar.dashboard-navbar-clean {
   background-color: var(--bg-surface-rebel);
 }
@@ -1719,7 +1719,7 @@ a.nm-hub-brand-bar__btn:hover {
   justify-content: center;
 }
 
-/* Estadísticas despachos (/pedidos-despachados/estadisticas) */
+/* Estad?sticas despachos (/pedidos-despachados/estadisticas) */
 .nm-hub-app.nm-hub-app--dispatched-stats .dashboard-navbar.dashboard-navbar-clean {
   background-color: var(--bg-surface-rebel);
 }
@@ -1889,7 +1889,7 @@ a.nm-hub-brand-bar__btn:hover {
   color: var(--accent-rebel-green, #22c55e);
 }
 
-/* Analítica admin — corte y despachos (Apple light) */
+/* Anal?tica admin ? corte y despachos (Apple light) */
 .nm-hub-app.nm-hub-app--dispatch-analytics .dashboard-navbar.dashboard-navbar-clean,
 .nm-hub-app.nm-hub-app--cut-analytics .dashboard-navbar.dashboard-navbar-clean {
   background-color: rgba(255, 255, 255, 0.92);
@@ -2342,7 +2342,7 @@ a.nm-hub-brand-bar__btn:hover {
 }
 
 :root {
-  /* Professional light system — Workspace / Meta Admin inspired */
+  /* Professional light system ? Workspace / Meta Admin inspired */
   --bg-main-rebel: #f3f5f8;
   --bg-surface-rebel: #ffffff;
   --bg-surface-hover-rebel: #eef1f5;
@@ -2368,7 +2368,7 @@ a.nm-hub-brand-bar__btn:hover {
   --accent-green: var(--accent-rebel-green);
   --accent-blue: var(--accent-rebel-blue);
 
-  /* Formulario «Nueva tarea» */
+  /* Formulario ?Nueva tarea? */
   --bg-form-card: #ffffff;
   --bg-input-field: #f8fafc;
   --bg-input-field-focus: #ffffff;
@@ -2389,7 +2389,7 @@ body:has(.nm-hub-app) {
 }
 
 /* ==========================================================================
-   Dashboard home — tema REBEL (crudo, alto contraste, textura urbana)
+   Dashboard home ? tema REBEL (crudo, alto contraste, textura urbana)
    ========================================================================== */
 
 .nm-hub-app.nm-hub-app--dashboard {
@@ -2415,7 +2415,7 @@ body:has(.nm-hub-app) {
   background: transparent;
   color: var(--text-rebel-primary);
   font-family: var(--font-rebel-main);
-  /* Más densidad en viewports grandes: podés sobrescribir (--printed-feed-columns: 4) */
+  /* M?s densidad en viewports grandes: pod?s sobrescribir (--printed-feed-columns: 4) */
   --printed-feed-columns: 2;
 }
 
@@ -2540,7 +2540,7 @@ body:has(.nm-hub-app) {
   font-weight: 700;
 }
 
-/* Subtítulo dinámico bajo NOT BRAIN (lista tareas / crear) */
+/* Subt?tulo din?mico bajo NOT BRAIN (lista tareas / crear) */
 .nm-hub-app .nm-hub-brand-bar__heading.navbar-brand-group {
   display: flex;
   flex-direction: column;
@@ -2736,7 +2736,7 @@ body:has(.nm-hub-app) {
   box-shadow: none;
 }
 
-/* Barra de métricas */
+/* Barra de m?tricas */
 .nm-hub-app--dashboard .status-bar-rebel {
   background-color: var(--bg-surface-rebel);
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -2970,7 +2970,7 @@ body:has(.nm-hub-app) {
 }
 
 /* --------------------------------------------------------------------------
-   Tareas hub — formulario “crear” y filas tipo dashboard (Urban Rebel tokens)
+   Tareas hub ? formulario ?crear? y filas tipo dashboard (Urban Rebel tokens)
    -------------------------------------------------------------------------- */
 
 .nm-hub-app--tasks form#nm-hub-tareas-nueva.nm-hub-card--task-create {
@@ -3434,7 +3434,7 @@ body:has(.nm-hub-app) {
   color: #0284c7;
 }
 
-/* Type filter menu (portal) — same tones as badges */
+/* Type filter menu (portal) ? same tones as badges */
 .hub-tasks-type-pill.task-type-badge--falta,
 .hub-tasks-pill-select__option.task-type-badge--falta {
   background: rgba(180, 83, 9, 0.12);
@@ -3702,7 +3702,7 @@ body:has(.nm-hub-app) {
   color: #fecaca !important;
 }
 
-/* Modal cliente mayorista — sheet Apple light */
+/* Modal cliente mayorista ? sheet Apple light */
 .hub-mayorista-client-backdrop {
   position: fixed;
   inset: 0;
@@ -4405,7 +4405,7 @@ select.hub-mayorista-client-modal__input {
   color: inherit;
 }
 
-/* ── Tasks list: Apple inset cards on phone / narrow tablet ─────── */
+/* ?? Tasks list: Apple inset cards on phone / narrow tablet ??????? */
 @media (max-width: 1023.98px) {
   .nm-hub-app--tasks .hub-tasks-filters {
     flex-direction: column;
@@ -5160,7 +5160,7 @@ select.hub-mayorista-client-modal__input {
   border-color: rgba(248, 113, 113, 0.9) !important;
 }
 
-/* Labels — Apple secondary label */
+/* Labels ? Apple secondary label */
 .nm-hub-app--tasks form#nm-hub-tareas-nueva .field-label {
   font-size: 0.8125rem;
   font-weight: 650;
@@ -5170,7 +5170,7 @@ select.hub-mayorista-client-modal__input {
   text-transform: none;
 }
 
-/* Input, textarea y select — cajas elevated light */
+/* Input, textarea y select ? cajas elevated light */
 .nm-hub-app--tasks form#nm-hub-tareas-nueva .field-input,
 .nm-hub-app--tasks form#nm-hub-tareas-nueva .field-textarea,
 .nm-hub-app--tasks form#nm-hub-tareas-nueva .field-select,
@@ -5318,7 +5318,7 @@ select.hub-mayorista-client-modal__input {
   padding-left: 9px;
 }
 
-/* Foco / menú abierto — borde verde + glow industrial */
+/* Foco / men? abierto ? borde verde + glow industrial */
 .nm-hub-app--tasks form#nm-hub-tareas-nueva .field-input:focus,
 .nm-hub-app--tasks form#nm-hub-tareas-nueva .field-textarea:focus,
 .nm-hub-app--tasks form#nm-hub-tareas-nueva .field-select:focus,
@@ -5442,7 +5442,7 @@ select.hub-mayorista-client-modal__input {
   transform: none;
 }
 
-/* Campos listado / franja día (solo tareas hub) */
+/* Campos listado / franja d?a (solo tareas hub) */
 .nm-hub-app--tasks .nm-hub-task-search.field-input {
   background-color: #ffffff;
   border: 1px solid rgba(15, 23, 42, 0.14);
@@ -5492,7 +5492,7 @@ select.hub-mayorista-client-modal__input {
   box-shadow: 0 0 10px rgba(70, 207, 248, 0.12);
 }
 
-/* Faja filtros listado — pista única segmented (Pendientes / Completadas) */
+/* Faja filtros listado ? pista ?nica segmented (Pendientes / Completadas) */
 .nm-hub-app--tasks .tasks-hub-filters-stack {
   display: flex;
   flex-direction: column;
@@ -5516,7 +5516,7 @@ select.hub-mayorista-client-modal__input {
   margin: 0;
 }
 
-/* Pista de filtros — tareas (2 segmentos 50%) e impresos (varios botones sin solapamiento) */
+/* Pista de filtros ? tareas (2 segmentos 50%) e impresos (varios botones sin solapamiento) */
 .nm-hub-app--tasks .filter-track-rebel,
 .nm-hub-app--printed-files .filter-track-rebel {
   background-color: var(--bg-surface-rebel);
@@ -5606,7 +5606,7 @@ select.hub-mayorista-client-modal__input {
   margin-bottom: 1.1rem;
 }
 
-/* Lista — tarjetas jerarquizadas (--accent-color inline por ítem) */
+/* Lista ? tarjetas jerarquizadas (--accent-color inline por ?tem) */
 .nm-hub-app--tasks ul.nm-hub-task-list.tasks-list-rebel {
   list-style: none;
   margin: 0;
@@ -5634,7 +5634,7 @@ select.hub-mayorista-client-modal__input {
   margin-bottom: 0;
 }
 
-/* Tareas hechas: pestaña Completadas y asignadas ya ejecutadas */
+/* Tareas hechas: pesta?a Completadas y asignadas ya ejecutadas */
 .nm-hub-app--tasks .task-card-rebel--done {
   background-color: rgba(255, 255, 255, 0.012);
   border-color: rgba(255, 255, 255, 0.035);
@@ -5761,7 +5761,7 @@ select.hub-mayorista-client-modal__input {
   gap: 6px;
 }
 
-/* Altura única en la fila de acciones de la tarjeta */
+/* Altura ?nica en la fila de acciones de la tarjeta */
 .nm-hub-app--tasks .task-card-header-actions .btn-task-notes,
 .nm-hub-app--tasks .task-card-header-actions .btn-complete-compact,
 .nm-hub-app--tasks .task-card-header-actions .btn-undo-icon,
@@ -5907,7 +5907,7 @@ select.hub-mayorista-client-modal__input {
   visibility: hidden;
 }
 
-/* Panel notas de tarea — sheet estilo Apple / light */
+/* Panel notas de tarea ? sheet estilo Apple / light */
 .nm-hub-task-notes-backdrop {
   z-index: 12000;
   background: rgba(15, 23, 42, 0.36);
@@ -6517,7 +6517,7 @@ select.hub-mayorista-client-modal__input {
 }
 
 /* --------------------------------------------------------------------------
-   Lista de corte (/manejador) — Apple light
+   Lista de corte (/manejador) ? Apple light
    -------------------------------------------------------------------------- */
 
 .nm-hub-app--cut-list .cut-list-container {
@@ -7864,7 +7864,7 @@ select.hub-mayorista-client-modal__input {
   font-size: 0.85rem;
 }
 
-/* Modal subir imágenes (lista upload) */
+/* Modal subir im?genes (lista upload) */
 .upload-images-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -8186,7 +8186,7 @@ select.hub-mayorista-client-modal__input {
   opacity: 1;
 }
 
-/* Avisos push (configuración) */
+/* Avisos push (configuraci?n) */
 .nm-hub-push-setup {
   margin: 0 1rem 1rem;
   padding: 0.85rem 1rem;
@@ -8236,7 +8236,7 @@ select.hub-mayorista-client-modal__input {
   color: #ffab40;
 }
 
-/* Home — pie para activar avisos globales (siempre visible al final) */
+/* Home ? pie para activar avisos globales (siempre visible al final) */
 .nm-hub-app--dashboard .nm-hub-push-footer {
   flex-shrink: 0;
   margin-top: auto;
@@ -8358,7 +8358,7 @@ select.hub-mayorista-client-modal__input {
 }
 
 /* ==========================================================================
-   Logística Andreani (/logistica-andreani) — Apple light cajones
+   Log?stica Andreani (/logistica-andreani) ? Apple light cajones
    ========================================================================== */
 
 body:has(.nm-hub-app--logistica-andreani) {
@@ -9014,7 +9014,7 @@ body:has(.nm-hub-app--logistica-andreani) {
 }
 
 /* ==========================================================================
-   NOT BRAIN — escritorio (768px+ y 1100px+)
+   NOT BRAIN ? escritorio (768px+ y 1100px+)
    ========================================================================== */
 
 .hub-desktop-nav {
@@ -9100,7 +9100,7 @@ body:has(.nm-hub-app--logistica-andreani) {
     background: var(--nm-hub-chrome-bg);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
-    /* overflow:auto recorta los dropdowns — debe ser visible */
+    /* overflow:auto recorta los dropdowns ? debe ser visible */
     overflow: visible;
   }
 
@@ -9351,7 +9351,7 @@ body:has(.nm-hub-app--logistica-andreani) {
   }
 }
 
-/* ── Cotizador 3D — light professional ──────────────────────────── */
+/* ?? Cotizador 3D ? light professional ???????????????????????????? */
 
 .nm-hub-app--3d {
   color: #0f172a;
@@ -9802,7 +9802,7 @@ body:has(.nm-hub-app--logistica-andreani) {
 }
 
 .printing3d-accordion__summary::after {
-  content: '▾';
+  content: '?';
   font-size: 0.85rem;
   color: #64748b;
   transition: transform 0.15s ease;
@@ -9929,7 +9929,7 @@ body:has(.nm-hub-app--logistica-andreani) {
 }
 
 /* --------------------------------------------------------------------------
-   Calculadora Importados — light Apple (reusa layout 3D)
+   Calculadora Importados ? light Apple (reusa layout 3D)
    -------------------------------------------------------------------------- */
 
 .importados-page__lead {
@@ -10156,7 +10156,7 @@ body:has(.nm-hub-app--logistica-andreani) {
 }
 
 /* --------------------------------------------------------------------------
-   Sync Importados — lista / alta de productos tracked
+   Sync Importados ? lista / alta de productos tracked
    -------------------------------------------------------------------------- */
 
 .importados-sync-page {
@@ -10190,6 +10190,106 @@ body:has(.nm-hub-app--logistica-andreani) {
   font: inherit;
   background: #fff;
   color: #0f172a;
+}
+
+.importados-sync-audit {
+  margin: 0 0 1rem;
+  padding: 0.75rem 0;
+}
+
+.importados-sync-audit__list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.importados-sync-audit__item {
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  background: color-mix(in srgb, currentColor 4%, transparent);
+  border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.importados-sync-audit__item.is-ok {
+  border-color: color-mix(in srgb, #1f7a4c 35%, transparent);
+}
+
+.importados-sync-audit__item.is-repaired {
+  border-color: color-mix(in srgb, #1d4ed8 40%, transparent);
+}
+
+.importados-sync-audit__item.is-mismatch,
+.importados-sync-audit__item.is-error,
+.importados-sync-audit__item.is-unlinked {
+  border-color: color-mix(in srgb, #b45309 45%, transparent);
+}
+
+.importados-sync-audit__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: baseline;
+}
+
+.importados-sync-audit__status {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.importados-sync-audit__variants {
+  margin: 0.35rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.importados-sync-map-health {
+  margin: 0 0 0.85rem;
+  padding: 0.65rem 0.8rem;
+  border-radius: 8px;
+  font-size: 0.92rem;
+  line-height: 1.4;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+
+.importados-sync-map-health.is-ok {
+  background: color-mix(in srgb, #1f7a4c 12%, transparent);
+  color: #145c38;
+}
+
+.importados-sync-map-health.is-warn {
+  background: color-mix(in srgb, #b45309 14%, transparent);
+  color: #7c3d0a;
+}
+
+.importados-sync-map-health .nm-hub-btn {
+  margin-left: 0.25rem;
+}
+
+.importados-sync-card__map {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.importados-sync-card__map.is-ok {
+  color: #145c38;
+}
+
+.importados-sync-card__map.is-warn {
+  color: #9a3412;
+}
+
+.importados-sync-card__map.is-muted {
+  color: #6b7280;
 }
 
 .importados-sync-list__head {
@@ -10457,12 +10557,8 @@ a.importados-orders-card__order:hover {
 .importados-orders-realizado {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.55rem;
   margin-left: auto;
-  padding: 0.35rem 0.55rem;
-  border-radius: 10px;
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  background: #fff;
   font-size: 0.8rem;
   font-weight: 750;
   color: #334155;
@@ -10471,9 +10567,15 @@ a.importados-orders-card__order:hover {
   white-space: nowrap;
 }
 
+.importados-orders-realizado__text {
+  line-height: 1;
+}
+
 .importados-orders-realizado input {
-  width: 1.05rem;
-  height: 1.05rem;
+  width: 1.15rem;
+  height: 1.15rem;
+  margin: 0;
+  flex-shrink: 0;
   accent-color: #0f9f6e;
   cursor: pointer;
 }
@@ -10484,8 +10586,6 @@ a.importados-orders-card__order:hover {
 }
 
 .importados-orders-card--realizado .importados-orders-realizado {
-  border-color: rgba(15, 159, 110, 0.35);
-  background: rgba(15, 159, 110, 0.08);
   color: #0f9f6e;
 }
 
@@ -10628,3 +10728,128 @@ a.importados-orders-card__order:hover {
   color: #334155;
 }
 
+
+/* --------------------------------------------------------------------------
+   PDFs de impresi?n ? misma c?scara visual que lista de tareas
+   -------------------------------------------------------------------------- */
+
+.nm-hub-app--pdfs .hub-pdfs-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+  flex: 0 0 auto;
+}
+
+.nm-hub-app--pdfs .hub-pdfs-secondary-action {
+  margin-top: 0.15rem;
+  padding: 0.65rem 1.05rem;
+  border-radius: 14px;
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  background: #ffffff;
+  color: #0f172a;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+}
+
+.nm-hub-app--pdfs .hub-pdfs-secondary-action:hover {
+  background: #f8fafc;
+  border-color: rgba(15, 23, 42, 0.22);
+}
+
+.nm-hub-app--pdfs .hub-pdfs-secondary-action:disabled,
+.nm-hub-app--pdfs .hub-page-primary-action:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.nm-hub-app--pdfs .hub-pdfs-counts {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.nm-hub-app--pdfs .hub-pdfs-notice {
+  margin: 0 0 0.85rem;
+  padding: 0.65rem 0.8rem;
+  border-radius: 10px;
+  background: rgba(21, 101, 216, 0.08);
+  color: #0f172a;
+  font-size: 0.88rem;
+}
+
+.nm-hub-app--pdfs .hub-pdfs-warning {
+  margin: 0 0 0.85rem;
+  padding: 0.65rem 0.8rem;
+  border-radius: 10px;
+  background: rgba(154, 103, 0, 0.1);
+  color: #9a6700;
+  font-size: 0.88rem;
+}
+
+.nm-hub-app--pdfs .hub-pdfs-table__col-line,
+.nm-hub-app--pdfs .hub-pdfs-table__line {
+  width: 42%;
+}
+
+.nm-hub-app--pdfs .hub-pdfs-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.nm-hub-app--pdfs .hub-pdfs-title-row .hub-tasks-table__title-link,
+.nm-hub-app--pdfs .hub-pdfs-title-row .hub-tasks-table__title-text {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.nm-hub-app--pdfs .hub-pdfs-line-title {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+.nm-hub-app--pdfs .hub-pdfs-status {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 0.28rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nm-hub-app--pdfs .hub-pdfs-status--ok {
+  background: rgba(10, 122, 50, 0.12);
+  color: #0a7a32;
+}
+
+.nm-hub-app--pdfs .hub-pdfs-status--skip {
+  background: rgba(154, 103, 0, 0.12);
+  color: #9a6700;
+}
+
+@media (max-width: 1023.98px) {
+  .nm-hub-app--pdfs .hub-tasks-table__row:not(.hub-tasks-table__row--mobile-open) {
+    grid-template-areas: 'title';
+  }
+
+  .nm-hub-app--pdfs .hub-tasks-table__row:not(.hub-tasks-table__row--mobile-open) .hub-pdfs-table__line {
+    display: none !important;
+  }
+
+  .nm-hub-app--pdfs .hub-pdfs-line-title {
+    white-space: normal;
+  }
+}

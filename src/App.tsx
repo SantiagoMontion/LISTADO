@@ -7,6 +7,7 @@ import { Hub3DApp } from './components/Hub3DApp'
 import { HubImportadosApp } from './components/HubImportadosApp'
 import { HubImportadosSyncApp } from './components/HubImportadosSyncApp'
 import { HubImportadosPedidosApp } from './components/HubImportadosPedidosApp'
+import { HubPersonalizadosPdfsApp } from './components/HubPersonalizadosPdfsApp'
 import { HubAdminCutAnalytics } from './components/HubAdminCutAnalytics'
 import { HubAdminDispatchAnalytics } from './components/HubAdminDispatchAnalytics'
 import { HubDispatchedStatsApp } from './components/HubDispatchedStatsApp'
@@ -191,6 +192,7 @@ export default function App() {
   const isHubImportados = path === '/importados'
   const isHubImportadosSync = path === '/importados-sync'
   const isHubImportadosPedidos = path === '/importados-pedidos'
+  const isHubPersonalizadosPdfs = path === '/pdfs-impresion'
   const isHubHome = path === '/' || path === ''
 
   const [reports, setReports] = useState<NmProdReport[]>([])
@@ -1060,7 +1062,8 @@ export default function App() {
       isHub3D ||
       isHubImportados ||
       isHubImportadosSync ||
-      isHubImportadosPedidos) &&
+      isHubImportadosPedidos ||
+      isHubPersonalizadosPdfs) &&
     !profileReady
   ) {
     return <HubLoadingScreen label="Cargando perfil…" />
@@ -1094,7 +1097,8 @@ export default function App() {
       isHub3D ||
       isHubImportados ||
       isHubImportadosSync ||
-      isHubImportadosPedidos) &&
+      isHubImportadosPedidos ||
+      isHubPersonalizadosPdfs) &&
     profileReady &&
     !profile
   ) {
@@ -1185,6 +1189,18 @@ export default function App() {
     authEnabled &&
     authReady &&
     session &&
+    isHubPersonalizadosPdfs &&
+    profileReady &&
+    profile &&
+    getHubPermissions(profile.role)?.viewPersonalizadosPdfs
+  ) {
+    return <HubPersonalizadosPdfsApp profileRole={profile.role} adminSignOut />
+  }
+
+  if (
+    authEnabled &&
+    authReady &&
+    session &&
     isLogisticaAndreani &&
     profileReady &&
     profile &&
@@ -1258,7 +1274,7 @@ export default function App() {
 
   if (
     !authEnabled &&
-    (isHubDispatchedCalendar || isHubDispatchedCargar || isHubDispatchedAnalytics || isHubCutAnalytics || isLogisticaAndreani || isHub3D || isHubImportados || isHubImportadosSync || isHubImportadosPedidos)
+    (isHubDispatchedCalendar || isHubDispatchedCargar || isHubDispatchedAnalytics || isHubCutAnalytics || isLogisticaAndreani || isHub3D || isHubImportados || isHubImportadosSync || isHubImportadosPedidos || isHubPersonalizadosPdfs)
   ) {
     return (
       <div className="nm-hub-app">

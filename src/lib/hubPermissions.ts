@@ -18,6 +18,7 @@ export interface HubPermissions {
   viewImportadosCalculator: boolean
   viewImportadosSync: boolean
   viewImportadosOrders: boolean
+  viewPersonalizadosPdfs: boolean
   viewDashboardSummary: boolean
 }
 
@@ -38,6 +39,7 @@ const FULL_ACCESS: HubPermissions = {
   viewImportadosCalculator: true,
   viewImportadosSync: true,
   viewImportadosOrders: true,
+  viewPersonalizadosPdfs: true,
   viewDashboardSummary: true,
 }
 
@@ -76,6 +78,7 @@ export type HubAppPath =
   | '/importados'
   | '/importados-sync'
   | '/importados-pedidos'
+  | '/pdfs-impresion'
   | '/entrar'
 
 export function canAccessHubPath(
@@ -115,6 +118,8 @@ export function canAccessHubPath(
       return perms.viewImportadosSync
     case '/importados-pedidos':
       return perms.viewImportadosOrders
+    case '/pdfs-impresion':
+      return perms.viewPersonalizadosPdfs
     default:
       return false
   }
@@ -137,6 +142,7 @@ export function normalizeHubPath(path: string): HubAppPath | string {
   if (p === '/importados') return '/importados'
   if (p === '/importados-sync') return '/importados-sync'
   if (p === '/importados-pedidos') return '/importados-pedidos'
+  if (p === '/pdfs-impresion') return '/pdfs-impresion'
   if (p === '' || p === '/') return '/'
   return p
 }
@@ -179,6 +185,9 @@ export function hubPathBlockedMessage(path: string, role: HubUserRole | null | u
   if (p === '/importados-pedidos') {
     return `El perfil «${label}» no accede a los pedidos de importados.`
   }
+  if (p === '/pdfs-impresion') {
+    return `El perfil «${label}» no accede a PDFs de impresión.`
+  }
   return 'No tenés permiso para esta pantalla.'
 }
 
@@ -199,6 +208,7 @@ export function hubDashboardLinks(day: string = todayIsoLocal()) {
     importados: '/importados',
     importadosSync: '/importados-sync',
     importadosPedidos: '/importados-pedidos',
+    personalizadosPdfs: '/pdfs-impresion',
   } as const
 }
 
@@ -243,10 +253,17 @@ export function hubDesktopNavGroups(
     groups.push({ id: 'corte', label: 'Corte', items: corteItems })
   }
 
-  if (perms.viewDispatchedOrders || perms.viewLogisticaAndreani) {
+  if (
+    perms.viewDispatchedOrders ||
+    perms.viewLogisticaAndreani ||
+    perms.viewPersonalizadosPdfs
+  ) {
     const enviosItems: HubDesktopNavItem[] = []
     if (perms.viewLogisticaAndreani) {
       enviosItems.push({ href: links.logisticaAndreani, label: 'Andreani' })
+    }
+    if (perms.viewPersonalizadosPdfs) {
+      enviosItems.push({ href: links.personalizadosPdfs, label: 'PDFs impresión' })
     }
     if (perms.viewDispatchedOrders) {
       enviosItems.push({ href: links.dispatchedOrders, label: 'Registro de salidas' })

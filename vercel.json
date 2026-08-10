@@ -17,6 +17,15 @@
     },
     "api/importados-sync/orders.ts": {
       "maxDuration": 60
+    },
+    "api/personalizados-pdfs/pending.ts": {
+      "maxDuration": 60
+    },
+    "api/personalizados-pdfs/file.ts": {
+      "maxDuration": 30
+    },
+    "api/personalizados-pdfs/tag-papel.ts": {
+      "maxDuration": 60
     }
   },
   "rewrites": [
