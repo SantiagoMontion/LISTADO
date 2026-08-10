@@ -421,10 +421,13 @@ export function HubPersonalizadosPdfsApp({
             </div>
           </div>
 
-          <p className="hub-pdfs-counts nm-hub-muted">
-            OK: <strong>{displayMatched}</strong>
-            {' - '}
-            Revisar: <strong>{displaySkipped}</strong>
+          <p className="hub-pdfs-counts" aria-label="Resumen de estados">
+            <span className="hub-pdfs-count hub-pdfs-count--ok">
+              OK: <strong>{displayMatched}</strong>
+            </span>
+            <span className="hub-pdfs-count hub-pdfs-count--review">
+              Revisar: <strong>{displaySkipped}</strong>
+            </span>
           </p>
         </div>
 

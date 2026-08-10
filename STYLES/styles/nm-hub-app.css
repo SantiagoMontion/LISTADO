@@ -10768,7 +10768,36 @@ a.importados-orders-card__order:hover {
 
 .nm-hub-app--pdfs .hub-pdfs-counts {
   margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem 0.85rem;
   font-size: 0.88rem;
+}
+
+.nm-hub-app--pdfs .hub-pdfs-count {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.28rem;
+  padding: 0.28rem 0.65rem;
+  border-radius: 999px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.nm-hub-app--pdfs .hub-pdfs-count strong {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.nm-hub-app--pdfs .hub-pdfs-count--ok {
+  background: rgba(10, 122, 50, 0.1);
+  color: #0a7a32;
+}
+
+.nm-hub-app--pdfs .hub-pdfs-count--review {
+  background: rgba(154, 103, 0, 0.12);
+  color: #9a6700;
 }
 
 .nm-hub-app--pdfs .hub-pdfs-notice {
