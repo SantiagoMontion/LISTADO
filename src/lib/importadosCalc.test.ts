@@ -12,6 +12,7 @@ import {
   IMPUESTOS_TRANSACCIONALES_RATE,
   normalizeStorePriceArs,
   precioCuotasFromContadoArs,
+  resolveImportadosCantidad,
   resolveImportadosMargin,
 } from './importadosCalc'
 
@@ -27,6 +28,13 @@ describe('importadosCalc', () => {
     expect(resolveImportadosMargin(120).marginRate).toBe(0.14)
     expect(resolveImportadosMargin(120.01).marginRate).toBe(0.12)
     expect(resolveImportadosMargin(250).marginRate).toBe(0.12)
+  })
+
+  it('resolveImportadosCantidad keeps 1 unless quantity mode', () => {
+    expect(resolveImportadosCantidad(false, 10)).toBe(1)
+    expect(resolveImportadosCantidad(true, 10)).toBe(10)
+    expect(resolveImportadosCantidad(true, 2.9)).toBe(2)
+    expect(resolveImportadosCantidad(true, 1)).toBe(2)
   })
 
   it('converts ARS with MEP+2% and blinds cuotas with MP factor', () => {
@@ -54,13 +62,62 @@ describe('importadosCalc', () => {
     const contadoArs = normalizeStorePriceArs(precioUsd * dolarConv)
     const cuotasArs = Math.round(contadoArs / CUOTAS_MP_NET_FACTOR)
 
+    expect(result.cantidad).toBe(1)
     expect(result.dolarMepConvertido).toBeCloseTo(dolarConv, 6)
     expect(result.precioContadoUsd).toBeCloseTo(precioUsd, 6)
+    expect(result.precioContadoLoteUsd).toBeCloseTo(precioUsd, 6)
     expect(result.precioContadoArs).toBe(contadoArs)
     expect(result.precioCuotasArs).toBe(cuotasArs)
     expect(result.precioCuotasArs).toBe(precioCuotasFromContadoArs(result.precioContadoArs))
     expect(result.bufferFinancieroUsd).toBeCloseTo(bufferFinanciero, 6)
     expect(result.margin.marginRate).toBe(0.14)
+  })
+
+  it('amortizes handling and AR shipping across quantity; margin uses unit cost', () => {
+    const qty = 10
+    const unitCost = 12
+    const result = computeImportados({
+      ...DEFAULT_IMPORTADOS_INPUTS,
+      costoProductoUsd: unitCost,
+      pesoKg: 3,
+      fleteInternoUsd: 8,
+      envioDomicilioUsd: 15,
+      dolarArs: 1000,
+      cotizarEnCantidad: true,
+      cantidad: qty,
+    })
+    expect(result.valid).toBe(true)
+    if (!result.valid) return
+
+    const productoLote = unitCost * qty
+    const aerobox = 3 * AEROBOX_USD_PER_KG
+    const base = productoLote + 8 + aerobox
+    const landed = base + HANDLING_AEROBOX_USD + base * GASTOS_NO_RECUPERABLES_RATE + 15
+    const friccion = landed * (1 + IMPUESTOS_TRANSACCIONALES_RATE)
+    // Unit $12 → banda < $50 → 18% (no 14% como si cotizara $120)
+    const subtotal = friccion * 1.18
+    const precioLote = subtotal + base * BUFFER_FINANCIERO_RATE
+
+    expect(result.cantidad).toBe(10)
+    expect(result.handlingAeroboxUsd).toBe(HANDLING_AEROBOX_USD)
+    expect(result.handlingAeroboxUnitUsd).toBeCloseTo(HANDLING_AEROBOX_USD / qty, 6)
+    expect(result.envioDomicilioUnitUsd).toBeCloseTo(15 / qty, 6)
+    expect(result.margin.marginRate).toBe(0.18)
+    expect(result.precioContadoLoteUsd).toBeCloseTo(precioLote, 6)
+    expect(result.precioContadoUsd).toBeCloseTo(precioLote / qty, 6)
+    expect(result.precioContadoLoteArs).toBe(result.precioContadoArs * qty)
+  })
+
+  it('rejects quantity mode with less than 2 units', () => {
+    const result = computeImportados({
+      ...DEFAULT_IMPORTADOS_INPUTS,
+      costoProductoUsd: 12,
+      cotizarEnCantidad: true,
+      cantidad: 1,
+    })
+    expect(result.valid).toBe(false)
+    if (result.valid) return
+    expect(result.errors[0]).toMatch(/cantidad/i)
   })
 
   it('precioCuotasFromContadoArs uses 0.7797 divisor', () => {
