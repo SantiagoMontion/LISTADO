@@ -48,6 +48,8 @@ export type PersonalizadosPdfRow = {
   printId: string | null
   fileName: string | null
   filePath: string | null
+  /** Nombre completo en prints.design_name (Supabase). */
+  designName: string | null
   reason: string | null
 }
 
@@ -57,6 +59,7 @@ type PrintRow = {
   bucket: string | null
   file_path: string | null
   file_name: string | null
+  design_name: string | null
   created_at: string | null
 }
 
@@ -163,11 +166,11 @@ function lineTitleOf(line: ShopifyLineItem): string {
   return (line.title || line.name || 'Producto').trim()
 }
 
-/** Solo personalizados: property _app_source=custom o título “… | Custom”. */
-function isPersonalizadosLine(line: ShopifyLineItem): boolean {
+/** Personalizado: property _app_source=custom o título “… | Custom/NOTMID”. */
+export function isPersonalizadosLine(line: ShopifyLineItem): boolean {
   const source = readAttributeValue(line.properties, ['_app_source', 'app_source'])
   if (source && source.toLowerCase() === 'custom') return true
-  return /\|\s*Custom\b/i.test(lineTitleOf(line))
+  return /\|\s*(Custom|NOTMID)\b/i.test(lineTitleOf(line))
 }
 
 function escapeIlike(value: string): string {
@@ -218,6 +221,7 @@ function mapPrintRow(row: Record<string, unknown> | null | undefined): PrintRow 
     bucket: typeof row.bucket === 'string' ? row.bucket : null,
     file_path: typeof row.file_path === 'string' ? row.file_path : null,
     file_name: typeof row.file_name === 'string' ? row.file_name : null,
+    design_name: typeof row.design_name === 'string' ? row.design_name : null,
     created_at: typeof row.created_at === 'string' ? row.created_at : null,
   }
 }
@@ -226,7 +230,7 @@ async function fetchPrintByJobId(jobId: string): Promise<PrintRow | null> {
   const supabase = getSupabase()
   const { data, error } = await supabase
     .from('prints')
-    .select('id, job_id, bucket, file_path, file_name, created_at')
+    .select('id, job_id, bucket, file_path, file_name, design_name, created_at')
     .eq('job_id', jobId)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -237,9 +241,9 @@ async function fetchPrintByJobId(jobId: string): Promise<PrintRow | null> {
   return mapPrintRow(Array.isArray(data) ? data[0] : null)
 }
 
-/** Quita el sufijo “| Custom” del título de línea de Shopify. */
+/** Quita el sufijo “| Custom” / “| NOTMID” del título de línea de Shopify. */
 export function normalizeShopifyLineTitle(title: string): string {
-  return title.replace(/\s*\|\s*Custom\b/gi, '').trim()
+  return title.replace(/\s*\|\s*(Custom|NOTMID)\b/gi, '').trim()
 }
 
 /**
@@ -336,14 +340,40 @@ export async function listPendingPersonalizadosPdfs(): Promise<{
     const orderName = (order.name || `#${orderId}`).trim()
     const orderJobId = readAttributeValue(order.note_attributes, ['job_id', 'jobid'])
 
-    for (const line of order.line_items ?? []) {
-      const qty = lineStillNeedsFulfillment(line)
-      if (qty <= 0) continue
-      if (!isPersonalizadosLine(line)) continue
+    const openLines = (order.line_items ?? [])
+      .map((line) => ({ line, qty: lineStillNeedsFulfillment(line) }))
+      .filter((entry) => entry.qty > 0)
 
+    // Solo listamos pedidos que tienen al menos un personalizado; dentro del pedido
+    // incluimos TODAS las líneas abiertas (catálogo NotMid también) para no etiquetar
+    // «Papel» mientras falte revisar alguna.
+    if (!openLines.some(({ line }) => isPersonalizadosLine(line))) continue
+
+    for (const { line, qty } of openLines) {
       const lineTitle = lineTitleOf(line)
+      const lineItemId = extractNumericId(line.id) || `${orderId}-${lineTitle}`
+
+      if (!isPersonalizadosLine(line)) {
+        rows.push({
+          orderId,
+          orderName,
+          createdAt: order.created_at || '',
+          lineItemId,
+          lineTitle,
+          quantity: qty,
+          jobId: null,
+          matchMethod: 'design_name',
+          status: 'skipped',
+          printId: null,
+          fileName: null,
+          filePath: null,
+          designName: null,
+          reason: 'not_custom',
+        })
+        continue
+      }
+
       const jobId = extractLineJobId(line, orderJobId)
-      const lineItemId = extractNumericId(line.id) || `${orderId}-${jobId || lineTitle}`
       const cacheKey = jobId
         ? `job:${jobId}`
         : `title:${normalizeShopifyLineTitle(lineTitle).toLowerCase()}`
@@ -392,6 +422,7 @@ export async function listPendingPersonalizadosPdfs(): Promise<{
           printId: null,
           fileName: null,
           filePath: null,
+          designName: null,
           reason: resolved.reason,
         })
         continue
@@ -423,6 +454,7 @@ export async function listPendingPersonalizadosPdfs(): Promise<{
           printId: print.id,
           fileName: print.file_name,
           filePath,
+          designName: print.design_name,
           reason: existence.reason || 'object_not_found',
         })
         continue
@@ -441,6 +473,7 @@ export async function listPendingPersonalizadosPdfs(): Promise<{
         printId: print.id,
         fileName: print.file_name || filePath.split('/').pop() || null,
         filePath,
+        designName: print.design_name,
         reason: null,
       })
     }

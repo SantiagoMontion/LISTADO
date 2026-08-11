@@ -15,6 +15,8 @@ export type PersonalizadosPdfRow = {
   printId: string | null
   fileName: string | null
   filePath: string | null
+  /** Nombre completo en prints.design_name (Supabase). */
+  designName: string | null
   reason: string | null
 }
 
@@ -34,7 +36,7 @@ export function copyablePersonalizadosTitle(raw: string): string {
   let text = String(raw || '').trim()
   if (!text) return ''
 
-  text = text.replace(/\s*\|\s*Custom\b.*$/i, '').trim()
+  text = text.replace(/\s*\|\s*(Custom|NOTMID)\b.*$/i, '').trim()
   text = text.replace(/^(Mousepad|Glasspad|Alfombra)\s+/i, '').trim()
 
   return text
@@ -114,19 +116,28 @@ export async function fetchPersonalizadosPdfFile(
   return { blob, fileName }
 }
 
+export function personalizadosRowKey(row: PersonalizadosPdfRow): string {
+  return `${row.orderId}-${row.lineItemId}-${row.jobId || row.printId || row.lineTitle}`
+}
+
 /**
- * Completo = todas las líneas del pedido matched y descargadas.
- * Parcial = se descargó al menos una, pero hay skipped u otras no descargadas.
+ * Completo = todas las líneas del pedido OK (matched descargadas o OK manual).
+ * Parcial = se avanzó algo, pero sigue habiendo pendientes.
+ * «Papel» SOLO si no queda ninguna línea pendiente.
  */
 export function partitionOrdersForPapelTag(
   rows: PersonalizadosPdfRow[],
   downloadedPrintIds: Iterable<string>,
+  manualOkIds: Iterable<string> = [],
 ): {
   complete: Array<{ orderId: string; orderName: string }>
   partial: Array<{ orderId: string; orderName: string; matched: number; skipped: number }>
 } {
   const downloaded = new Set(
     [...downloadedPrintIds].map((id) => String(id || '').trim()).filter(Boolean),
+  )
+  const manualOk = new Set(
+    [...manualOkIds].map((id) => String(id || '').trim()).filter(Boolean),
   )
   const byOrder = new Map<string, PersonalizadosPdfRow[]>()
   for (const row of rows) {
@@ -141,35 +152,119 @@ export function partitionOrdersForPapelTag(
 
   for (const [orderId, orderRows] of byOrder) {
     const orderName = orderRows[0]?.orderName || `#${orderId}`
-    let matchedCount = 0
-    let skippedCount = 0
-    let downloadedMatched = 0
+    let readyCount = 0
+    let pendingCount = 0
+    let confirmedReady = 0
 
     for (const row of orderRows) {
+      const key = personalizadosRowKey(row)
+      const manual = manualOk.has(key)
       if (row.status === 'matched' && row.printId) {
-        matchedCount += 1
-        if (downloaded.has(row.printId)) downloadedMatched += 1
+        readyCount += 1
+        if (downloaded.has(row.printId) || manual) confirmedReady += 1
+      } else if (manual) {
+        readyCount += 1
+        confirmedReady += 1
       } else {
-        skippedCount += 1
+        pendingCount += 1
       }
     }
 
-    if (matchedCount > 0 && skippedCount === 0 && downloadedMatched === matchedCount) {
+    if (readyCount > 0 && pendingCount === 0 && confirmedReady === readyCount) {
       complete.push({ orderId, orderName })
       continue
     }
 
-    if (downloadedMatched > 0 && (skippedCount > 0 || downloadedMatched < matchedCount)) {
+    if (confirmedReady > 0 && pendingCount > 0) {
       partial.push({
         orderId,
         orderName,
-        matched: downloadedMatched,
-        skipped: skippedCount + (matchedCount - downloadedMatched),
+        matched: confirmedReady,
+        skipped: pendingCount,
       })
     }
   }
 
   return { complete, partial }
+}
+
+/** Identidad de producto dentro del pedido (iguales → una fila con ×N). */
+export function productIdentityKey(row: PersonalizadosPdfRow): string {
+  if (row.printId) return `print:${row.printId}`
+  if (row.jobId) return `job:${row.jobId}`
+  return `title:${row.lineTitle.trim().toLowerCase()}`
+}
+
+export type PersonalizadosProductGroup = {
+  groupId: string
+  orderId: string
+  orderName: string
+  lineTitle: string
+  quantity: number
+  status: PersonalizadosPdfRowStatus
+  printId: string | null
+  jobId: string | null
+  fileName: string | null
+  designName: string | null
+  members: PersonalizadosPdfRow[]
+}
+
+/**
+ * Une líneas idénticas del mismo pedido en un solo producto visual.
+ * qty 1+1 → una fila ×2; un solo estado cubre todas las unidades.
+ */
+export function mergeIdenticalProductRows(
+  rows: PersonalizadosPdfRow[],
+): PersonalizadosProductGroup[] {
+  const map = new Map<string, PersonalizadosProductGroup>()
+  for (const row of rows) {
+    const identity = productIdentityKey(row)
+    const groupId = `${row.orderId}::${identity}`
+    const existing = map.get(groupId)
+    if (!existing) {
+      map.set(groupId, {
+        groupId,
+        orderId: row.orderId,
+        orderName: row.orderName,
+        lineTitle: row.lineTitle,
+        quantity: Math.max(1, Math.trunc(row.quantity || 1)),
+        status: row.status,
+        printId: row.printId,
+        jobId: row.jobId,
+        fileName: row.fileName,
+        designName: row.designName,
+        members: [row],
+      })
+      continue
+    }
+    existing.quantity += Math.max(1, Math.trunc(row.quantity || 1))
+    existing.members.push(row)
+    // Si alguna unidad sigue sin match, el grupo queda pendiente.
+    if (row.status === 'skipped' || existing.status === 'skipped') {
+      existing.status = 'skipped'
+    }
+    if (!existing.printId && row.printId) existing.printId = row.printId
+    if (!existing.jobId && row.jobId) existing.jobId = row.jobId
+    if (!existing.fileName && row.fileName) existing.fileName = row.fileName
+    if (!existing.designName && row.designName) existing.designName = row.designName
+  }
+  return [...map.values()]
+}
+
+/**
+ * Una entrada por unidad a imprimir: qty 2 → el mismo PDF va 2 veces al ZIP.
+ * No dedupea por printId entre pedidos/líneas (cada unidad cuenta).
+ */
+export function expandMatchedRowsForZip(rows: PersonalizadosPdfRow[]): PersonalizadosPdfRow[] {
+  const out: PersonalizadosPdfRow[] = []
+  for (const row of rows) {
+    if (row.status !== 'matched' || !row.printId) continue
+    const copies = Math.max(1, Math.trunc(row.quantity || 1))
+    for (let i = 0; i < copies; i += 1) {
+      out.push(row)
+    }
+  }
+  return out
 }
 
 export async function tagOrdersWithPapel(orderIds: string[]): Promise<{
