@@ -3,10 +3,20 @@
     {
       "path": "/api/cron/sync-inventory",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/trends-tick",
+      "schedule": "*/20 * * * *"
     }
   ],
   "functions": {
     "api/cron/sync-inventory.ts": {
+      "maxDuration": 60
+    },
+    "api/cron/trends-tick.ts": {
+      "maxDuration": 60
+    },
+    "api/trends/run.ts": {
       "maxDuration": 60
     },
     "api/importados-sync/products.ts": {

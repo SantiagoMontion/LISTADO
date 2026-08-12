@@ -19,6 +19,7 @@ export interface HubPermissions {
   viewImportadosSync: boolean
   viewImportadosOrders: boolean
   viewPersonalizadosPdfs: boolean
+  viewTrends: boolean
   viewDashboardSummary: boolean
 }
 
@@ -40,6 +41,7 @@ const FULL_ACCESS: HubPermissions = {
   viewImportadosSync: true,
   viewImportadosOrders: true,
   viewPersonalizadosPdfs: true,
+  viewTrends: true,
   viewDashboardSummary: true,
 }
 
@@ -79,6 +81,7 @@ export type HubAppPath =
   | '/importados-sync'
   | '/importados-pedidos'
   | '/pdfs-impresion'
+  | '/trends'
   | '/entrar'
 
 export function canAccessHubPath(
@@ -120,6 +123,8 @@ export function canAccessHubPath(
       return perms.viewImportadosOrders
     case '/pdfs-impresion':
       return perms.viewPersonalizadosPdfs
+    case '/trends':
+      return perms.viewTrends
     default:
       return false
   }
@@ -143,6 +148,7 @@ export function normalizeHubPath(path: string): HubAppPath | string {
   if (p === '/importados-sync') return '/importados-sync'
   if (p === '/importados-pedidos') return '/importados-pedidos'
   if (p === '/pdfs-impresion') return '/pdfs-impresion'
+  if (p === '/trends') return '/trends'
   if (p === '' || p === '/') return '/'
   return p
 }
@@ -188,6 +194,9 @@ export function hubPathBlockedMessage(path: string, role: HubUserRole | null | u
   if (p === '/pdfs-impresion') {
     return `El perfil «${label}» no accede a PDFs de impresión.`
   }
+  if (p === '/trends') {
+    return `El perfil «${label}» no accede a vigilancia de tendencias.`
+  }
   return 'No tenés permiso para esta pantalla.'
 }
 
@@ -209,6 +218,7 @@ export function hubDashboardLinks(day: string = todayIsoLocal()) {
     importadosSync: '/importados-sync',
     importadosPedidos: '/importados-pedidos',
     personalizadosPdfs: '/pdfs-impresion',
+    trends: '/trends',
   } as const
 }
 
@@ -294,6 +304,10 @@ export function hubDesktopNavGroups(
       importadosItems.push({ href: links.importadosSync, label: 'Sync' })
     }
     groups.push({ id: 'importados', label: 'Importados', items: importadosItems })
+  }
+
+  if (perms.viewTrends) {
+    groups.push({ id: 'trends', label: 'Tendencias', href: links.trends })
   }
 
   return groups
