@@ -1,8 +1,15 @@
 import { supabase } from './supabase'
 import { formatHttpApiError, formatSupabaseOrError } from './errors'
 
+export type TrendSearchGoal = 'both' | 'product' | 'content'
+
 export type TrendTaskConfig = {
+  context: string
+  goal: TrendSearchGoal
   keywords: string[]
+  must_include: string[]
+  exclude: string[]
+  news_queries: string[]
   subreddits: string[]
   youtube_channel_ids: string[]
   rss_feeds: string[]
@@ -57,9 +64,25 @@ export type TrendAlert = {
   created_at: string
 }
 
+export const TREND_SOURCE_LABELS: Record<string, string> = {
+  reddit: 'Reddit',
+  youtube: 'YouTube',
+  rss: 'Noticias / RSS',
+  gtrends_rss: 'Google Trends',
+  hn: 'Hacker News',
+  bluesky: 'Bluesky',
+  arxiv: 'arXiv',
+  lobsters: 'Lobsters',
+}
+
 function emptyConfig(): TrendTaskConfig {
   return {
+    context: '',
+    goal: 'both',
     keywords: [],
+    must_include: [],
+    exclude: [],
+    news_queries: [],
     subreddits: [],
     youtube_channel_ids: [],
     rss_feeds: [],
@@ -75,8 +98,16 @@ function parseConfig(raw: unknown): TrendTaskConfig {
   const o = raw as Record<string, unknown>
   const arr = (v: unknown) =>
     Array.isArray(v) ? v.map((x) => String(x).trim()).filter(Boolean) : []
+  const goalRaw = String(o.goal ?? 'both').toLowerCase()
+  const goal: TrendSearchGoal =
+    goalRaw === 'product' || goalRaw === 'content' || goalRaw === 'both' ? goalRaw : 'both'
   return {
+    context: typeof o.context === 'string' ? o.context.trim() : '',
+    goal,
     keywords: arr(o.keywords),
+    must_include: arr(o.must_include),
+    exclude: arr(o.exclude),
+    news_queries: arr(o.news_queries),
     subreddits: arr(o.subreddits),
     youtube_channel_ids: arr(o.youtube_channel_ids),
     rss_feeds: arr(o.rss_feeds),

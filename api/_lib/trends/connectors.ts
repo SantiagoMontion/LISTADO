@@ -1,7 +1,13 @@
 import { firstEnv } from '../importados-sync/env.js'
 import { consumeBudget, getRemainingBudget } from './quota.js'
 import { fetchJson, fetchText, parseRssItems, sleep } from './http.js'
-import type { NormalizedTrendItem, TrendSearchTask, TrendSourceId } from './types.js'
+import {
+  buildGoogleNewsFeeds,
+  itemPassesTaskFilters,
+  type NormalizedTrendItem,
+  type TrendSearchTask,
+  type TrendSourceId,
+} from './types.js'
 
 type RedditTokenCache = { token: string; expiresAt: number }
 let redditToken: RedditTokenCache | null = null
@@ -203,7 +209,15 @@ export async function fetchRss(task: TrendSearchTask, maxItems: number): Promise
   if (remaining <= 0) return []
   const out: NormalizedTrendItem[] = []
   let spent = 0
-  for (const feed of task.config.rss_feeds.slice(0, 8)) {
+
+  const newsQueries =
+    task.config.news_queries.length > 0
+      ? task.config.news_queries
+      : task.config.keywords.slice(0, 3)
+  const autoNews = buildGoogleNewsFeeds(newsQueries, task.config.trends_geos)
+  const feeds = [...task.config.rss_feeds, ...autoNews].slice(0, 12)
+
+  for (const feed of feeds) {
     if (out.length >= maxItems || spent >= remaining) break
     try {
       const xml = await fetchText(feed)
@@ -466,6 +480,7 @@ export async function collectForTask(
   const unique: NormalizedTrendItem[] = []
   for (const item of merged) {
     if (seen.has(item.externalId)) continue
+    if (!itemPassesTaskFilters(item, task.config)) continue
     seen.add(item.externalId)
     unique.push(item)
   }

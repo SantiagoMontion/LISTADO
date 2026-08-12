@@ -1,5 +1,10 @@
 import { firstEnv } from '../importados-sync/env.js'
-import { clampScore, type AnalysisResult, type NormalizedTrendItem, type TrendSearchTask } from './types.js'
+import {
+  clampScore,
+  type AnalysisResult,
+  type NormalizedTrendItem,
+  type TrendSearchTask,
+} from './types.js'
 
 function engagementScore(item: NormalizedTrendItem): number {
   const e = item.engagement
@@ -24,15 +29,30 @@ function keywordHits(text: string, keywords: string[]): string[] {
   return keywords.filter((k) => lower.includes(k.toLowerCase()))
 }
 
+function goalHint(goal: string): string {
+  if (goal === 'product') return 'Priorizá oportunidades de producto/merch/importados.'
+  if (goal === 'content') return 'Priorizá ideas de contenido (posts, reels, videos, hooks).'
+  return 'Buscá tanto producto/merch como ideas de contenido.'
+}
+
 export function analyzeHeuristic(
   item: NormalizedTrendItem,
   task: TrendSearchTask,
 ): AnalysisResult {
   const text = `${item.title}\n${item.body}`
-  const hits = keywordHits(text, task.config.keywords)
+  const searchTerms = [
+    ...task.config.keywords,
+    ...task.config.must_include,
+    ...task.config.news_queries,
+  ]
+  const hits = keywordHits(text, searchTerms)
   const eng = engagementScore(item)
-  const relevance = clampScore(hits.length * 25 + (eng > 0 ? 20 : 0) + (item.source === 'gtrends_rss' ? 25 : 0))
-  const virality = clampScore(Math.log10(eng + 1) * 35 + (item.source === 'gtrends_rss' ? 40 : 0) + hits.length * 8)
+  const relevance = clampScore(
+    hits.length * 25 + (eng > 0 ? 20 : 0) + (item.source === 'gtrends_rss' ? 25 : 0),
+  )
+  const virality = clampScore(
+    Math.log10(eng + 1) * 35 + (item.source === 'gtrends_rss' ? 40 : 0) + hits.length * 8,
+  )
 
   const lower = text.toLowerCase()
   let sentiment: AnalysisResult['sentiment'] = 'neutral'
@@ -42,30 +62,42 @@ export function analyzeHeuristic(
   }
 
   const signal_type: string[] = []
-  if (/(merch|figure|figurine|hoodie|shirt|drop|product|buy|shop|store)/i.test(lower)) {
+  const wantProduct = task.config.goal !== 'content'
+  const wantContent = task.config.goal !== 'product'
+
+  if (wantProduct && /(merch|figure|figurine|hoodie|shirt|drop|product|buy|shop|store|sku)/i.test(lower)) {
     signal_type.push('product_opportunity')
   }
-  if (/(tutorial|guide|tips|meme|trailer|reaction|review|video|reel|post)/i.test(lower)) {
+  if (wantContent && /(tutorial|guide|tips|meme|trailer|reaction|review|video|reel|post)/i.test(lower)) {
     signal_type.push('content_idea')
   }
   if (item.source === 'rss' || item.source === 'gtrends_rss' || item.source === 'hn') {
     signal_type.push('news_impact')
   }
-  if (!signal_type.length) signal_type.push('content_idea')
+  if (!signal_type.length) {
+    signal_type.push(wantProduct && !wantContent ? 'product_opportunity' : 'content_idea')
+  }
 
   const is_emerging = virality >= 65 && relevance >= 40
-  const product_angle = signal_type.includes('product_opportunity')
-    ? `Explorar merch/producto alrededor de: ${item.title.slice(0, 80)}`
+  const product_angle =
+    wantProduct && signal_type.includes('product_opportunity')
+      ? `Explorar merch/producto alrededor de: ${item.title.slice(0, 80)}`
+      : wantProduct
+        ? `¿Hay ángulo de producto en «${item.title.slice(0, 60)}»?`
+        : null
+  const content_angle = wantContent
+    ? `Idea de contenido: ángulo sobre «${item.title.slice(0, 70)}» (${item.source})`
     : null
-  const content_angle = `Idea de contenido: ángulo sobre «${item.title.slice(0, 70)}» (${item.source})`
+
+  const ctxBit = task.config.context ? ` Contexto: ${task.config.context.slice(0, 80)}.` : ''
 
   return {
     relevance,
     sentiment,
     virality_score: virality,
     impact_summary: hits.length
-      ? `Señal ${item.source} alineada a ${hits.slice(0, 3).join(', ')} con engagement ~${Math.round(eng)}.`
-      : `Señal ${item.source}: ${item.title.slice(0, 100)}`,
+      ? `Señal ${item.source} alineada a ${hits.slice(0, 3).join(', ')} (eng ~${Math.round(eng)}).${ctxBit}`
+      : `Señal ${item.source}: ${item.title.slice(0, 100)}.${ctxBit}`,
     keywords: hits.length ? hits : task.config.keywords.slice(0, 3),
     entities: [],
     signal_type,
@@ -92,9 +124,13 @@ export async function analyzeWithGemini(
   if (!apiKey) return null
 
   const model = firstEnv(['GEMINI_MODEL']) || 'gemini-2.0-flash'
-  const prompt = `Sos un analista de tendencias para un negocio de merch/importados (NotMid).
-Evaluá el item en el nicho "${task.name}" (${task.niche}).
-Keywords de la tarea: ${task.config.keywords.join(', ') || '(ninguna)'}.
+  const prompt = `Sos un analista de tendencias para NotMid (merch / importados / contenido).
+Búsqueda: "${task.name}"
+${goalHint(task.config.goal)}
+Contexto del usuario: ${task.config.context || '(sin contexto extra)'}
+Keywords: ${task.config.keywords.join(', ') || '(ninguna)'}
+Debe incluir (si aplica): ${task.config.must_include.join(', ') || '—'}
+Excluir: ${task.config.exclude.join(', ') || '—'}
 
 ITEM:
 source=${item.source}

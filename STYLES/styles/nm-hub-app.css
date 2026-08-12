@@ -11344,6 +11344,39 @@ a.importados-orders-card__order:hover {
   margin: 0;
   font-size: 1.1rem;
 }
-.hub-trends__filters select {
-  margin-left: 0.35rem;
+.hub-trends__form-hint {
+  margin: -0.25rem 0 0.25rem;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+.hub-trends__field-help {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: #94a3b8;
+}
+.hub-trends__task-context {
+  margin: 0.35rem 0 0;
+  font-size: 0.88rem;
+  color: #475569;
+  line-height: 1.35;
+}
+.hub-trends__task-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0.45rem 0 0;
+}
+.hub-trends__chip {
+  display: inline-block;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.hub-trends__check--block {
+  align-items: flex-start !important;
 }

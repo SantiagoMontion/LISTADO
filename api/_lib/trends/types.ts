@@ -12,8 +12,20 @@ export type TrendSourceId =
   | 'mastodon'
   | 'arxiv'
 
+export type TrendSearchGoal = 'both' | 'product' | 'content'
+
 export type TrendTaskConfig = {
+  /** Qué estás buscando y por qué (para el análisis). */
+  context: string
+  /** product | content | both */
+  goal: TrendSearchGoal
   keywords: string[]
+  /** Al menos uno debe aparecer en título/body (si hay alguno). */
+  must_include: string[]
+  /** Si aparece, se descarta. */
+  exclude: string[]
+  /** Consultas para Google News RSS (se arman solos). */
+  news_queries: string[]
   subreddits: string[]
   youtube_channel_ids: string[]
   rss_feeds: string[]
@@ -62,7 +74,12 @@ export type AnalysisResult = {
 
 export function emptyTaskConfig(): TrendTaskConfig {
   return {
+    context: '',
+    goal: 'both',
     keywords: [],
+    must_include: [],
+    exclude: [],
+    news_queries: [],
     subreddits: [],
     youtube_channel_ids: [],
     rss_feeds: [],
@@ -72,14 +89,24 @@ export function emptyTaskConfig(): TrendTaskConfig {
   }
 }
 
+function strArr(v: unknown): string[] {
+  return Array.isArray(v) ? v.map((x) => String(x).trim()).filter(Boolean) : []
+}
+
 export function parseTaskConfig(raw: unknown): TrendTaskConfig {
   const base = emptyTaskConfig()
   if (!raw || typeof raw !== 'object') return base
   const o = raw as Record<string, unknown>
-  const strArr = (v: unknown): string[] =>
-    Array.isArray(v) ? v.map((x) => String(x).trim()).filter(Boolean) : []
+  const goalRaw = String(o.goal ?? 'both').toLowerCase()
+  const goal: TrendSearchGoal =
+    goalRaw === 'product' || goalRaw === 'content' || goalRaw === 'both' ? goalRaw : 'both'
   return {
+    context: typeof o.context === 'string' ? o.context.trim() : '',
+    goal,
     keywords: strArr(o.keywords),
+    must_include: strArr(o.must_include),
+    exclude: strArr(o.exclude),
+    news_queries: strArr(o.news_queries),
     subreddits: strArr(o.subreddits),
     youtube_channel_ids: strArr(o.youtube_channel_ids),
     rss_feeds: strArr(o.rss_feeds),
@@ -87,6 +114,36 @@ export function parseTaskConfig(raw: unknown): TrendTaskConfig {
     bluesky_queries: strArr(o.bluesky_queries),
     sources_enabled: strArr(o.sources_enabled) as TrendSourceId[],
   }
+}
+
+/** Arma feeds de Google News a partir de queries libres. */
+export function buildGoogleNewsFeeds(queries: string[], geos: string[]): string[] {
+  const geosUse = geos.length ? geos : ['AR']
+  const out: string[] = []
+  for (const q of queries.slice(0, 6)) {
+    for (const geo of geosUse.slice(0, 2)) {
+      const hl = geo === 'US' || geo === 'GB' ? 'en' : 'es-419'
+      const ceid = geo === 'US' || geo === 'GB' ? `${geo}:en` : `${geo}:es-419`
+      out.push(
+        `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=${hl}&gl=${geo}&ceid=${ceid}`,
+      )
+    }
+  }
+  return out
+}
+
+export function itemPassesTaskFilters(
+  item: Pick<NormalizedTrendItem, 'title' | 'body'>,
+  config: TrendTaskConfig,
+): boolean {
+  const text = `${item.title}\n${item.body}`.toLowerCase()
+  for (const bad of config.exclude) {
+    if (bad && text.includes(bad.toLowerCase())) return false
+  }
+  if (config.must_include.length) {
+    return config.must_include.some((need) => text.includes(need.toLowerCase()))
+  }
+  return true
 }
 
 export function normalizeUrl(url: string | null | undefined): string {
