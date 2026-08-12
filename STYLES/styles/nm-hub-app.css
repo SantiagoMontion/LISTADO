@@ -11302,6 +11302,13 @@ a.importados-orders-card__order:hover {
   border-color: #f59e0b;
   background: #fffbeb;
 }
+.hub-trends__alert-body {
+  white-space: pre-wrap;
+  margin: 0.35rem 0;
+  line-height: 1.4;
+  color: #334155;
+  font-size: 0.92rem;
+}
 .hub-trends__task-actions,
 .hub-trends__form-actions {
   display: flex;

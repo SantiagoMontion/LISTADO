@@ -242,7 +242,6 @@ export async function fetchGoogleTrendsRss(
   const out: NormalizedTrendItem[] = []
   let spent = 0
   const geos = task.config.trends_geos.length ? task.config.trends_geos : ['AR', 'US']
-  const keywords = task.config.keywords.map((k) => k.toLowerCase())
 
   for (const geo of geos.slice(0, 4)) {
     if (out.length >= maxItems || spent >= remaining) break
@@ -254,12 +253,23 @@ export async function fetchGoogleTrendsRss(
         externalId: `gtrends:${geo}:${item.title.toLowerCase()}`,
         raw: { ...item.raw, geo },
       }))
-      if (keywords.length) {
-        const matched = items.filter((it) =>
-          keywords.some((k) => it.title.toLowerCase().includes(k) || it.body.toLowerCase().includes(k)),
-        )
-        // Si no matchea keywords, igual guardamos top 3 del geo como contexto global
-        items = matched.length ? matched : items.slice(0, 3)
+      const terms = [
+        ...task.config.keywords,
+        ...task.config.must_include,
+        ...task.config.news_queries,
+        ...task.config.bluesky_queries,
+      ]
+        .map((k) => k.toLowerCase())
+        .filter(Boolean)
+
+      // Solo tendencias que matchean la búsqueda. Nunca top genérico del país.
+      if (!terms.length) {
+        items = []
+      } else {
+        items = items.filter((it) => {
+          const hay = `${it.title} ${it.body}`.toLowerCase()
+          return terms.some((k) => hay.includes(k))
+        })
       }
       out.push(...items)
       spent += 1

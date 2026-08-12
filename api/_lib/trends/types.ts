@@ -133,17 +133,132 @@ export function buildGoogleNewsFeeds(queries: string[], geos: string[]): string[
 }
 
 export function itemPassesTaskFilters(
-  item: Pick<NormalizedTrendItem, 'title' | 'body'>,
+  item: Pick<NormalizedTrendItem, 'title' | 'body' | 'publishedAt' | 'source'>,
   config: TrendTaskConfig,
+  opts?: { maxAgeDays?: number },
 ): boolean {
-  const text = `${item.title}\n${item.body}`.toLowerCase()
+  const text = `${item.title}\n${item.body}`
+  const lower = text.toLowerCase()
+
   for (const bad of config.exclude) {
-    if (bad && text.includes(bad.toLowerCase())) return false
+    if (bad && lower.includes(bad.toLowerCase())) return false
   }
+
+  if (!isAllowedLanguage(text)) return false
+  if (!isRecentEnough(item.publishedAt, opts?.maxAgeDays ?? maxAgeDaysForSource(item.source))) {
+    return false
+  }
+
   if (config.must_include.length) {
-    return config.must_include.some((need) => text.includes(need.toLowerCase()))
+    return config.must_include.some((need) => lower.includes(need.toLowerCase()))
   }
+
+  // Si hay keywords, exigir al menos un match (salvo que la fuente ya buscó por query).
+  // gtrends_rss y lobsters/trending globales sí requieren match.
+  const terms = [
+    ...config.keywords,
+    ...config.news_queries,
+    ...config.bluesky_queries,
+  ].filter(Boolean)
+  if (
+    terms.length &&
+    (item.source === 'gtrends_rss' || item.source === 'lobsters' || item.source === 'mastodon')
+  ) {
+    return terms.some((t) => lower.includes(t.toLowerCase()))
+  }
+
   return true
+}
+
+/** Solo español / inglés (bloquea CJK, cirílico, árabe, etc.). */
+export function isAllowedLanguage(text: string): boolean {
+  const sample = text.slice(0, 800)
+  if (!sample.trim()) return true
+
+  if (/[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af\u0400-\u04ff\u0600-\u06ff\u0e00-\u0e7f]/u.test(sample)) {
+    return false
+  }
+
+  const letters = sample.replace(/[^a-záéíóúüñàèìòùäëïöüç]/gi, '')
+  if (letters.length < 8) return true
+
+  // Si tiene signos/palabras típicas ES/EN, ok
+  if (/[áéíóúñ¿¡]/i.test(sample)) return true
+  if (
+    /\b(the|and|for|with|this|that|new|best|game|anime|merch|how|what|why|el|la|los|las|de|del|que|una|para|con|tendencia|nuevo|nueva)\b/i.test(
+      sample,
+    )
+  ) {
+    return true
+  }
+
+  // Texto latino genérico: aceptar (muchas keywords EN)
+  if (/^[a-záéíóúüñ\s\d'".,:;!?()/-]+$/i.test(sample.replace(/\s+/g, ' ').trim())) return true
+
+  // Si hay muchas letras latinas vs total, ok
+  const latin = (sample.match(/[a-záéíóúüñ]/gi) || []).length
+  const other = (sample.match(/[^\x00-\x7FáéíóúüñÁÉÍÓÚÜÑ¿¡]/g) || []).length
+  return latin >= other * 2
+}
+
+export function maxAgeDaysForSource(source: string): number {
+  // Social más fresco; noticias un poco más margen. Nada de años viejos.
+  if (source === 'reddit' || source === 'bluesky' || source === 'hn') return 10
+  if (source === 'youtube' || source === 'gtrends_rss') return 14
+  return 21
+}
+
+export function isRecentEnough(publishedAt: string | null | undefined, maxAgeDays: number): boolean {
+  if (!publishedAt) return true // sin fecha: no descartamos acá (otra capa puede filtrar)
+  const t = Date.parse(publishedAt)
+  if (!Number.isFinite(t)) return true
+  const ageMs = Date.now() - t
+  if (ageMs < 0) return true // futuro raro / timezone
+  return ageMs <= maxAgeDays * 24 * 60 * 60 * 1000
+}
+
+export function detectContentLanguage(text: string): 'es' | 'en' | 'other' {
+  if (!isAllowedLanguage(text)) return 'other'
+  if (/[áéíóúñ¿¡]/i.test(text)) return 'es'
+  if (
+    /\b(el|la|los|las|una|para|cómo|qué|tendencia|nuevo|nueva|merch)\b/i.test(text)
+  ) {
+    return 'es'
+  }
+  return 'en'
+}
+
+export function buildAlertCopy(opts: {
+  taskName: string
+  title: string
+  source: string
+  analysis: AnalysisResult
+  url?: string | null
+}): { title: string; body: string; severity: string } {
+  const a = opts.analysis
+  const why =
+    a.relevance >= 70
+      ? 'Alta relevancia a tu búsqueda'
+      : a.is_emerging
+        ? 'Señal emergente'
+        : a.virality_score >= 70
+          ? 'Alto potencial de viralidad'
+          : 'Match con tu vigilancia'
+
+  const lines = [
+    why + '.',
+    a.impact_summary,
+    a.product_angle ? `Producto: ${a.product_angle}` : null,
+    a.content_angle ? `Contenido: ${a.content_angle}` : null,
+    `Scores — relevancia ${a.relevance}/100, viralidad ${a.virality_score}/100, sentimiento ${a.sentiment}.`,
+    opts.url ? `Link: ${opts.url}` : null,
+  ].filter(Boolean)
+
+  return {
+    title: `${opts.taskName} · ${opts.source}: ${opts.title.slice(0, 90)}`,
+    body: lines.join('\n'),
+    severity: a.virality_score >= 80 && a.relevance >= 60 ? 'high' : a.is_emerging ? 'medium' : 'info',
+  }
 }
 
 export function normalizeUrl(url: string | null | undefined): string {

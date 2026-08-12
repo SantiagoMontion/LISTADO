@@ -1,6 +1,7 @@
 import { firstEnv } from '../importados-sync/env.js'
 import {
   clampScore,
+  detectContentLanguage,
   type AnalysisResult,
   type NormalizedTrendItem,
   type TrendSearchTask,
@@ -19,9 +20,7 @@ function engagementScore(item: NormalizedTrendItem): number {
 }
 
 function detectLanguage(text: string): string {
-  if (/[áéíóúñ¿¡]/i.test(text)) return 'es'
-  if (/[a-z]/i.test(text)) return 'en'
-  return 'other'
+  return detectContentLanguage(text)
 }
 
 function keywordHits(text: string, keywords: string[]): string[] {
@@ -48,15 +47,15 @@ export function analyzeHeuristic(
   const hits = keywordHits(text, searchTerms)
   const eng = engagementScore(item)
   const relevance = clampScore(
-    hits.length * 25 + (eng > 0 ? 20 : 0) + (item.source === 'gtrends_rss' ? 25 : 0),
+    hits.length * 28 + (eng > 0 ? 15 : 0) + (task.config.context ? 5 : 0),
   )
-  const virality = clampScore(
-    Math.log10(eng + 1) * 35 + (item.source === 'gtrends_rss' ? 40 : 0) + hits.length * 8,
-  )
+  const virality = clampScore(Math.log10(eng + 1) * 35 + hits.length * 10)
 
   const lower = text.toLowerCase()
   let sentiment: AnalysisResult['sentiment'] = 'neutral'
-  if (/(amazing|love|best|fire|hype|increíble|genial|brutal)/i.test(lower)) sentiment = 'positive'
+  if (/(amazing|love|best|fire|hype|increíble|genial|brutal|trending)/i.test(lower)) {
+    sentiment = 'positive'
+  }
   if (/(hate|scam|bad|terrible|worst|estafa|malo)/i.test(lower)) {
     sentiment = sentiment === 'positive' ? 'mixed' : 'negative'
   }
@@ -78,33 +77,32 @@ export function analyzeHeuristic(
     signal_type.push(wantProduct && !wantContent ? 'product_opportunity' : 'content_idea')
   }
 
-  const is_emerging = virality >= 65 && relevance >= 40
+  const is_emerging = virality >= 65 && relevance >= 50 && hits.length > 0
   const product_angle =
-    wantProduct && signal_type.includes('product_opportunity')
-      ? `Explorar merch/producto alrededor de: ${item.title.slice(0, 80)}`
-      : wantProduct
-        ? `¿Hay ángulo de producto en «${item.title.slice(0, 60)}»?`
-        : null
+    wantProduct && (signal_type.includes('product_opportunity') || relevance >= 55)
+      ? `Oportunidad posible: «${item.title.slice(0, 80)}» — evaluar stock/precio/merch.`
+      : null
   const content_angle = wantContent
-    ? `Idea de contenido: ángulo sobre «${item.title.slice(0, 70)}» (${item.source})`
+    ? `Hook de contenido: «${item.title.slice(0, 70)}» (${item.source}). Ángulo: por qué está pidiendo atención ahora.`
     : null
 
-  const ctxBit = task.config.context ? ` Contexto: ${task.config.context.slice(0, 80)}.` : ''
+  const matched = hits.slice(0, 4).join(', ')
+  const impact_summary = matched
+    ? `Encaja con tu búsqueda por: ${matched}. Fuente ${item.source}, engagement ~${Math.round(eng)}. ${task.config.context ? `Contexto: ${task.config.context.slice(0, 100)}` : ''}`.trim()
+    : `Baja coincidencia con tus keywords (${item.source}). Revisar solo si el título aporta.`
 
   return {
     relevance,
     sentiment,
     virality_score: virality,
-    impact_summary: hits.length
-      ? `Señal ${item.source} alineada a ${hits.slice(0, 3).join(', ')} (eng ~${Math.round(eng)}).${ctxBit}`
-      : `Señal ${item.source}: ${item.title.slice(0, 100)}.${ctxBit}`,
+    impact_summary: impact_summary.slice(0, 500),
     keywords: hits.length ? hits : task.config.keywords.slice(0, 3),
     entities: [],
     signal_type,
     product_angle,
     content_angle,
     is_emerging,
-    confidence: 0.45,
+    confidence: hits.length ? 0.55 : 0.3,
     language: detectLanguage(text),
   }
 }
@@ -125,6 +123,8 @@ export async function analyzeWithGemini(
 
   const model = firstEnv(['GEMINI_MODEL']) || 'gemini-2.0-flash'
   const prompt = `Sos un analista de tendencias para NotMid (merch / importados / contenido).
+Respondé siempre en español.
+Solo considerá contenido en español o inglés; si el item está en otro idioma, poné relevance=0 y language="other".
 Búsqueda: "${task.name}"
 ${goalHint(task.config.goal)}
 Contexto del usuario: ${task.config.context || '(sin contexto extra)'}
@@ -145,12 +145,12 @@ Respondé SOLO un JSON válido con exactamente estas claves:
   "relevance": 0-100,
   "sentiment": "positive|neutral|negative|mixed",
   "virality_score": 0-100,
-  "impact_summary": "1-2 oraciones en español",
+  "impact_summary": "2 oraciones en español: qué pasó y por qué importa para esta búsqueda",
   "keywords": ["..."],
   "entities": ["..."],
   "signal_type": ["product_opportunity","content_idea","news_impact","meme_culture","risk_controversy"],
-  "product_angle": "string o null",
-  "content_angle": "string o null",
+  "product_angle": "acción concreta de producto/merch o null",
+  "content_angle": "hook concreto de contenido o null",
   "is_emerging": true/false,
   "confidence": 0-1,
   "language": "es|en|other"

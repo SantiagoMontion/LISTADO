@@ -4,6 +4,11 @@ import { collectForTask } from './connectors.js'
 import {
   clusterFingerprint,
   contentHash,
+  buildAlertCopy,
+  detectContentLanguage,
+  isAllowedLanguage,
+  isRecentEnough,
+  maxAgeDaysForSource,
   parseTaskConfig,
   type TrendSearchTask,
 } from './types.js'
@@ -188,7 +193,24 @@ export async function runTrendsTick(opts?: {
                 : {},
           }
 
+          const blob = `${normalized.title}\n${normalized.body}`
+          if (!isAllowedLanguage(blob) || detectContentLanguage(blob) === 'other') {
+            continue
+          }
+          if (
+            !isRecentEnough(
+              normalized.publishedAt,
+              maxAgeDaysForSource(normalized.source),
+            )
+          ) {
+            continue
+          }
+
           const analysis = await analyzeItem(normalized, task)
+          if (analysis.language === 'other' || analysis.relevance < 35) {
+            continue
+          }
+
           const { data: analyzed, error: aErr } = await sb
             .from('trend_analyzed_items')
             .insert({
@@ -267,22 +289,27 @@ export async function runTrendsTick(opts?: {
           }
 
           const multiSource = clusterSources.length >= 2
-          if (
-            analysis.is_emerging ||
-            (analysis.virality_score >= 70 && analysis.relevance >= 50) ||
-            multiSource
-          ) {
+          const shouldAlert =
+            analysis.relevance >= 55 &&
+            (analysis.is_emerging ||
+              (analysis.virality_score >= 65 && analysis.relevance >= 55) ||
+              (multiSource && analysis.relevance >= 60))
+
+          if (shouldAlert) {
+            const copy = buildAlertCopy({
+              taskName: task.name,
+              title: normalized.title,
+              source: normalized.source,
+              analysis,
+              url: normalized.url,
+            })
             const { error: alertErr } = await sb.from('trend_alerts').insert({
               task_id: taskId,
               analyzed_item_id: analyzed?.id ?? null,
               cluster_id: clusterId,
-              severity: analysis.virality_score >= 80 ? 'high' : 'info',
-              title: `${task.name}: ${normalized.title.slice(0, 100)}`,
-              body:
-                analysis.impact_summary ||
-                analysis.content_angle ||
-                analysis.product_angle ||
-                '',
+              severity: copy.severity,
+              title: copy.title,
+              body: copy.body,
             })
             if (!alertErr) alertsCreated += 1
           }

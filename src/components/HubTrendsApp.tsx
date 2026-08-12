@@ -729,7 +729,7 @@ export function HubTrendsApp({
                 >
                   <div>
                     <strong>{alert.title}</strong>
-                    <p>{alert.body}</p>
+                    <p className="hub-trends__alert-body">{alert.body}</p>
                     <span className="hub-trends__when">
                       {alert.severity} · {formatWhen(alert.created_at)}
                     </span>
