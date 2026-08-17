@@ -167,7 +167,6 @@ export function computeImportadosAnalytics(
 ): { series: ImportadosDayRecord[]; analytics: ImportadosAnalytics } {
   const weekFriday = weekRangeEndFriday(weekMonday)
   const weekSunday = addDaysToIsoDate(weekMonday, 6)
-  const prevFriday = weekRangeEndFriday(previousWeekMonday)
   const prevSunday = addDaysToIsoDate(previousWeekMonday, 6)
 
   const currentWeekLines = linesInRange(lines, weekMonday, weekSunday)
