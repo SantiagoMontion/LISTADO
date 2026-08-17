@@ -133,30 +133,78 @@ function stripSupplierStoreBoilerplate($: ReturnType<typeof cheerio.load>): void
   stripMatchingTextNodes($)
 }
 
-function looksMostlySpanish(text: string): boolean {
-  const sample = text.slice(0, 800).toLowerCase()
-  const hits = (
+export function looksMostlySpanish(text: string): boolean {
+  const sample = text.slice(0, 1500).toLowerCase()
+  const en = (
     sample.match(
-      /\b(el|la|los|las|de|del|para|con|una|este|esta|teclado|mouse|switch|incluye|características|garantía)\b/gi,
+      /\b(the|and|with|for|from|this|that|features|wireless|designed|performance|sensor|includes|compatible|lightweight)\b/gi,
     ) || []
   ).length
-  const hasAccents = /[áéíóúñü¿¡]/i.test(sample)
-  return hasAccents || hits >= 4
+  const es = (
+    sample.match(
+      /\b(que|los|las|para|como|también|incluye|características|garantía|inalámbrico|botones|diseñado|ratón|teclado)\b/gi,
+    ) || []
+  ).length
+  if (en >= 3) return false
+  return es >= 5 || (/[áéíóúñü¿¡]/i.test(sample) && es >= 3 && en <= 1)
+}
+
+function decodeTranslated(raw: string): string {
+  return raw
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+}
+
+function parseGoogleGtx(json: unknown): string {
+  if (!Array.isArray(json) || !Array.isArray(json[0])) return ''
+  return json[0]
+    .map((row) => (Array.isArray(row) && typeof row[0] === 'string' ? row[0] : ''))
+    .join('')
+    .trim()
+}
+
+async function translateGoogleGtx(q: string): Promise<string> {
+  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=es&dt=t&q=${encodeURIComponent(q)}`
+  const resp = await fetchWithTimeout(url, { method: 'GET' }, 8_000)
+  if (!resp.ok) return ''
+  const json = await resp.json()
+  return decodeTranslated(parseGoogleGtx(json))
+}
+
+async function translateMyMemory(q: string): Promise<string> {
+  const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(q)}&langpair=en|es`
+  const resp = await fetchWithTimeout(url, { method: 'GET' }, 8_000)
+  if (!resp.ok) return ''
+  const json = (await resp.json()) as { responseData?: { translatedText?: string } }
+  const translated = (json.responseData?.translatedText || '').trim()
+  if (!translated || /MYMEMORY WARNING/i.test(translated)) return ''
+  return decodeTranslated(translated)
+}
+
+function shouldTranslateChunk(text: string): boolean {
+  const q = text.trim()
+  if (q.length <= 2) return false
+  if (looksMostlySpanish(q)) return false
+  const words = q.match(/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]{3,}/g) || []
+  return words.length >= 2
 }
 
 async function translateChunkEnToEs(chunk: string): Promise<string> {
   const q = chunk.trim()
   if (!q) return ''
-  if (q.length <= 2) return q
+  if (!shouldTranslateChunk(q)) return q
 
-  // MyMemory ~450 chars; trocear frases largas y unir
-  if (q.length > 420) {
+  if (q.length > 1400) {
     const parts = q.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [q]
     const out: string[] = []
     let buf = ''
     for (const part of parts) {
       const next = `${buf} ${part}`.trim()
-      if (next.length > 400 && buf) {
+      if (next.length > 1200 && buf) {
         out.push(await translateChunkEnToEs(buf))
         buf = part.trim()
       } else {
@@ -167,86 +215,62 @@ async function translateChunkEnToEs(chunk: string): Promise<string> {
     return out.join(' ').replace(/\s+/g, ' ').trim()
   }
 
-  const url =
-    `https://api.mymemory.translated.net/get?q=${encodeURIComponent(q)}&langpair=en|es`
   try {
-    const resp = await fetchWithTimeout(url, { method: 'GET' }, 10_000)
-    if (!resp.ok) return q
-    const json = (await resp.json()) as {
-      responseData?: { translatedText?: string }
-    }
-    const translated = (json.responseData?.translatedText || '').trim()
-    if (!translated || /MYMEMORY WARNING/i.test(translated)) return q
-    // Evitar basura HTML entities dobles del traductor
-    return translated
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'")
-      .replace(/&amp;/g, '&')
+    const google = await translateGoogleGtx(q)
+    if (google) return google
   } catch {
-    return q
+    /* fallback */
   }
+  try {
+    const memory = await translateMyMemory(q)
+    if (memory) return memory
+  } catch {
+    /* keep original */
+  }
+  return q
 }
 
-type DomNode = {
-  type?: string
-  name?: string
-  data?: string
-  children?: DomNode[]
-}
+type TextNode = { type?: string; data?: string }
 
-function collectTranslatableTextNodes(root: DomNode | null | undefined): DomNode[] {
-  const nodes: DomNode[] = []
-
-  function walk(node: DomNode | undefined) {
-    if (!node) return
-    if (node.type === 'text') {
-      const raw = node.data ?? ''
-      if (raw.trim().length >= 2) nodes.push(node)
-      return
-    }
-    if (node.type === 'tag') {
-      const name = (node.name || '').toLowerCase()
-      if (name === 'script' || name === 'style' || name === 'noscript') return
-      for (const child of node.children ?? []) walk(child)
-      return
-    }
-    if (node.type === 'root') {
-      for (const child of node.children ?? []) walk(child)
-    }
-  }
-
-  walk(root ?? undefined)
+function collectTranslatableTextNodes($: ReturnType<typeof cheerio.load>): TextNode[] {
+  const nodes: TextNode[] = []
+  $('#nm-root, #nm-root *')
+    .contents()
+    .each((_, node) => {
+      const n = node as TextNode
+      if (n.type === 'text' && (n.data || '').trim().length >= 2) nodes.push(n)
+    })
   return nodes
 }
 
-/**
- * Traduce solo nodos de texto; deja intactos <p>, <ul>, <li>, <strong>, <br>, títulos, etc.
- */
+/** Traduce solo nodos de texto; deja intactos <p>, <ul>, <li>, <strong>, <br>, títulos, etc. */
 async function translateHtmlPreservingMarkup(html: string): Promise<string> {
   const $ = cheerio.load(`<div id="nm-root">${html}</div>`, undefined, false)
-  const rootEl = $('#nm-root').get(0) as DomNode | undefined
-  if (!rootEl) return html
+  const textNodes = collectTranslatableTextNodes($)
+  if (!textNodes.length) return html
 
-  const textNodes = collectTranslatableTextNodes(rootEl)
-  const limit = Math.min(textNodes.length, 48)
+  const unique = [...new Set(textNodes.map((n) => (n.data ?? '').trim()).filter(Boolean))]
+  const cache = new Map<string, string>()
   const started = Date.now()
-  const budgetMs = 14_000
-  const batchSize = 4
+  const budgetMs = 35_000
+  const batchSize = 3
 
-  for (let i = 0; i < limit; i += batchSize) {
+  for (let i = 0; i < unique.length; i += batchSize) {
     if (Date.now() - started > budgetMs) break
-    const batch = textNodes.slice(i, Math.min(i + batchSize, limit))
+    const batch = unique.slice(i, i + batchSize)
     await Promise.all(
-      batch.map(async (node) => {
-        const original = node.data ?? ''
-        const leading = original.match(/^\s*/)?.[0] ?? ''
-        const trailing = original.match(/\s*$/)?.[0] ?? ''
-        const core = original.trim()
-        if (!core) return
-        const translated = await translateChunkEnToEs(core)
-        node.data = `${leading}${translated}${trailing}`
+      batch.map(async (core) => {
+        cache.set(core, await translateChunkEnToEs(core))
       }),
     )
+  }
+
+  for (const node of textNodes) {
+    const original = node.data ?? ''
+    const leading = original.match(/^\s*/)?.[0] ?? ''
+    const trailing = original.match(/\s*$/)?.[0] ?? ''
+    const core = original.trim()
+    node.data = `${leading}${cache.get(core) ?? core}${trailing}`
   }
 
   return $('#nm-root').html() || html
@@ -287,7 +311,17 @@ export async function publicProductDescriptionHtml(
 
   try {
     const translated = await translateHtmlPreservingMarkup(cleaned)
-    return sanitizePublicProductHtml(translated)
+    const htmlOut = sanitizePublicProductHtml(translated)
+    const $out = cheerio.load(`<div id="probe">${htmlOut}</div>`, undefined, false)
+    const outPlain = $out('#probe').text().replace(/\s+/g, ' ').trim()
+    if (looksMostlySpanish(outPlain) || !shouldTranslateChunk(outPlain)) {
+      return htmlOut
+    }
+    const blob = await translateChunkEnToEs(plain.slice(0, 4500))
+    if (blob && looksMostlySpanish(blob)) {
+      return ensureReadableBlocks(blob)
+    }
+    return htmlOut
   } catch {
     return cleaned
   }

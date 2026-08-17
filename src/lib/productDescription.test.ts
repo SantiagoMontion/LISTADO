@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { sanitizePublicProductHtml } from '../../api/_lib/importados-sync/productDescription'
+import {
+  looksMostlySpanish,
+  sanitizePublicProductHtml,
+} from '../../api/_lib/importados-sync/productDescription'
 
 describe('sanitizePublicProductHtml', () => {
   it('keeps specs and drops MK US-duty + FAQ + store promo', () => {
@@ -36,5 +39,23 @@ Obtenga una tecla promocional con cualquier compra en mechanicalkeyboards.com.
     )
     expect(out).not.toMatch(/href=/)
     expect(out).toMatch(/más/)
+  })
+})
+
+describe('looksMostlySpanish', () => {
+  it('does not skip English Lethal-style copy', () => {
+    expect(
+      looksMostlySpanish(
+        'Lightweight gaming mouse with optical switch and USB-C cable. The sensor tracks at 8000 Hz. Designed for performance.',
+      ),
+    ).toBe(false)
+  })
+
+  it('detects a Spanish description', () => {
+    expect(
+      looksMostlySpanish(
+        'Este teclado inalámbrico incluye características pensadas para jugar. Los interruptores están diseñados para una respuesta precisa. También tiene garantía.',
+      ),
+    ).toBe(true)
   })
 })
