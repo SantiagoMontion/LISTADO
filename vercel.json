@@ -25,7 +25,13 @@
     "api/importados-sync/create-product.ts": {
       "maxDuration": 120
     },
+    "api/importados-sync/sync-product.ts": {
+      "maxDuration": 90
+    },
     "api/importados-sync/orders.ts": {
+      "maxDuration": 60
+    },
+    "api/importados-sync/sales.ts": {
       "maxDuration": 60
     },
     "api/personalizados-pdfs/pending.ts": {

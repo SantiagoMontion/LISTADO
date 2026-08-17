@@ -1,6 +1,6 @@
 import * as cheerio from 'cheerio'
 import type { Provider } from './env.js'
-import { lethalSafeNotmidQtyThrottled } from './lethalCartStock.js'
+import { lethalSafeNotmidQtyThrottledDetailed } from './lethalCartStock.js'
 import { BROWSER_HEADERS, fetchWithRetries, fetchWithTimeout, parsePrice } from './providers/types.js'
 
 export type SupplierVariant = {
@@ -11,8 +11,17 @@ export type SupplierVariant = {
   option3: string | null
   sku: string | null
   priceUsd: number
+  /** Peso del ítem en kg si el proveedor lo publica (grams/1000). */
+  weightKg: number | null
+  /** Flag `available` del .js del proveedor (antes de sondear). */
+  storefrontAvailable: boolean
   available: boolean
   inventoryQuantity: number
+  /**
+   * false = la qty es dudosa (timeout/rate-limit/no probeado).
+   * El sync no debe pisar NotMid si no es confiable.
+   */
+  inventoryReliable: boolean
   featuredImageUrl: string | null
 }
 
@@ -89,10 +98,23 @@ type ShopifyStorefrontProduct = {
     sku?: string | null
     price?: number | string
     available?: boolean
+    grams?: number
     featured_image?: { src?: string; variant_ids?: number[] } | null
   }>
   images?: Array<string | { src?: string }>
   media?: Array<{ src?: string; alt?: string | null; media_type?: string }>
+}
+
+/** Lethal sin www suele pegar Cloudflare 429; el storefront estable es www. */
+function resolveStorefrontOrigin(productUrl: string): string {
+  try {
+    const u = new URL(productUrl.includes('://') ? productUrl : `https://${productUrl}`)
+    const host = u.hostname.replace(/^www\./i, '').toLowerCase()
+    if (host === 'lethal.gg') return 'https://www.lethal.gg'
+    return u.origin
+  } catch {
+    return new URL(productUrl).origin
+  }
 }
 
 async function fetchShopifyProductJs(productUrl: string): Promise<{
@@ -102,7 +124,7 @@ async function fetchShopifyProductJs(productUrl: string): Promise<{
 }> {
   const handle = extractHandleFromUrl(productUrl)
   if (!handle) throw new Error('No pude leer el handle del producto desde el link')
-  const origin = new URL(productUrl).origin
+  const origin = resolveStorefrontOrigin(productUrl)
   const candidates = [
     `${origin}/products/${encodeURIComponent(handle)}.js`,
     `${origin}/products/${encodeURIComponent(handle)}.json`,
@@ -158,7 +180,7 @@ async function scrapeVariantInventoryQty(
   origin: string,
   handle: string,
   variantId: string,
-): Promise<number> {
+): Promise<{ qty: number; reliable: boolean }> {
   const url = `${origin}/products/${encodeURIComponent(handle)}?variant=${encodeURIComponent(variantId)}`
   try {
     const resp = await fetchWithTimeout(url, {
@@ -166,20 +188,17 @@ async function scrapeVariantInventoryQty(
       headers: BROWSER_HEADERS,
       redirect: 'follow',
     })
-    if (!resp.ok) return 0
+    if (!resp.ok) return { qty: 0, reliable: false }
     const html = await resp.text()
     const $ = cheerio.load(html)
     const info = $('#inventory_info').text().replace(/\s+/g, ' ').trim()
     const qtyMatch = info.match(/(\d+)\s+in\s+stock/i)
-    if (qtyMatch) return Number(qtyMatch[1])
-    if (/out\s+of\s+stock|sold\s*out/i.test(info)) return 0
-    // Fallback: available flag from page buttons is unreliable; keep 0 if unknown OOS text
-    if (/out\s+of\s+stock|sold\s*out/i.test(html.slice(0, 50000))) {
-      // don't use global page sold-out footer
-    }
-    return 0
+    if (qtyMatch) return { qty: Number(qtyMatch[1]), reliable: true }
+    if (/out\s+of\s+stock|sold\s*out/i.test(info)) return { qty: 0, reliable: true }
+    // Sin texto claro de stock: no asumir 0.
+    return { qty: 0, reliable: false }
   } catch {
-    return 0
+    return { qty: 0, reliable: false }
   }
 }
 
@@ -255,20 +274,46 @@ async function fetchVariantFeaturedFromProductJson(
   }
 }
 
+/** Alta: sondear carrito si hay pocas variantes (RCC-1 = 1). Beast G ×21 se deja al cron. */
+export const CREATE_CART_PROBE_MAX_VARIANTS = 8
+
+export type FetchCatalogOptions = {
+  /**
+   * `full` (default): crea producto — imágenes + stock de todas las variantes.
+   * `inventory`: solo stock; salta imágenes y puede limitar probes a ciertos ids.
+   */
+  mode?: 'full' | 'inventory'
+  /** Si se setea, Lethal/MK solo miden stock de estos variant ids (+ los unavailable → 0). */
+  probeVariantIds?: string[]
+  /**
+   * Alta de producto: no sondear carrito (21 variantes × ~1.5s = timeout Vercel).
+   * Usa el flag `available` del .js (1 o 0); el cron de sync ajusta qty real después.
+   */
+  skipStockProbe?: boolean
+}
+
 async function catalogFromShopifyJs(
   provider: Provider,
   productUrl: string,
+  options: FetchCatalogOptions = {},
 ): Promise<SupplierCatalogProduct> {
+  const mode = options.mode ?? 'full'
+  const probeSet =
+    options.probeVariantIds && options.probeVariantIds.length
+      ? new Set(options.probeVariantIds.map(String))
+      : null
+
   const { json, handle, origin } = await fetchShopifyProductJs(productUrl)
   if (!json.title) throw new Error('El proveedor no devolvió título de producto')
 
-  const options = (json.options ?? [])
+  const productOptions = (json.options ?? [])
     .filter((o) => o.name && Array.isArray(o.values) && o.values.length)
     .map((o) => ({ name: String(o.name), values: (o.values ?? []).map(String) }))
 
   const baseVariants = (json.variants ?? []).map((v) => {
     const id = String(v.id ?? '')
     const priceUsd = centsToUsd(v.price)
+    const grams = typeof v.grams === 'number' && Number.isFinite(v.grams) ? v.grams : null
     return {
       id,
       title: (v.title || v.option1 || 'Default').trim(),
@@ -277,8 +322,11 @@ async function catalogFromShopifyJs(
       option3: v.option3 ?? null,
       sku: v.sku?.trim() || null,
       priceUsd: priceUsd ?? 0,
+      weightKg: grams && grams > 0 ? grams / 1000 : null,
+      storefrontAvailable: Boolean(v.available),
       available: Boolean(v.available),
       inventoryQuantity: 0,
+      inventoryReliable: true,
       featuredImageUrl: absUrl(v.featured_image?.src, origin),
     } satisfies SupplierVariant
   }).filter((v) => v.id && v.priceUsd > 0)
@@ -288,44 +336,110 @@ async function catalogFromShopifyJs(
   // Stock por variante:
   // - MK: número real desde #inventory_info (si no hay número pero available → 1)
   // - Lethal: sin unidades públicas → sondear el carrito y usar (lo que acepta − 1)
+  // - skipStockProbe (alta): solo flag available → 1/0 (el cron ajusta después)
   const variants: SupplierVariant[] = []
-  for (const variant of baseVariants) {
+  for (const base of baseVariants) {
+    let variant = base
     let qty = 0
+    let reliable = true
+
+    if (options.skipStockProbe) {
+      qty = variant.storefrontAvailable ? 1 : 0
+      reliable = true
+      variants.push({
+        ...variant,
+        inventoryQuantity: qty,
+        inventoryReliable: reliable,
+        available: qty > 0,
+      })
+      continue
+    }
+
+    const shouldProbe = !probeSet || probeSet.has(variant.id) || variant.storefrontAvailable
+    if (!shouldProbe) {
+      // No sondeada y OOS en storefront: no inventar qty.
+      variants.push({
+        ...variant,
+        inventoryQuantity: 0,
+        inventoryReliable: false,
+        available: false,
+      })
+      continue
+    }
     if (provider === 'lethal') {
-      qty = await lethalSafeNotmidQtyThrottled(origin, variant.id, variant.available)
-    } else if (variant.available) {
-      qty = await scrapeVariantInventoryQty(origin, handle, variant.id)
-      if (qty <= 0 && variant.available) {
-        qty = 1
+      const delayMs = mode === 'inventory' ? 1100 : 1600
+      const probed = await lethalSafeNotmidQtyThrottledDetailed(
+        origin,
+        variant.id,
+        variant.storefrontAvailable,
+        delayMs,
+        {
+          recheckStorefrontAvailable: async () => {
+            const fresh = await fetchShopifyProductJs(productUrl)
+            const hit = (fresh.json.variants ?? []).find((v) => String(v.id) === variant.id)
+            return Boolean(hit?.available)
+          },
+        },
+      )
+      qty = probed.qty
+      reliable = probed.reliable
+      // Si el recheck descubrió stock, el flag original mentía.
+      if (probed.reliable && probed.qty > 0 && !variant.storefrontAvailable) {
+        variant = { ...variant, storefrontAvailable: true }
       }
+    } else if (variant.storefrontAvailable) {
+      const scraped = await scrapeVariantInventoryQty(origin, handle, variant.id)
+      if (scraped.reliable) {
+        qty = scraped.qty
+        reliable = true
+      } else {
+        // .js available pero scrape dudoso → no confiar (ni un 0 ni inventar 1 reliable).
+        qty = scraped.qty > 0 ? scraped.qty : 1
+        reliable = false
+      }
+      if (qty <= 0 && variant.storefrontAvailable) {
+        qty = 1
+        reliable = false
+      }
+    } else {
+      // MK .js unavailable: OOS a nivel flag.
+      qty = 0
+      reliable = true
     }
     variants.push({
       ...variant,
       inventoryQuantity: qty,
+      inventoryReliable: reliable,
+      // available operativo; storefrontAvailable se conserva en el spread.
       available: qty > 0,
     })
   }
 
-  const imageUrls = collectImageUrls(json, origin)
-  const fromJsFeatured = buildVariantFeaturedImageByOption(json, origin)
-  const variantIdToOption: Record<string, string> = {}
-  for (const v of baseVariants) {
-    const option = (v.option1 || v.title || '').trim()
-    if (v.id && option) variantIdToOption[v.id] = option
+  let imageUrls: string[] = []
+  let variantFeaturedImageByOption: Record<string, string> = {}
+  let imageOptionByUrl: Record<string, string> = {}
+
+  if (mode === 'full') {
+    imageUrls = collectImageUrls(json, origin)
+    const fromJsFeatured = buildVariantFeaturedImageByOption(json, origin)
+    const variantIdToOption: Record<string, string> = {}
+    for (const v of baseVariants) {
+      const option = (v.option1 || v.title || '').trim()
+      if (v.id && option) variantIdToOption[v.id] = option
+    }
+    const fromJsonFeatured = await fetchVariantFeaturedFromProductJson(
+      origin,
+      handle,
+      variantIdToOption,
+    )
+    variantFeaturedImageByOption = { ...fromJsFeatured, ...fromJsonFeatured }
+    for (const [option, url] of Object.entries(variantFeaturedImageByOption)) {
+      imageOptionByUrl[url] = option
+    }
   }
-  const fromJsonFeatured = await fetchVariantFeaturedFromProductJson(
-    origin,
-    handle,
-    variantIdToOption,
-  )
-  // .json variant_ids gana si existe; si no, featured_image del .js
-  const variantFeaturedImageByOption = { ...fromJsFeatured, ...fromJsonFeatured }
-  // Compat: URL → option (solo featured reales)
-  const imageOptionByUrl: Record<string, string> = {}
-  for (const [option, url] of Object.entries(variantFeaturedImageByOption)) {
-    imageOptionByUrl[url] = option
-  }
-  const bodyHtml = (json.body_html || json.description || '').trim()
+
+  const bodyHtml =
+    mode === 'full' ? (json.body_html || json.description || '').trim() : ''
   const price = Math.min(...variants.map((v) => v.priceUsd))
   const inStock = variants.some((v) => v.available && v.inventoryQuantity > 0)
 
@@ -336,7 +450,9 @@ async function catalogFromShopifyJs(
     bodyHtml,
     vendor: (json.vendor || (provider === 'mk' ? 'MechanicalKeyboards' : 'Lethal')).trim(),
     handle,
-    options: options.length ? options : [{ name: 'Title', values: variants.map((v) => v.title) }],
+    options: productOptions.length
+      ? productOptions
+      : [{ name: 'Title', values: variants.map((v) => v.title) }],
     variants,
     imageUrls,
     variantFeaturedImageByOption,
@@ -351,9 +467,10 @@ async function catalogFromShopifyJs(
 export async function fetchSupplierCatalog(
   provider: Provider,
   productUrl: string,
+  options?: FetchCatalogOptions,
 ): Promise<SupplierCatalogProduct> {
   if (provider !== 'lethal' && provider !== 'mk') {
     throw new Error(`Proveedor desconocido: ${provider}`)
   }
-  return catalogFromShopifyJs(provider, productUrl)
+  return catalogFromShopifyJs(provider, productUrl, options)
 }

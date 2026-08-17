@@ -40,6 +40,8 @@ export function sanitizePublicProductHtml(html: string): string {
     $a.replaceWith($a.contents())
   })
 
+  stripSupplierStoreBoilerplate($)
+
   $('*').each((_, el) => {
     const attribs = (el as { attribs?: Record<string, string> }).attribs
     if (!attribs) return
@@ -68,6 +70,67 @@ export function sanitizePublicProductHtml(html: string): string {
   const inner = (body.length ? body.html() : $.root().html()) || ''
   // No aplastar a una sola línea: preserva saltos que el theme pueda respetar
   return inner.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim()
+}
+
+const SUPPLIER_BOILERPLATE =
+  /aranceles de importación de EE\.?\s*UU|pagados por adelantado por MK|all U\.S\. import (?:duties|tariffs)|mechanicalkeyboards\.com|lethal\.gg|frozen llama|consulta nuestras preguntas frecuentes|preguntas frecuentes\s*\(?\s*FAQ|este artículo viene con una tecla|echa un vistazo al rat[oó]n .+ a juego/i
+
+/** Frases enteras de aduana USA / FAQ / promo MK — no borrar el resto del bloque. */
+const SUPPLIER_BOILERPLATE_CHUNKS = [
+  /Todos los aranceles de importación de EE\.?\s*UU[\s\S]{0,500}?preguntas frecuentes(?:\s*\(\s*FAQ\s*\))?[^.!]*(?:[.!]|$)/gi,
+  /All U\.S\. import (?:duties|tariffs)(?: are)? prepaid by MK[\s\S]{0,400}?(?:FAQ|frequently asked)[^.!]*(?:[.!]|$)/gi,
+  /¡?Este artículo viene con una tecla GMK Frozen Llama![\s\S]{0,80}/gi,
+  /[^.!\n]*mechanicalkeyboards\.com[^.!\n]*(?:[.!]|$)/gi,
+  /Echa un vistazo al rat[oó]n [\s\S]{0,120}?a juego[^.!]*(?:[.!]|$)/gi,
+]
+
+function stripBoilerplateFromString(raw: string): string {
+  let out = raw
+  for (const re of SUPPLIER_BOILERPLATE_CHUNKS) {
+    out = out.replace(re, ' ')
+  }
+  return out.replace(/[ \t]{2,}/g, ' ')
+}
+
+function dropBoilerplateSentences(raw: string): string {
+  const stripped = stripBoilerplateFromString(raw)
+  return stripped
+    .split(/(?<=[.!?])\s+|\n+/)
+    .filter((sentence) => !SUPPLIER_BOILERPLATE.test(sentence))
+    .join(' ')
+    .replace(/[ \t]{2,}/g, ' ')
+}
+
+function isMostlyBoilerplate(text: string): boolean {
+  const orig = text.replace(/\s+/g, ' ').trim()
+  if (!orig || !SUPPLIER_BOILERPLATE.test(orig)) return false
+  return !dropBoilerplateSentences(orig).replace(/\s+/g, ' ').trim()
+}
+
+function stripMatchingTextNodes($: ReturnType<typeof cheerio.load>): void {
+  const visit = (parent: ReturnType<typeof $>) => {
+    parent.contents().each((_, node) => {
+      if (node.type === 'text') {
+        const data = (node as { data?: string }).data ?? ''
+        if (!SUPPLIER_BOILERPLATE.test(data)) return
+        const cleaned = dropBoilerplateSentences(data)
+        if (!cleaned.replace(/\s+/g, ' ').trim()) $(node).remove()
+        else (node as { data?: string }).data = cleaned
+        return
+      }
+      if ('children' in node) visit($(node))
+    })
+  }
+  visit($.root())
+}
+
+function stripSupplierStoreBoilerplate($: ReturnType<typeof cheerio.load>): void {
+  $('p, li, h1, h2, h3, h4, h5, h6').each((_, el) => {
+    const $el = $(el)
+    if ($el.find('p, li, ul, ol, h1, h2, h3, h4, h5, h6').length) return
+    if (isMostlyBoilerplate($el.text())) $el.remove()
+  })
+  stripMatchingTextNodes($)
 }
 
 function looksMostlySpanish(text: string): boolean {
@@ -200,7 +263,10 @@ function ensureReadableBlocks(html: string): string {
 }
 
 /** Traduce descripción EN→ES preservando el HTML (best effort). */
-export async function publicProductDescriptionHtml(rawHtml: string): Promise<string> {
+export async function publicProductDescriptionHtml(
+  rawHtml: string,
+  opts?: { skipTranslation?: boolean },
+): Promise<string> {
   const cleaned = ensureReadableBlocks(sanitizePublicProductHtml(rawHtml))
   if (!cleaned) return ''
 
@@ -208,12 +274,13 @@ export async function publicProductDescriptionHtml(rawHtml: string): Promise<str
   const plain = $('#probe').text().replace(/\s+/g, ' ').trim()
   if (!plain) return ''
 
-  if (looksMostlySpanish(plain)) {
-    return cleaned
+  if (opts?.skipTranslation || looksMostlySpanish(plain)) {
+    return sanitizePublicProductHtml(cleaned)
   }
 
   try {
-    return await translateHtmlPreservingMarkup(cleaned)
+    const translated = await translateHtmlPreservingMarkup(cleaned)
+    return sanitizePublicProductHtml(translated)
   } catch {
     return cleaned
   }

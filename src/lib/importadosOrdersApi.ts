@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import type { ImportadosSaleLine } from './importadosSalesSummary'
 
 export type ImportadosOrderLine = {
   lineItemId: string
@@ -6,10 +7,11 @@ export type ImportadosOrderLine = {
   variantTitle: string | null
   quantity: number
   supplierUrls: string[]
-  provider: 'lethal' | 'mk'
-  trackedProductId: string
+  provider: 'lethal' | 'mk' | null
+  trackedProductId: string | null
   notmidVariantId: string | null
   supplierVariantId: string | null
+  unmatchedVariant: boolean
 }
 
 export type ImportadosOrderRow = {
@@ -21,6 +23,16 @@ export type ImportadosOrderRow = {
   adminUrl: string
   lines: ImportadosOrderLine[]
   allSupplierUrls: string[]
+}
+
+export type ImportadosSalesPayload = {
+  lines: ImportadosSaleLine[]
+  ingestError: string | null
+  tableMissing: boolean
+}
+
+export type DisplayImportadosLine = ImportadosOrderLine & {
+  memberIds: string[]
 }
 
 async function accessToken(): Promise<string> {
@@ -60,6 +72,55 @@ export async function listImportadosOrders(): Promise<{
     count: json.count ?? 0,
     units: json.units ?? 0,
   }
+}
+
+export async function fetchImportadosSales(): Promise<ImportadosSalesPayload> {
+  const token = await accessToken()
+  const resp = await fetch('/api/importados-sync/sales', {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/json',
+    },
+  })
+  const json = (await resp.json().catch(() => ({}))) as {
+    ok?: boolean
+    error?: string
+    sales?: ImportadosSalesPayload
+  }
+  if (!resp.ok || json.ok === false) {
+    throw new Error(json.error || `Error HTTP ${resp.status}`)
+  }
+  return json.sales ?? { lines: [], ingestError: null, tableMissing: false }
+}
+
+/** Une la misma variante (mismo proveedor + IDs) en una fila con ×N. */
+export function mergeOrderLines(order: ImportadosOrderRow): DisplayImportadosLine[] {
+  const map = new Map<string, DisplayImportadosLine>()
+  for (const line of order.lines) {
+    const identity = [
+      line.trackedProductId || '',
+      line.notmidVariantId || '',
+      line.supplierVariantId || '',
+      line.provider || 'notmid',
+      line.title.trim().toLowerCase(),
+      (line.variantTitle || '').trim().toLowerCase(),
+    ].join('::')
+    const existing = map.get(identity)
+    if (!existing) {
+      map.set(identity, {
+        ...line,
+        unmatchedVariant: Boolean(line.unmatchedVariant),
+        memberIds: [line.lineItemId],
+      })
+      continue
+    }
+    existing.quantity += line.quantity
+    existing.supplierUrls = [...existing.supplierUrls, ...line.supplierUrls]
+    existing.unmatchedVariant = existing.unmatchedVariant || Boolean(line.unmatchedVariant)
+    existing.memberIds.push(line.lineItemId)
+  }
+  return [...map.values()]
 }
 
 /**

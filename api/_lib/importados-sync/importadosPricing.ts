@@ -38,6 +38,10 @@ export type SyncImportadosQuote = {
   fleteAeroboxUsd: number
   envioDomicilioUsd: number
   marginLabel: string
+  /** Costo operativo unitario con fricción (USD), sin margen de venta */
+  costoConFriccionUsd: number
+  /** Mismo costo convertido con MEP +2% */
+  costoConFriccionArs: number
 }
 
 function resolveMargin(costoProductoUsd: number): { label: string; marginRate: number; fixedUsd: number } {
@@ -108,10 +112,51 @@ export function quoteImportadosForSync(inputs: SyncImportadosInputs): SyncImport
     fleteAeroboxUsd,
     envioDomicilioUsd,
     marginLabel: margin.label,
+    costoConFriccionUsd,
+    costoConFriccionArs: costoConFriccionUsd * dolarMepConvertido,
+  }
+}
+
+/** Costo unitario ARS (Aerobox + handling + SAS + fricción + MEP). Null si falta input. */
+export function unitCostWithFrictionArs(inputs: {
+  costoProductoUsd: number | null | undefined
+  pesoKg: number | null | undefined
+  dolarArs: number | null | undefined
+}): number | null {
+  const costoProductoUsd = Number(inputs.costoProductoUsd)
+  const pesoKg = Number(inputs.pesoKg)
+  const dolarArs = Number(inputs.dolarArs)
+  if (!Number.isFinite(costoProductoUsd) || costoProductoUsd <= 0) return null
+  if (!Number.isFinite(pesoKg) || pesoKg <= 0) return null
+  if (!Number.isFinite(dolarArs) || dolarArs <= 0) return null
+  try {
+    return quoteImportadosForSync({ costoProductoUsd, pesoKg, dolarArs }).costoConFriccionArs
+  } catch {
+    return null
   }
 }
 
 /** Precio Shopify: cuotas / tarjeta (ARS), blindado MP 6 cuotas. */
 export function shopifyPriceFromQuote(quote: SyncImportadosQuote): number {
   return normalizeStorePriceArs(quote.precioCuotasArs)
+}
+
+/** ARS de venta NotMid a partir de costo USD proveedor + peso + MEP. */
+export function shopifyArsFromSupplierUsd(opts: {
+  costoProductoUsd: number
+  pesoKg: number
+  dolarArs: number
+}): number {
+  const quote = quoteImportadosForSync({
+    ...SYNC_IMPORTADOS_DEFAULTS,
+    costoProductoUsd: opts.costoProductoUsd,
+    pesoKg: opts.pesoKg,
+    dolarArs: opts.dolarArs,
+  })
+  return shopifyPriceFromQuote(quote)
+}
+
+export function pricesArsEqual(a: number | null | undefined, b: number): boolean {
+  if (a === null || a === undefined || !Number.isFinite(a)) return false
+  return Math.abs(Number(a) - b) < 0.5
 }

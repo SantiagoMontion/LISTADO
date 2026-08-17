@@ -3,7 +3,23 @@ import { getShopifyEnv } from './env.js'
 type ShopifyJson = Record<string, unknown>
 
 let cachedLocationId: string | null = null
+let cachedPrimaryLocation: { id: string; name: string } | null = null
 let cachedImportadosCollectionId: string | null = null
+let shopifyWriteChain: Promise<void> = Promise.resolve()
+
+/** Serializa writes a Shopify y deja un gap mínimo (plan: 2 req/s). */
+async function withShopifyPace<T>(fn: () => Promise<T>, gapMs = 550): Promise<T> {
+  const run = shopifyWriteChain.then(async () => {
+    const result = await fn()
+    await new Promise((r) => setTimeout(r, gapMs))
+    return result
+  })
+  shopifyWriteChain = run.then(
+    () => undefined,
+    () => undefined,
+  )
+  return run
+}
 
 const IMPORTADOS_COLLECTION_TITLE = 'IMPORTADOS'
 
@@ -132,6 +148,37 @@ async function addProductToImportadosCollection(productId: string): Promise<void
   }
 }
 
+type ShopifyLocation = {
+  id?: number | string
+  name?: string
+  active?: boolean
+  legacy?: boolean
+}
+
+async function listShopifyLocations(): Promise<ShopifyLocation[]> {
+  const { ok, status, json, text } = await shopifyFetch('locations.json')
+  if (!ok) {
+    throw new Error(`Shopify locations.json failed (${status}): ${text.slice(0, 300)}`)
+  }
+  return (json?.locations as ShopifyLocation[] | undefined) ?? []
+}
+
+function pickPrimaryLocation(locations: ShopifyLocation[]): ShopifyLocation | null {
+  const active = locations.filter((loc) => loc.active !== false)
+  const pool = active.length ? active : locations
+  if (!pool.length) return null
+
+  const byName = pool.find((loc) =>
+    /san\s*juan|taller/i.test(String(loc.name || '')),
+  )
+  if (byName) return byName
+
+  const legacy = pool.find((loc) => loc.legacy === true)
+  if (legacy) return legacy
+
+  return pool[0]
+}
+
 export async function resolveLocationId(): Promise<string> {
   const configured = getShopifyEnv().locationId
   if (configured) {
@@ -142,18 +189,62 @@ export async function resolveLocationId(): Promise<string> {
 
   if (cachedLocationId) return cachedLocationId
 
-  const { ok, status, json, text } = await shopifyFetch('locations.json')
-  if (!ok) {
-    throw new Error(`Shopify locations.json failed (${status}): ${text.slice(0, 300)}`)
-  }
-
-  const locations = (json?.locations as Array<{ id?: number; active?: boolean }> | undefined) ?? []
-  const active = locations.find((loc) => loc.active !== false) ?? locations[0]
-  const id = extractNumericId(active?.id)
+  const locations = await listShopifyLocations()
+  const picked = pickPrimaryLocation(locations)
+  const id = extractNumericId(picked?.id)
   if (!id) throw new Error('Shopify returned no usable location id')
 
   cachedLocationId = id
   return id
+}
+
+/**
+ * Una sola ubicación: Taller/San Juan (o SHOPIFY_LOCATION_ID).
+ * Escribir en varias + relocate vaciaba San Juan en el siguiente sync.
+ */
+export async function resolveInventoryTargetLocations(): Promise<
+  Array<{ id: string; name: string }>
+> {
+  if (cachedPrimaryLocation) return [cachedPrimaryLocation]
+
+  const configured = getShopifyEnv().locationId
+  if (configured) {
+    const id = extractNumericId(configured)
+    if (!id) throw new Error(`Invalid SHOPIFY_LOCATION_ID: ${configured}`)
+    cachedPrimaryLocation = { id, name: 'configured' }
+    cachedLocationId = id
+    return [cachedPrimaryLocation]
+  }
+
+  const locations = await listShopifyLocations()
+  const picked = pickPrimaryLocation(locations)
+  const id = extractNumericId(picked?.id)
+  if (!id) throw new Error('Shopify returned no usable location id')
+  cachedPrimaryLocation = { id, name: String(picked?.name || id) }
+  cachedLocationId = id
+  return [cachedPrimaryLocation]
+}
+
+async function connectInventoryLevel(
+  locationId: string,
+  inventoryItemId: string,
+): Promise<void> {
+  const { ok, status, text } = await shopifyFetch('inventory_levels/connect.json', {
+    method: 'POST',
+    body: JSON.stringify({
+      location_id: Number(locationId),
+      inventory_item_id: Number(inventoryItemId),
+      // NUNCA relocate: Shopify movía el stock de San Juan a otra ubicación.
+      relocate_if_necessary: false,
+    }),
+  })
+  // 422 "already connected" / already stocked elsewhere sin relocate es manejable:
+  // si no está conectado y no podemos relocate, el set puede fallar y lo reportamos.
+  if (!ok && status !== 422) {
+    throw new Error(
+      `Shopify inventory_levels/connect failed (${status}): ${text.slice(0, 300)}`,
+    )
+  }
 }
 
 export async function getVariantInventoryItemId(variantId: string): Promise<string> {
@@ -202,34 +293,229 @@ export function shopifyAdminProductUrl(productId: string): string {
   return `https://admin.shopify.com/store/${storeHandle}/products/${productId}`
 }
 
-export async function setVariantInventoryAvailable(
-  variantId: string,
-  available: number,
-): Promise<void> {
-  const inventoryItemId = await getVariantInventoryItemId(variantId)
-  const locationId = await resolveLocationId()
-  const qty = Math.max(0, Math.trunc(Number(available) || 0))
-
-  const body = JSON.stringify({
-    location_id: Number(locationId),
-    inventory_item_id: Number(inventoryItemId),
-    available: qty,
+async function ensureInventoryItemTracked(inventoryItemId: string): Promise<void> {
+  const { ok, status, text } = await shopifyFetch(`inventory_items/${inventoryItemId}.json`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      inventory_item: {
+        id: Number(inventoryItemId),
+        tracked: true,
+      },
+    }),
   })
-
-  const { ok, status, text } = await shopifyFetch('inventory_levels/set.json', {
-    method: 'POST',
-    body,
-  })
-
   if (!ok) {
     throw new Error(
-      `Shopify inventory_levels/set failed for variant ${variantId} (${status}): ${text.slice(0, 400)}`,
+      `Shopify inventory_items tracked failed (${status}): ${text.slice(0, 300)}`,
     )
   }
 }
 
+export type NotmidVariantRow = {
+  id: string
+  title: string
+  sku: string | null
+  option1: string | null
+  option2: string | null
+  option3: string | null
+  inventoryItemId: string | null
+  /** Precio actual en NotMid (ARS). */
+  price: number | null
+}
+
+export async function fetchNotmidProductVariants(
+  productId: string,
+): Promise<NotmidVariantRow[]> {
+  const numericId = extractNumericId(productId)
+  if (!numericId) throw new Error(`Invalid Shopify product id: ${productId}`)
+  const { ok, status, json, text } = await shopifyFetch(
+    `products/${numericId}.json?fields=id,variants`,
+  )
+  if (!ok) {
+    throw new Error(`Shopify product ${numericId} failed (${status}): ${text.slice(0, 300)}`)
+  }
+  const variants =
+    (json?.product as {
+      variants?: Array<{
+        id?: number | string
+        title?: string
+        sku?: string | null
+        price?: string | number | null
+        option1?: string | null
+        option2?: string | null
+        option3?: string | null
+        inventory_item_id?: number | string
+      }>
+    } | undefined)?.variants ?? []
+
+  return variants
+    .map((v) => {
+      const id = extractNumericId(v.id)
+      if (!id) return null
+      const rawPrice = v.price
+      const priceNum =
+        rawPrice === null || rawPrice === undefined || rawPrice === ''
+          ? null
+          : Number(rawPrice)
+      return {
+        id,
+        title: (v.title || '').trim(),
+        sku: v.sku?.trim() || null,
+        option1: v.option1 ?? null,
+        option2: v.option2 ?? null,
+        option3: v.option3 ?? null,
+        inventoryItemId: extractNumericId(v.inventory_item_id),
+        price: priceNum !== null && Number.isFinite(priceNum) ? priceNum : null,
+      } satisfies NotmidVariantRow
+    })
+    .filter((v): v is NotmidVariantRow => Boolean(v))
+}
+
+/** Actualiza precio de una variante NotMid (ARS). */
+export async function updateVariantPrice(
+  variantId: string,
+  priceArs: number,
+): Promise<void> {
+  const numericVariantId = extractNumericId(variantId)
+  if (!numericVariantId) throw new Error(`Invalid Shopify variant id: ${variantId}`)
+  const price = Number(priceArs)
+  if (!Number.isFinite(price) || price <= 0) {
+    throw new Error(`Precio inválido para variante ${numericVariantId}: ${priceArs}`)
+  }
+
+  await withShopifyPace(async () => {
+    const { ok, status, text } = await shopifyFetch(`variants/${numericVariantId}.json`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        variant: {
+          id: Number(numericVariantId),
+          price: price.toFixed(2),
+        },
+      }),
+    })
+    if (!ok) {
+      throw new Error(
+        `Shopify update variant price failed (${status}): ${text.slice(0, 300)}`,
+      )
+    }
+  })
+}
+
+export async function setVariantInventoryAvailable(
+  variantId: string,
+  available: number,
+): Promise<{ locationIds: string[]; quantity: number; errors: string[] }> {
+  return withShopifyPace(async () => {
+    const inventoryItemId = await getVariantInventoryItemId(variantId)
+    await ensureInventoryItemTracked(inventoryItemId)
+    const locations = await resolveInventoryTargetLocations()
+    const qty = Math.max(0, Math.trunc(Number(available) || 0))
+    const locationIds: string[] = []
+    const errors: string[] = []
+
+    for (const loc of locations) {
+      try {
+        await connectInventoryLevel(loc.id, inventoryItemId)
+        const { ok, status, text } = await shopifyFetch('inventory_levels/set.json', {
+          method: 'POST',
+          body: JSON.stringify({
+            location_id: Number(loc.id),
+            inventory_item_id: Number(inventoryItemId),
+            available: qty,
+          }),
+        })
+        if (!ok) {
+          errors.push(`${loc.name}: ${status} ${text.slice(0, 160)}`)
+          continue
+        }
+        locationIds.push(loc.id)
+      } catch (err) {
+        errors.push(
+          `${loc.name}: ${err instanceof Error ? err.message : String(err)}`,
+        )
+      }
+    }
+
+    if (!locationIds.length) {
+      throw new Error(
+        `No pude setear inventario para variant ${variantId}. ${errors.join(' | ')}`,
+      )
+    }
+
+    if (locationIds[0]) cachedLocationId = locationIds[0]
+    return { locationIds, quantity: qty, errors }
+  })
+}
+
 export async function setVariantInventoryToZero(variantId: string): Promise<void> {
   await setVariantInventoryAvailable(variantId, 0)
+}
+
+/**
+ * Tras alta rápida (skipInventorySetup): poner stock inicial antes del sync fino.
+ * Usa qty del catálogo (available → ≥1). El cron/processOne ajusta con cart probe.
+ */
+export async function bootstrapCreatedProductInventory(
+  variantMap: CreatedVariantMapEntry[],
+  rows: Array<{ supplierVariantId: string; inventoryQuantity: number }>,
+): Promise<number> {
+  const qtyBySupplier = new Map(
+    rows.map((r) => [String(r.supplierVariantId), Math.max(0, Math.trunc(r.inventoryQuantity))]),
+  )
+  let restocked = 0
+  for (const entry of variantMap) {
+    const qty = qtyBySupplier.get(String(entry.supplierVariantId)) ?? 0
+    if (qty <= 0) continue
+    try {
+      await setVariantInventoryAvailable(entry.notmidVariantId, qty)
+      restocked += 1
+    } catch (err) {
+      console.warn(
+        '[shopify] bootstrap inventory failed',
+        entry.notmidVariantId,
+        err instanceof Error ? err.message : String(err),
+      )
+    }
+  }
+  return restocked
+}
+
+/** Stock available en la ubicación primaria (San Juan / configurada). */
+export async function getVariantInventoryAtPrimaryLocation(variantId: string): Promise<{
+  locationId: string
+  locationName: string
+  available: number
+  connected: boolean
+}> {
+  const inventoryItemId = await getVariantInventoryItemId(variantId)
+  const locations = await resolveInventoryTargetLocations()
+  const loc = locations[0]
+  if (!loc) throw new Error('No hay ubicación de inventario')
+
+  const { ok, status, json, text } = await shopifyFetch(
+    `inventory_levels.json?inventory_item_ids=${encodeURIComponent(inventoryItemId)}&location_ids=${encodeURIComponent(loc.id)}`,
+  )
+  if (!ok) {
+    throw new Error(
+      `Shopify inventory_levels failed (${status}): ${text.slice(0, 300)}`,
+    )
+  }
+  const levels =
+    (json?.inventory_levels as Array<{ available?: number | null }> | undefined) ?? []
+  if (!levels.length) {
+    return {
+      locationId: loc.id,
+      locationName: loc.name,
+      available: 0,
+      connected: false,
+    }
+  }
+  const available = Number(levels[0]?.available)
+  return {
+    locationId: loc.id,
+    locationName: loc.name,
+    available: Number.isFinite(available) ? available : 0,
+    connected: true,
+  }
 }
 
 export type CreateNotmidVariantInput = {
@@ -258,6 +544,10 @@ export type CreateNotmidProductInput = {
   sourceUrl: string
   provider: string
   tags?: string[]
+  /** Alta: el cron setea stock real después (evita timeout con muchas variantes). */
+  skipInventorySetup?: boolean
+  /** Alta: solo galería; asignar fotos por variante queda para edición manual / sync. */
+  skipVariantFeaturedImages?: boolean
 }
 
 export type CreatedVariantMapEntry = {
@@ -463,6 +753,7 @@ async function attachAllImages(params: {
   sourceUrl: string
   variantFeaturedImageByOption: Record<string, string>
   optionToVariantId: Record<string, string[]>
+  skipVariantFeaturedImages?: boolean
 }): Promise<{ attached: number; warnings: string[] }> {
   const warnings: string[] = []
   let attached = 0
@@ -494,6 +785,7 @@ async function attachAllImages(params: {
     imageId: string,
     option: string,
   ): Promise<void> {
+    if (params.skipVariantFeaturedImages) return
     const { ok, status, text } = await shopifyFetch(`variants/${variantId}.json`, {
       method: 'PUT',
       body: JSON.stringify({
@@ -514,7 +806,8 @@ async function attachAllImages(params: {
     const result = await uploadProductImage({
       productId: params.productId,
       imageUrl: url,
-      variantIds: variantIds.length ? variantIds : undefined,
+      variantIds:
+        params.skipVariantFeaturedImages || !variantIds.length ? undefined : variantIds,
     })
     if (result.warning) warnings.push(result.warning)
     if (!result.imageId) continue
@@ -530,21 +823,23 @@ async function attachAllImages(params: {
   }
 
   // Si alguna featured no estaba en la galería, subirla aparte
-  for (const entry of featuredEntries) {
-    if (assignedOptions.has(entry.option)) continue
-    const result = await uploadProductImage({
-      productId: params.productId,
-      imageUrl: entry.url,
-      variantIds: entry.variantIds.map(Number),
-    })
-    if (result.warning) warnings.push(result.warning)
-    if (!result.imageId) {
-      warnings.push(`No pude subir la foto de frente de «${entry.option}»`)
-      continue
-    }
-    attached += 1
-    for (const variantId of entry.variantIds) {
-      await setVariantImage(variantId, result.imageId, entry.option)
+  if (!params.skipVariantFeaturedImages) {
+    for (const entry of featuredEntries) {
+      if (assignedOptions.has(entry.option)) continue
+      const result = await uploadProductImage({
+        productId: params.productId,
+        imageUrl: entry.url,
+        variantIds: entry.variantIds.map(Number),
+      })
+      if (result.warning) warnings.push(result.warning)
+      if (!result.imageId) {
+        warnings.push(`No pude subir la foto de frente de «${entry.option}»`)
+        continue
+      }
+      attached += 1
+      for (const variantId of entry.variantIds) {
+        await setVariantImage(variantId, result.imageId, entry.option)
+      }
     }
   }
 
@@ -743,14 +1038,17 @@ export async function createNotmidProductFromCatalog(
       notmidVariantId,
       sku: created.sku || row?.source.sku || null,
     })
-
-    // Inventario por variante (qty del proveedor; 0 si OOS)
-    try {
-      await setVariantInventoryAvailable(notmidVariantId, row?.source.inventoryQuantity ?? 0)
-    } catch (err) {
-      console.error('[shopify] inventory set failed', label, err)
-    }
   }
+
+  // Stock ANTES de las fotos. Si el alta se queda sin tiempo en las imágenes,
+  // el producto no puede quedar en 0 en Taller.
+  await bootstrapCreatedProductInventory(
+    variantMap,
+    input.variants.map((v) => ({
+      supplierVariantId: v.supplierVariantId,
+      inventoryQuantity: v.inventoryQuantity,
+    })),
+  )
 
   const imageResult = await attachAllImages({
     productId,
@@ -762,6 +1060,7 @@ export async function createNotmidProductFromCatalog(
         Object.entries(input.imageOptionByUrl ?? {}).map(([url, option]) => [option, url]),
       ),
     optionToVariantId,
+    skipVariantFeaturedImages: input.skipVariantFeaturedImages === true,
   })
 
   const firstVariantId = variantMap[0]?.notmidVariantId

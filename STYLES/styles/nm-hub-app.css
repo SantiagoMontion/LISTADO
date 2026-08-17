@@ -10614,30 +10614,6 @@ a.importados-orders-card__order:hover {
   justify-content: flex-end;
 }
 
-.importados-orders-card--demo {
-  border-style: dashed;
-  background: linear-gradient(180deg, #fcfcff 0%, #fff 55%);
-}
-
-.importados-orders-demo-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.15rem 0.5rem;
-  border-radius: 999px;
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: #7c3aed;
-  background: rgba(124, 58, 237, 0.1);
-  border: 1px solid rgba(124, 58, 237, 0.22);
-}
-
-.importados-orders-meta__demo {
-  color: #7c3aed;
-  font-weight: 700;
-}
-
 .importados-orders-filters {
   display: flex;
   flex-wrap: wrap;
@@ -10850,6 +10826,104 @@ a.importados-orders-card__order:hover {
 .importados-orders-line__variant {
   font-weight: 650;
   color: #334155;
+}
+
+.importados-orders-line__warn {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #b45309;
+}
+
+.importados-orders-tabs {
+  display: flex;
+  gap: 0.4rem;
+  margin: 0 0 0.85rem;
+}
+
+.importados-orders-tab {
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  background: #fff;
+  color: #334155;
+  border-radius: 999px;
+  padding: 0.4rem 0.85rem;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.importados-orders-tab.is-active {
+  background: #0f172a;
+  color: #fff;
+  border-color: #0f172a;
+}
+
+.importados-sales-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.75rem;
+  margin: 0 0 1rem;
+}
+
+.importados-sales-kpi {
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 14px;
+  padding: 0.85rem 1rem;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.importados-sales-kpi span {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.importados-sales-kpi strong {
+  font-size: 1.2rem;
+  color: #0f172a;
+}
+
+.importados-sales-months {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 0.9rem;
+}
+
+.importados-sales-table-wrap {
+  overflow: auto;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.importados-sales-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+
+.importados-sales-table th,
+.importados-sales-table td {
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  white-space: nowrap;
+}
+
+.importados-sales-table th {
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.importados-sales-table td.num,
+.importados-sales-table th.num {
+  text-align: right;
 }
 
 

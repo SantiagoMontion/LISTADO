@@ -7,6 +7,7 @@ import { Hub3DApp } from './components/Hub3DApp'
 import { HubImportadosApp } from './components/HubImportadosApp'
 import { HubImportadosSyncApp } from './components/HubImportadosSyncApp'
 import { HubImportadosPedidosApp } from './components/HubImportadosPedidosApp'
+import { HubImportadosAnalyticsApp } from './components/HubImportadosAnalyticsApp'
 import { HubPersonalizadosPdfsApp } from './components/HubPersonalizadosPdfsApp'
 import { HubTrendsApp } from './components/HubTrendsApp'
 import { HubAdminCutAnalytics } from './components/HubAdminCutAnalytics'
@@ -193,6 +194,7 @@ export default function App() {
   const isHubImportados = path === '/importados'
   const isHubImportadosSync = path === '/importados-sync'
   const isHubImportadosPedidos = path === '/importados-pedidos'
+  const isHubImportadosAnalytics = path === '/importados-pedidos/analitica'
   const isHubPersonalizadosPdfs = path === '/pdfs-impresion'
   const isHubTrends = path === '/trends'
   const isHubHome = path === '/' || path === ''
@@ -1065,6 +1067,7 @@ export default function App() {
       isHubImportados ||
       isHubImportadosSync ||
       isHubImportadosPedidos ||
+      isHubImportadosAnalytics ||
       isHubPersonalizadosPdfs ||
       isHubTrends) &&
     !profileReady
@@ -1101,6 +1104,7 @@ export default function App() {
       isHubImportados ||
       isHubImportadosSync ||
       isHubImportadosPedidos ||
+      isHubImportadosAnalytics ||
       isHubPersonalizadosPdfs ||
       isHubTrends) &&
     profileReady &&
@@ -1175,6 +1179,24 @@ export default function App() {
     getHubPermissions(profile.role)?.viewImportadosSync
   ) {
     return <HubImportadosSyncApp profileRole={profile.role} adminSignOut />
+  }
+
+  if (
+    authEnabled &&
+    authReady &&
+    session &&
+    isHubImportadosAnalytics &&
+    profileReady &&
+    profile &&
+    getHubPermissions(profile.role)?.viewImportadosOrders
+  ) {
+    return (
+      <HubImportadosAnalyticsApp
+        configured={configured}
+        role={profile.role}
+        adminSignOut
+      />
+    )
   }
 
   if (
@@ -1292,7 +1314,7 @@ export default function App() {
 
   if (
     !authEnabled &&
-    (isHubDispatchedCalendar || isHubDispatchedCargar || isHubDispatchedAnalytics || isHubCutAnalytics || isLogisticaAndreani || isHub3D || isHubImportados || isHubImportadosSync || isHubImportadosPedidos || isHubPersonalizadosPdfs || isHubTrends)
+    (isHubDispatchedCalendar || isHubDispatchedCargar || isHubDispatchedAnalytics || isHubCutAnalytics || isLogisticaAndreani || isHub3D || isHubImportados || isHubImportadosSync || isHubImportadosPedidos || isHubImportadosAnalytics || isHubPersonalizadosPdfs || isHubTrends)
   ) {
     return (
       <div className="nm-hub-app">

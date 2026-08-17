@@ -5,6 +5,7 @@ import { HubTasksPillSelect, type HubTasksPillOption } from './HubTasksPillSelec
 import { formatSupabaseOrError } from '../lib/errors'
 import {
   listImportadosOrders,
+  mergeOrderLines,
   openSupplierOrderTabs,
   type ImportadosOrderRow,
 } from '../lib/importadosOrdersApi'
@@ -18,6 +19,7 @@ interface HubImportadosPedidosAppProps {
 type CourierAviso = 'pendiente' | 'completo'
 type CourierAvisoFilter = 'all' | CourierAviso
 type CompraFilter = 'all' | 'sin_comprar' | 'comprados'
+type LineCompraStatus = 'pendiente' | 'realizado'
 
 const COURIER_AVISO_OPTIONS: HubTasksPillOption<CourierAviso>[] = [
   {
@@ -60,47 +62,18 @@ const COMPRA_FILTER_OPTIONS: HubTasksPillOption<CompraFilter>[] = [
   },
 ]
 
-/** Solo front: no se crea en Shopify. Sirve para ver layout y el dropdown. */
-const DEMO_ORDER: ImportadosOrderRow = {
-  orderId: 'demo-importados-1',
-  orderName: '#15999',
-  createdAt: new Date().toISOString(),
-  financialStatus: 'paid',
-  fulfillmentStatus: null,
-  adminUrl: '#',
-  lines: [
-    {
-      lineItemId: 'demo-line-1',
-      title: 'Teclado 60% | Importados',
-      variantTitle: 'Negro / 60%',
-      quantity: 2,
-      supplierUrls: [
-        'https://lethal.gg/products/demo-60-keyboard?variant=111',
-        'https://lethal.gg/products/demo-60-keyboard?variant=111',
-      ],
-      provider: 'lethal',
-      trackedProductId: 'demo-tracked-1',
-      notmidVariantId: 'demo-variant-1',
-      supplierVariantId: '111',
-    },
-    {
-      lineItemId: 'demo-line-2',
-      title: 'Mousepad PRO Custom | Importados',
-      variantTitle: null,
-      quantity: 1,
-      supplierUrls: ['https://mechanicalkeyboards.com/products/demo-mousepad'],
-      provider: 'mk',
-      trackedProductId: 'demo-tracked-2',
-      notmidVariantId: 'demo-variant-2',
-      supplierVariantId: null,
-    },
-  ],
-  allSupplierUrls: [
-    'https://lethal.gg/products/demo-60-keyboard?variant=111',
-    'https://lethal.gg/products/demo-60-keyboard?variant=111',
-    'https://mechanicalkeyboards.com/products/demo-mousepad',
-  ],
-}
+const LINE_COMPRA_OPTIONS: HubTasksPillOption<LineCompraStatus>[] = [
+  {
+    value: 'pendiente',
+    label: 'Pendiente',
+    toneClass: 'hub-tasks-tracking-sent-select--pendiente',
+  },
+  {
+    value: 'realizado',
+    label: 'Realizado',
+    toneClass: 'hub-tasks-tracking-sent-select--enviado',
+  },
+]
 
 function formatWhen(iso: string): string {
   if (!iso) return '—'
@@ -114,12 +87,14 @@ function formatWhen(iso: string): string {
   }
 }
 
-function providerLabel(provider: 'lethal' | 'mk'): string {
-  return provider === 'lethal' ? 'Lethal' : 'MK'
+function providerLabel(provider: 'lethal' | 'mk' | null): string {
+  if (provider === 'lethal') return 'Lethal'
+  if (provider === 'mk') return 'MK'
+  return 'NotMid'
 }
 
-function isDemoOrder(order: ImportadosOrderRow): boolean {
-  return order.orderId === DEMO_ORDER.orderId
+function lineKey(orderId: string, lineItemId: string): string {
+  return `${orderId}:${lineItemId}`
 }
 
 export function HubImportadosPedidosApp({
@@ -130,18 +105,17 @@ export function HubImportadosPedidosApp({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
-  const [courierAvisoByOrder, setCourierAvisoByOrder] = useState<Record<string, CourierAviso>>({
-    [DEMO_ORDER.orderId]: 'pendiente',
-  })
-  const [realizadoByOrder, setRealizadoByOrder] = useState<Record<string, boolean>>({
-    [DEMO_ORDER.orderId]: false,
-  })
+  const [courierAvisoByOrder, setCourierAvisoByOrder] = useState<Record<string, CourierAviso>>(
+    {},
+  )
+  const [realizadoByLine, setRealizadoByLine] = useState<Record<string, boolean>>({})
   const [avisoFilter, setAvisoFilter] = useState<CourierAvisoFilter>('all')
   const [compraFilter, setCompraFilter] = useState<CompraFilter>('all')
 
   const reload = useCallback(async () => {
     setLoading(true)
     setError(null)
+    setNotice(null)
     try {
       const data = await listImportadosOrders()
       setOrders(data.orders)
@@ -157,46 +131,42 @@ export function HubImportadosPedidosApp({
     void reload()
   }, [reload])
 
-  const allOrders = useMemo(() => {
-    const withoutDemo = orders.filter((o) => o.orderId !== DEMO_ORDER.orderId)
-    return [DEMO_ORDER, ...withoutDemo]
-  }, [orders])
-
   function courierAvisoFor(orderId: string): CourierAviso {
-    return courierAvisoByOrder[orderId] ?? 'pendiente'
+    return courierAvisoByOrder[orderId] || 'pendiente'
   }
 
-  function realizadoFor(orderId: string): boolean {
-    return Boolean(realizadoByOrder[orderId])
+  function lineRealizado(orderId: string, memberIds: string[]): boolean {
+    return memberIds.every((id) => Boolean(realizadoByLine[lineKey(orderId, id)]))
+  }
+
+  function orderAllRealizado(order: ImportadosOrderRow): boolean {
+    const lines = mergeOrderLines(order)
+    if (!lines.length) return false
+    return lines.every((line) => lineRealizado(order.orderId, line.memberIds))
+  }
+
+  function orderAnyRealizado(order: ImportadosOrderRow): boolean {
+    const lines = mergeOrderLines(order)
+    return lines.some((line) => lineRealizado(order.orderId, line.memberIds))
   }
 
   const filteredOrders = useMemo(() => {
-    return allOrders.filter((order) => {
-      const aviso = courierAvisoByOrder[order.orderId] ?? 'pendiente'
-      const realizado = Boolean(realizadoByOrder[order.orderId])
-
+    return orders.filter((order) => {
+      const aviso = courierAvisoFor(order.orderId)
       if (avisoFilter !== 'all' && aviso !== avisoFilter) return false
-      if (compraFilter === 'sin_comprar' && realizado) return false
-      if (compraFilter === 'comprados' && !realizado) return false
+      const allDone = orderAllRealizado(order)
+      const anyDone = orderAnyRealizado(order)
+      if (compraFilter === 'sin_comprar' && allDone) return false
+      if (compraFilter === 'comprados' && !anyDone) return false
       return true
     })
-  }, [allOrders, avisoFilter, compraFilter, courierAvisoByOrder, realizadoByOrder])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- helpers use state maps
+  }, [orders, avisoFilter, compraFilter, courierAvisoByOrder, realizadoByLine])
 
-  const units = useMemo(
-    () => filteredOrders.reduce((sum, o) => sum + o.allSupplierUrls.length, 0),
-    [filteredOrders],
-  )
-
-  function onHacerPedido(order: ImportadosOrderRow, urls: string[]) {
+  function onHacerPedido(urls: string[]) {
     setNotice(null)
-    if (isDemoOrder(order)) {
-      setNotice(
-        'Este es un pedido de ejemplo (solo preview). No se abre nada en el proveedor.',
-      )
-      return
-    }
     if (!urls.length) {
-      setNotice('No hay links de proveedor para este pedido.')
+      setNotice('No hay links de proveedor para este ítem.')
       return
     }
     const { opened, blocked } = openSupplierOrderTabs(urls)
@@ -214,7 +184,7 @@ export function HubImportadosPedidosApp({
   }
 
   return (
-    <div className="nm-hub-app nm-hub-app--3d nm-hub-app--importados">
+    <div className="nm-hub-app nm-hub-app--importados">
       <header className="dashboard-navbar dashboard-navbar-clean nm-hub-header">
         <HubBrandBar
           integratedDashboard
@@ -222,59 +192,21 @@ export function HubImportadosPedidosApp({
           adminSignOut={adminSignOut}
         />
       </header>
+
       <HubDesktopNav role={profileRole} />
 
       <div className="printing3d-page importados-page importados-orders-page">
-        <header className="printing3d-page__head">
-          <div className="printing3d-page__head-row">
-            <h1 className="printing3d-page__title">Pedidos importados</h1>
-            <button
-              type="button"
-              className="importados-orders-refresh"
-              onClick={() => void reload()}
-              disabled={loading}
-            >
-              {loading ? 'Actualizando…' : 'Actualizar'}
-            </button>
-          </div>
-          <p className="printing3d-page__lead importados-page__lead">
-            Pedidos pagados y sin preparar que incluyen productos Importados. «Hacer pedido»
-            abre el link exacto en Lethal/MK — una pestaña por cada unidad.
-          </p>
+        <header className="printing3d-page__head importados-orders-head">
+          <h1 className="printing3d-page__title">Pedidos importados</h1>
+          <button
+            type="button"
+            className="importados-orders-refresh"
+            onClick={() => void reload()}
+            disabled={loading}
+          >
+            {loading ? 'Actualizando…' : 'Actualizar'}
+          </button>
         </header>
-
-        <div className="importados-orders-filters" role="search">
-          <div className="importados-orders-filter">
-            <span className="importados-orders-filter__label">Aviso de Currier</span>
-            <HubTasksPillSelect
-              value={avisoFilter}
-              options={COURIER_FILTER_OPTIONS}
-              aria-label="Filtrar por aviso de currier"
-              pillClassName="hub-tasks-status-select"
-              className="importados-orders-filter__select"
-              onChange={setAvisoFilter}
-            />
-          </div>
-          <div className="importados-orders-filter">
-            <span className="importados-orders-filter__label">Compra pendiente</span>
-            <HubTasksPillSelect
-              value={compraFilter}
-              options={COMPRA_FILTER_OPTIONS}
-              aria-label="Filtrar por estado de compra"
-              pillClassName="hub-tasks-status-select"
-              className="importados-orders-filter__select"
-              onChange={setCompraFilter}
-            />
-          </div>
-        </div>
-
-        {!loading && (
-          <p className="importados-orders-meta">
-            {filteredOrders.length} pedido{filteredOrders.length === 1 ? '' : 's'} · {units}{' '}
-            unidad{units === 1 ? '' : 'es'}
-            <span className="importados-orders-meta__demo"> · 1 ejemplo en preview</span>
-          </p>
-        )}
 
         {error ? (
           <p className="nm-hub-error" role="alert">
@@ -287,47 +219,59 @@ export function HubImportadosPedidosApp({
           </p>
         ) : null}
 
+        <div className="importados-orders-filters" role="search">
+          <div className="importados-orders-filter">
+            <span className="importados-orders-filter__label">Aviso de Currier</span>
+            <HubTasksPillSelect
+              value={avisoFilter}
+              options={COURIER_FILTER_OPTIONS}
+              aria-label="Filtrar por aviso de Currier"
+              className="importados-orders-filter__select"
+              onChange={setAvisoFilter}
+            />
+          </div>
+          <div className="importados-orders-filter">
+            <span className="importados-orders-filter__label">Compra pendiente</span>
+            <HubTasksPillSelect
+              value={compraFilter}
+              options={COMPRA_FILTER_OPTIONS}
+              aria-label="Filtrar por compra"
+              className="importados-orders-filter__select"
+              onChange={setCompraFilter}
+            />
+          </div>
+        </div>
+
         {loading ? (
           <p className="importados-orders-empty">Cargando pedidos…</p>
         ) : filteredOrders.length === 0 ? (
-          <p className="importados-orders-empty">
-            No hay pedidos con esos filtros.
-          </p>
+          <p className="importados-orders-empty">No hay pedidos con esos filtros.</p>
         ) : (
           <ul className="importados-orders-list">
             {filteredOrders.map((order) => {
-              const demo = isDemoOrder(order)
-              const realizado = realizadoFor(order.orderId)
+              const allDone = orderAllRealizado(order)
               return (
                 <li
                   key={order.orderId}
-                  className={`importados-orders-card${demo ? ' importados-orders-card--demo' : ''}${
-                    realizado ? ' importados-orders-card--realizado' : ''
+                  className={`importados-orders-card${
+                    allDone ? ' importados-orders-card--realizado' : ''
                   }`}
                 >
                   <div className="importados-orders-card__head">
                     <div>
                       <div className="importados-orders-card__title-row">
-                        {demo ? (
-                          <span className="importados-orders-card__order">
-                            {order.orderName}
-                          </span>
-                        ) : (
-                          <a
-                            className="importados-orders-card__order"
-                            href={order.adminUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            {order.orderName}
-                          </a>
-                        )}
-                        {demo ? (
-                          <span className="importados-orders-demo-badge">Ejemplo</span>
-                        ) : null}
+                        <a
+                          className="importados-orders-card__order"
+                          href={order.adminUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {order.orderName}
+                        </a>
                       </div>
                       <p className="importados-orders-card__when">
-                        {formatWhen(order.createdAt)}
+                        {formatWhen(order.createdAt)} · {order.lines.length} producto
+                        {order.lines.length === 1 ? '' : 's'}
                       </p>
                     </div>
                     <div className="importados-orders-card__actions">
@@ -346,57 +290,75 @@ export function HubImportadosPedidosApp({
                           }}
                         />
                       </div>
-                      <button
-                        type="button"
-                        className="importados-orders-hacer"
-                        onClick={() => onHacerPedido(order, order.allSupplierUrls)}
-                      >
-                        Hacer pedido
-                        {order.allSupplierUrls.length > 1
-                          ? ` (${order.allSupplierUrls.length})`
-                          : ''}
-                      </button>
-                      <label className="importados-orders-realizado">
-                        <input
-                          type="checkbox"
-                          checked={realizado}
-                          onChange={(e) => {
-                            const checked = e.target.checked
-                            setRealizadoByOrder((prev) => ({
-                              ...prev,
-                              [order.orderId]: checked,
-                            }))
-                          }}
-                        />
-                        <span>Realizado?</span>
-                      </label>
+                      {order.allSupplierUrls.length > 0 ? (
+                        <button
+                          type="button"
+                          className="importados-orders-hacer"
+                          onClick={() => onHacerPedido(order.allSupplierUrls)}
+                        >
+                          Hacer pedido
+                          {order.allSupplierUrls.length > 1
+                            ? ` (${order.allSupplierUrls.length})`
+                            : ''}
+                        </button>
+                      ) : null}
                     </div>
                   </div>
 
                   <ul className="importados-orders-lines">
-                    {order.lines.map((line) => (
-                      <li key={line.lineItemId} className="importados-orders-line">
-                        <div className="importados-orders-line__info">
-                          <strong>{line.title}</strong>
-                          {line.variantTitle ? (
-                            <span className="importados-orders-line__variant">
-                              {line.variantTitle}
+                    {mergeOrderLines(order).map((line) => {
+                      const done = lineRealizado(order.orderId, line.memberIds)
+                      return (
+                        <li key={line.memberIds.join('-')} className="importados-orders-line">
+                          <div className="importados-orders-line__info">
+                            <strong>{line.title}</strong>
+                            {line.variantTitle ? (
+                              <span className="importados-orders-line__variant">
+                                {line.variantTitle}
+                              </span>
+                            ) : null}
+                            <span className="importados-orders-line__meta">
+                              ×{line.quantity} · {providerLabel(line.provider)}
                             </span>
-                          ) : null}
-                          <span className="importados-orders-line__meta">
-                            ×{line.quantity} · {providerLabel(line.provider)}
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          className="importados-orders-hacer importados-orders-hacer--ghost"
-                          onClick={() => onHacerPedido(order, line.supplierUrls)}
-                        >
-                          Hacer pedido
-                          {line.quantity > 1 ? ` (${line.quantity})` : ''}
-                        </button>
-                      </li>
-                    ))}
+                            {line.trackedProductId && line.unmatchedVariant ? (
+                              <span className="importados-orders-line__warn">
+                                Sin variante de proveedor — no se abre el link
+                              </span>
+                            ) : null}
+                          </div>
+                          <div className="importados-orders-line__actions">
+                            {line.supplierUrls.length > 0 ? (
+                              <button
+                                type="button"
+                                className="importados-orders-hacer importados-orders-hacer--ghost"
+                                onClick={() => onHacerPedido(line.supplierUrls)}
+                              >
+                                Hacer pedido
+                                {line.supplierUrls.length > 1
+                                  ? ` (${line.supplierUrls.length})`
+                                  : ''}
+                              </button>
+                            ) : null}
+                            <HubTasksPillSelect
+                              value={done ? 'realizado' : 'pendiente'}
+                              options={LINE_COMPRA_OPTIONS}
+                              aria-label={`Estado compra ${line.title}`}
+                              pillClassName="hub-tasks-status-select"
+                              onChange={(value) => {
+                                const checked = value === 'realizado'
+                                setRealizadoByLine((prev) => {
+                                  const next = { ...prev }
+                                  for (const id of line.memberIds) {
+                                    next[lineKey(order.orderId, id)] = checked
+                                  }
+                                  return next
+                                })
+                              }}
+                            />
+                          </div>
+                        </li>
+                      )
+                    })}
                   </ul>
                 </li>
               )

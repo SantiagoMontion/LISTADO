@@ -16,9 +16,11 @@ import { importadosProductTitle } from '../_lib/importados-sync/productTitle.js'
 import {
   createNotmidProductFromCatalog,
   deleteNotmidProduct,
+  bootstrapCreatedProductInventory,
 } from '../_lib/importados-sync/shopify.js'
-import { getSupabase } from '../_lib/importados-sync/supabase.js'
-import { fetchSupplierCatalog } from '../_lib/importados-sync/supplierCatalog.js'
+import { processOne } from '../_lib/importados-sync/runSync.js'
+import { getSupabase, variantMapWithPesoKg, type TrackedProduct } from '../_lib/importados-sync/supabase.js'
+import { fetchSupplierCatalog, CREATE_CART_PROBE_MAX_VARIANTS } from '../_lib/importados-sync/supplierCatalog.js'
 
 function sendJson(res: VercelResponse, status: number, payload: unknown): void {
   res.setHeader('Content-Type', 'application/json; charset=utf-8')
@@ -195,10 +197,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return
     }
 
-    const [catalog, dolarMep] = await Promise.all([
-      fetchSupplierCatalog(provider, productUrl),
+    const [catalogFast, dolarMep] = await Promise.all([
+      // Fotos/título sin sondear el carrito (21 variantes × ~1.5s = timeout).
+      fetchSupplierCatalog(provider, productUrl, {
+        mode: 'full',
+        skipStockProbe: true,
+      }),
       fetchDolarMepQuote(),
     ])
+
+    let catalog = catalogFast
+    if (catalog.variants.length <= CREATE_CART_PROBE_MAX_VARIANTS) {
+      const stock = await fetchSupplierCatalog(provider, productUrl, {
+        mode: 'inventory',
+        skipStockProbe: false,
+      })
+      const qtyById = new Map(stock.variants.map((v) => [v.id, v]))
+      catalog = {
+        ...catalog,
+        inStock: stock.inStock,
+        variants: catalog.variants.map((v) => {
+          const live = qtyById.get(v.id)
+          if (!live) return v
+          return {
+            ...v,
+            inventoryQuantity: live.inventoryQuantity,
+            inventoryReliable: live.inventoryReliable,
+            available: live.available,
+            storefrontAvailable: live.storefrontAvailable,
+          }
+        }),
+      }
+    }
 
     const sb = getSupabase()
     const productTitle = importadosProductTitle(catalog.title)
@@ -227,7 +257,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       dolarArs: dolarMep.venta,
     })
     const shopifyPriceArs = shopifyPriceFromQuote(quote)
-    const bodyHtml = await publicProductDescriptionHtml(catalog.bodyHtml)
+    const bodyHtml = await publicProductDescriptionHtml(catalog.bodyHtml, {
+      skipTranslation: true,
+    })
+
+    const variantRows = catalog.variants.map((v) => {
+      const variantArs = shopifyPriceFromQuote(
+        quoteImportadosForSync({
+          ...SYNC_IMPORTADOS_DEFAULTS,
+          costoProductoUsd: v.priceUsd,
+          pesoKg,
+          dolarArs: dolarMep.venta,
+        }),
+      )
+      return {
+        option1: v.option1 || v.title,
+        option2: v.option2,
+        option3: v.option3,
+        sku: v.sku,
+        price: variantArs,
+        inventoryQuantity: v.inventoryQuantity,
+        supplierVariantId: v.id,
+      }
+    })
 
     const created = await createNotmidProductFromCatalog({
       title: productTitle,
@@ -235,21 +287,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       vendor: catalog.vendor,
       price: shopifyPriceArs,
       options: catalog.options,
-      variants: catalog.variants.map((v) => ({
-        option1: v.option1 || v.title,
-        option2: v.option2,
-        option3: v.option3,
-        sku: v.sku,
-        price: shopifyPriceArs,
-        inventoryQuantity: v.inventoryQuantity,
-        supplierVariantId: v.id,
-      })),
+      variants: variantRows,
       imageUrls: catalog.imageUrls,
       variantFeaturedImageByOption: catalog.variantFeaturedImageByOption,
       imageOptionByUrl: catalog.imageOptionByUrl,
       sourceUrl: catalog.sourceUrl,
       provider: catalog.provider,
+      skipInventorySetup: true,
+      skipVariantFeaturedImages: catalog.variants.length > 8,
     })
+
+    const variantMap = variantMapWithPesoKg(created.variantMap, pesoKg)
 
     const rowBase = {
       provider,
@@ -258,8 +306,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       product_title: productTitle,
       notmid_shopify_variant_id: created.variantId,
       current_price: catalog.price,
+      peso_kg: pesoKg,
       in_stock: catalog.inStock,
-      last_checked: new Date().toISOString(),
+      last_checked: null,
       is_active: true,
     }
 
@@ -272,7 +321,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         .insert({
           ...rowBase,
           notmid_shopify_product_id: created.productId,
-          variant_map: created.variantMap,
+          variant_map: variantMap,
         })
         .select(
           'id, provider, product_url, shopify_handle, product_title, notmid_shopify_variant_id, current_price, in_stock, last_checked, is_active',
@@ -280,6 +329,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         .single()
       data = full.data
       error = full.error
+    }
+
+    if (error && /peso_kg|column/i.test(error.message)) {
+      const { peso_kg: _drop, ...withoutPeso } = rowBase
+      const noPeso = await sb
+        .from('tracked_products')
+        .insert({
+          ...withoutPeso,
+          notmid_shopify_product_id: created.productId,
+          variant_map: variantMap,
+        })
+        .select(
+          'id, provider, product_url, shopify_handle, product_title, notmid_shopify_variant_id, current_price, in_stock, last_checked, is_active',
+        )
+        .single()
+      data = noPeso.data
+      error = noPeso.error
     }
 
     if (error && /variant_map|notmid_shopify_product_id|product_title|column/i.test(error.message)) {
@@ -290,7 +356,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         .insert({
           ...withoutTitle,
           notmid_shopify_product_id: created.productId,
-          variant_map: created.variantMap,
+          variant_map: variantMap,
         })
         .select(
           'id, provider, product_url, shopify_handle, notmid_shopify_variant_id, current_price, in_stock, last_checked, is_active',
@@ -339,6 +405,73 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       )
     }
 
+    const productId = String((data as { id?: string })?.id ?? '')
+    let stockNote = 'Stock en camino: el cron lo ajusta si esta corrida no llega a sondear Lethal.'
+
+    if (productId && created.variantMap?.length) {
+      let rowsForBootstrap = variantRows
+      const anyPositive = variantRows.some((r) => r.inventoryQuantity > 0)
+      if (!anyPositive && catalog.inStock) {
+        // .js del proveedor a veces marca todo OOS; piso 1 hasta el sondeo de carrito.
+        rowsForBootstrap = variantRows.map((r) => ({ ...r, inventoryQuantity: 1 }))
+      }
+
+      const bootstrapped = await bootstrapCreatedProductInventory(
+        created.variantMap,
+        rowsForBootstrap,
+      )
+      if (bootstrapped > 0) {
+        stockNote = `Stock inicial en ${bootstrapped} variante${bootstrapped === 1 ? '' : 's'}.`
+      }
+
+      const tracked: TrackedProduct = {
+        id: productId,
+        provider,
+        product_url: productUrl,
+        shopify_handle: catalog.shopifyHandle,
+        notmid_shopify_variant_id: created.variantId,
+        notmid_shopify_product_id: created.productId,
+        variant_map: variantMap,
+        current_price: catalog.price,
+        in_stock: catalog.inStock,
+        last_known_qty: null,
+        peso_kg: pesoKg,
+        oos_pending: {},
+        last_checked: null,
+        is_active: true,
+      }
+      try {
+        const sync = await processOne(tracked, { dolarArs: dolarMep.venta })
+        const qtys = sync.detail?.quantities ?? []
+        const live = qtys.filter((q) => q.qty > 0)
+        if (sync.error) {
+          stockNote =
+            bootstrapped > 0
+              ? `${stockNote} El cron termina de ajustar.`
+              : 'No se pudo sondear stock ahora; el cron lo toma en los próximos minutos.'
+        } else if (live.length) {
+          const preview = live
+            .slice(0, 6)
+            .map((q) => `${q.option} × ${q.qty}`)
+            .join(', ')
+          const extra = live.length > 6 ? ` +${live.length - 6}` : ''
+          stockNote = `Stock listo: ${preview}${extra}.`
+        } else if (sync.shopifyRestocked) {
+          stockNote = 'Stock escrito en Shopify.'
+        } else if (catalog.inStock) {
+          stockNote =
+            'El proveedor figura en stock, pero el sondeo no escribió qty. Usá Sincronizar ahora.'
+        } else {
+          stockNote = 'El proveedor figura sin stock en este momento.'
+        }
+      } catch (syncErr) {
+        console.warn(
+          '[importados-sync/create-product] initial stock sync failed',
+          syncErr instanceof Error ? syncErr.message : String(syncErr),
+        )
+      }
+    }
+
     sendJson(res, 201, {
       ok: true,
       product: data,
@@ -347,12 +480,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         precio_contado_ars: quote.precioContadoArs,
         precio_cuotas_ars: quote.precioCuotasArs,
       },
-      message: `Producto en borrador · precio contado ARS ${shopifyPriceArs.toLocaleString('es-AR')}`,
+      message: `Producto en borrador · precio cuotas ARS ${shopifyPriceArs.toLocaleString('es-AR')}. ${stockNote}`,
     })
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
+    const message = formatCaughtError(error)
     console.error('[importados-sync/create-product]', message)
     const rateLimited = /\b429\b|limitando las consultas|too many requests/i.test(message)
     sendJson(res, rateLimited ? 429 : 500, { ok: false, error: message })
   }
+}
+
+function formatCaughtError(error: unknown): string {
+  if (error instanceof Error && error.message.trim()) return error.message
+  if (typeof error === 'string' && error.trim()) return error
+  if (error && typeof error === 'object') {
+    const o = error as { message?: unknown; error?: unknown; detail?: unknown }
+    if (typeof o.message === 'string' && o.message.trim()) return o.message
+    if (typeof o.detail === 'string' && o.detail.trim()) return o.detail
+    if (typeof o.error === 'string' && o.error.trim()) return o.error
+    try {
+      return JSON.stringify(error)
+    } catch {
+      return 'Error desconocido al crear el producto'
+    }
+  }
+  return 'Error desconocido al crear el producto'
 }

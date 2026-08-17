@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import JSZip from 'jszip'
 import { HubBrandBar } from './HubBrandBar'
 import { HubDesktopNav } from './HubDesktopNav'
+import { HubTasksPillSelect, type HubTasksPillOption } from './HubTasksPillSelect'
 import { formatSupabaseOrError } from '../lib/errors'
 import {
   fetchPersonalizadosPdfFile,
@@ -9,7 +10,11 @@ import {
   partitionOrdersForPapelTag,
   tagOrdersWithPapel,
   copyablePersonalizadosTitle,
+  expandMatchedRowsForZip,
+  mergeIdenticalProductRows,
+  personalizadosRowKey,
   type PersonalizadosPdfRow,
+  type PersonalizadosProductGroup,
 } from '../lib/personalizadosPdfsApi'
 import { shopifyOrderAdminUrlById } from '../lib/shopifyOrderUrl'
 import type { HubUserRole } from '../lib/types'
@@ -20,6 +25,20 @@ interface HubPersonalizadosPdfsAppProps {
 }
 
 type StatusFilter = 'all' | 'matched' | 'skipped'
+type LineStatus = 'pendiente' | 'ok'
+
+const LINE_STATUS_OPTIONS: HubTasksPillOption<LineStatus>[] = [
+  {
+    value: 'pendiente',
+    label: 'Pendiente',
+    toneClass: 'hub-tasks-tracking-sent-select--pendiente',
+  },
+  {
+    value: 'ok',
+    label: 'OK',
+    toneClass: 'hub-tasks-tracking-sent-select--enviado',
+  },
+]
 
 function todayStamp(): string {
   const d = new Date()
@@ -29,33 +48,9 @@ function todayStamp(): string {
   return `${y}-${m}-${day}`
 }
 
-function skipReasonLabel(reason: string | null): string {
-  if (!reason) return 'Revisar manual'
-  if (reason === 'print_not_found') return 'Revisar manual'
-  if (reason === 'ambiguous_design_name') return 'Nombre ambiguo'
-  if (reason === 'object_not_found' || reason === 'missing_file_path') return 'Archivo ausente'
-  return reason
-}
-
-/** Cualquier salteado se puede pasar a OK a mano (y gatillar Papel). */
-function canMarkManualOk(row: PersonalizadosPdfRow): boolean {
-  return row.status === 'skipped'
-}
-
-function uniqueMatchedForZip(rows: PersonalizadosPdfRow[]): PersonalizadosPdfRow[] {
-  const seen = new Set<string>()
-  const out: PersonalizadosPdfRow[] = []
-  for (const row of rows) {
-    if (row.status !== 'matched' || !row.printId) continue
-    if (seen.has(row.printId)) continue
-    seen.add(row.printId)
-    out.push(row)
-  }
-  return out
-}
-
-function rowKey(row: PersonalizadosPdfRow): string {
-  return `${row.orderId}-${row.lineItemId}-${row.jobId || row.printId || row.lineTitle}`
+function isGroupOk(group: PersonalizadosProductGroup, manualOkIds: Set<string>): boolean {
+  if (group.status === 'matched') return true
+  return group.members.every((m) => manualOkIds.has(personalizadosRowKey(m)))
 }
 
 export function HubPersonalizadosPdfsApp({
@@ -63,8 +58,6 @@ export function HubPersonalizadosPdfsApp({
   adminSignOut = false,
 }: HubPersonalizadosPdfsAppProps) {
   const [rows, setRows] = useState<PersonalizadosPdfRow[]>([])
-  const [matched, setMatched] = useState(0)
-  const [skipped, setSkipped] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -73,10 +66,10 @@ export function HubPersonalizadosPdfsApp({
   const [zipProgress, setZipProgress] = useState<{ current: number; total: number } | null>(null)
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
-  const [expandedMobileIds, setExpandedMobileIds] = useState<Set<string>>(() => new Set())
   const [manualOkIds, setManualOkIds] = useState<Set<string>>(() => new Set())
-  const [manualBusyId, setManualBusyId] = useState<string | null>(null)
+  const [statusBusyId, setStatusBusyId] = useState<string | null>(null)
   const [copiedTitleId, setCopiedTitleId] = useState<string | null>(null)
+  const [copiedDesignId, setCopiedDesignId] = useState<string | null>(null)
 
   const reload = useCallback(async () => {
     setLoading(true)
@@ -84,17 +77,13 @@ export function HubPersonalizadosPdfsApp({
     setNotice(null)
     setWarning(null)
     setManualOkIds(new Set())
-    setManualBusyId(null)
+    setStatusBusyId(null)
     try {
       const data = await listPendingPersonalizadosPdfs()
       setRows(data.rows)
-      setMatched(data.matched)
-      setSkipped(data.skipped)
     } catch (e) {
       setError(formatSupabaseOrError(e))
       setRows([])
-      setMatched(0)
-      setSkipped(0)
     } finally {
       setLoading(false)
     }
@@ -104,121 +93,149 @@ export function HubPersonalizadosPdfsApp({
     void reload()
   }, [reload])
 
-  const zipTargets = useMemo(() => uniqueMatchedForZip(rows), [rows])
+  const zipTargets = useMemo(() => expandMatchedRowsForZip(rows), [rows])
 
-  const displayMatched = matched + manualOkIds.size
-  const displaySkipped = Math.max(0, skipped - manualOkIds.size)
+  const productGroups = useMemo(() => mergeIdenticalProductRows(rows), [rows])
 
-  const filteredRows = useMemo(() => {
+  const displayMatched = useMemo(
+    () => productGroups.filter((g) => isGroupOk(g, manualOkIds)).length,
+    [manualOkIds, productGroups],
+  )
+  const displaySkipped = Math.max(0, productGroups.length - displayMatched)
+
+  const filteredGroups = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return rows.filter((row) => {
-      const id = rowKey(row)
-      const isManualOk = manualOkIds.has(id)
-      const looksOk = row.status === 'matched' || isManualOk
+    return productGroups.filter((group) => {
+      const looksOk = isGroupOk(group, manualOkIds)
       if (statusFilter === 'matched' && !looksOk) return false
       if (statusFilter === 'skipped' && looksOk) return false
       if (!q) return true
-      const hay = [
-        row.orderName,
-        row.lineTitle,
-        row.jobId || '',
-        row.fileName || '',
-        row.reason || '',
-        isManualOk ? 'ok' : '',
-        canMarkManualOk(row) && !isManualOk ? skipReasonLabel(row.reason) : '',
-      ]
+      const hay = [group.orderName, group.lineTitle, group.jobId || '', group.fileName || '']
         .join(' ')
         .toLowerCase()
       return hay.includes(q)
     })
-  }, [manualOkIds, query, rows, statusFilter])
+  }, [manualOkIds, productGroups, query, statusFilter])
 
-  function toggleMobileCard(id: string) {
-    setExpandedMobileIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
+  const ordersGrouped = useMemo(() => {
+    const map = new Map<string, PersonalizadosProductGroup[]>()
+    for (const group of filteredGroups) {
+      const list = map.get(group.orderId) || []
+      list.push(group)
+      map.set(group.orderId, list)
+    }
+    return [...map.entries()].map(([orderId, lines]) => ({
+      orderId,
+      orderName: lines[0]?.orderName || `#${orderId}`,
+      lines,
+    }))
+  }, [filteredGroups])
 
-  async function copyLineTitle(row: PersonalizadosPdfRow) {
-    const text = copyablePersonalizadosTitle(row.lineTitle)
+  async function copyLineTitle(group: PersonalizadosProductGroup) {
+    const text = copyablePersonalizadosTitle(group.lineTitle)
     if (!text) return
-    const id = rowKey(row)
     try {
       await navigator.clipboard.writeText(text)
-      setCopiedTitleId(id)
+      setCopiedTitleId(group.groupId)
       window.setTimeout(() => {
-        setCopiedTitleId((prev) => (prev === id ? null : prev))
+        setCopiedTitleId((prev) => (prev === group.groupId ? null : prev))
       }, 1400)
     } catch {
-      setWarning(`No se pudo copiar el título de ${row.orderName}.`)
+      setWarning(`No se pudo copiar el título de ${group.orderName}.`)
     }
   }
 
-  /**
-   * Salteado → OK. Etiqueta Papel solo si el pedido queda completo
-   * (todas las líneas matched o pasadas a OK a mano). Los OK automáticos del match
-   * no gatillan Papel por este camino.
-   */
-  async function onManualOk(row: PersonalizadosPdfRow) {
-    const id = rowKey(row)
-    if (!canMarkManualOk(row) || manualOkIds.has(id) || manualBusyId) return
+  /** Prueba temporal: copia design_name completo de Supabase. */
+  async function copySupabaseDesignName(group: PersonalizadosProductGroup) {
+    const text = (group.designName || '').trim()
+    if (!text) {
+      setWarning(`${group.orderName}: no hay design_name en Supabase para copiar.`)
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedDesignId(group.groupId)
+      window.setTimeout(() => {
+        setCopiedDesignId((prev) => (prev === group.groupId ? null : prev))
+      }, 1600)
+    } catch {
+      setWarning(`No se pudo copiar design_name de ${group.orderName}.`)
+    }
+  }
 
-    const nextManual = new Set(manualOkIds)
-    nextManual.add(id)
-    setManualOkIds(nextManual)
-    setManualBusyId(id)
-    setWarning(null)
-
-    const orderRows = rows.filter((r) => r.orderId === row.orderId)
-    const orderComplete = orderRows.every((r) => {
-      const key = rowKey(r)
-      return r.status === 'matched' || nextManual.has(key)
-    })
-
+  async function applyPapelIfOrderComplete(
+    orderId: string,
+    orderName: string,
+    nextManual: Set<string>,
+  ) {
+    const orderRows = rows.filter((r) => r.orderId === orderId)
+    const orderComplete = orderRows.every(
+      (r) => r.status === 'matched' || nextManual.has(personalizadosRowKey(r)),
+    )
     if (!orderComplete) {
-      setManualBusyId(null)
       setNotice(
-        `${row.orderName}: marcado OK. Falta revisar otra línea del mismo pedido antes de «Papel».`,
+        `${orderName}: estado actualizado. Falta marcar OK en otro producto antes de «Papel».`,
       )
       return
     }
 
-    try {
-      const tagResult = await tagOrdersWithPapel([row.orderId])
-      const result = tagResult.results[0]
-      if (!result?.ok) {
-        throw new Error(result?.error || 'No se pudo etiquetar Papel')
-      }
-      setRows((prev) => prev.filter((r) => r.orderId !== row.orderId))
-      setManualOkIds((prev) => {
-        const cleaned = new Set<string>()
-        for (const key of prev) {
-          if (!key.startsWith(`${row.orderId}-`)) cleaned.add(key)
-        }
-        return cleaned
-      })
-      setMatched((n) => Math.max(0, n - orderRows.filter((r) => r.status === 'matched').length))
-      setSkipped((n) =>
-        Math.max(0, n - orderRows.filter((r) => r.status === 'skipped').length),
-      )
-      setNotice(
-        `${row.orderName}: OK manual → etiqueta «Papel» aplicada. Sale del listado.`,
-      )
-    } catch (e) {
-      setManualOkIds((prev) => {
-        const reverted = new Set(prev)
-        reverted.delete(id)
-        return reverted
-      })
-      setWarning(
-        `${row.orderName}: no se pudo etiquetar «Papel»: ${formatSupabaseOrError(e)}`,
-      )
-    } finally {
-      setManualBusyId(null)
+    const tagResult = await tagOrdersWithPapel([orderId])
+    const result = tagResult.results[0]
+    if (!result?.ok) {
+      throw new Error(result?.error || 'No se pudo etiquetar Papel')
     }
+    setRows((prev) => prev.filter((r) => r.orderId !== orderId))
+    setManualOkIds((prev) => {
+      const cleaned = new Set<string>()
+      for (const key of prev) {
+        if (!key.startsWith(`${orderId}-`)) cleaned.add(key)
+      }
+      return cleaned
+    })
+    setNotice(`${orderName}: todos los productos OK → etiqueta «Papel». Sale del listado.`)
+  }
+
+  async function onGroupStatusChange(group: PersonalizadosProductGroup, value: LineStatus) {
+    if (statusBusyId || zipBusy) return
+
+    if (group.status === 'matched') {
+      if (value === 'pendiente') {
+        setNotice(`${group.orderName}: este producto ya tiene PDF; queda en OK.`)
+      }
+      return
+    }
+
+    const memberKeys = group.members.map((m) => personalizadosRowKey(m))
+
+    if (value === 'ok') {
+      const nextManual = new Set(manualOkIds)
+      for (const key of memberKeys) nextManual.add(key)
+      setManualOkIds(nextManual)
+      setStatusBusyId(group.groupId)
+      setWarning(null)
+      try {
+        await applyPapelIfOrderComplete(group.orderId, group.orderName, nextManual)
+      } catch (e) {
+        setManualOkIds((prev) => {
+          const reverted = new Set(prev)
+          for (const key of memberKeys) reverted.delete(key)
+          return reverted
+        })
+        setWarning(
+          `${group.orderName}: no se pudo etiquetar «Papel»: ${formatSupabaseOrError(e)}`,
+        )
+      } finally {
+        setStatusBusyId(null)
+      }
+      return
+    }
+
+    setManualOkIds((prev) => {
+      const next = new Set(prev)
+      for (const key of memberKeys) next.delete(key)
+      return next
+    })
+    setNotice(`${group.orderName}: producto vuelto a Pendiente.`)
   }
 
   async function onDownloadZip() {
@@ -234,11 +251,18 @@ export function HubPersonalizadosPdfsApp({
     try {
       const zip = new JSZip()
       const usedNames = new Set<string>()
+      const blobCache = new Map<string, { blob: Blob; fileName: string }>()
 
       for (let i = 0; i < zipTargets.length; i += 1) {
         const row = zipTargets[i]
         setZipProgress({ current: i + 1, total: zipTargets.length })
-        const { blob, fileName } = await fetchPersonalizadosPdfFile(row.printId!)
+        const printId = row.printId!
+        let cached = blobCache.get(printId)
+        if (!cached) {
+          cached = await fetchPersonalizadosPdfFile(printId)
+          blobCache.set(printId, cached)
+        }
+        const { blob, fileName } = cached
         const baseName = fileName || `${row.orderName}-${row.jobId || row.printId}.pdf`
         let finalName = baseName
         let n = 2
@@ -266,18 +290,18 @@ export function HubPersonalizadosPdfsApp({
       a.remove()
       URL.revokeObjectURL(url)
 
-      const { complete, partial } = partitionOrdersForPapelTag(rows, downloadedPrintIds)
+      const { complete, partial } = partitionOrdersForPapelTag(
+        rows,
+        downloadedPrintIds,
+        manualOkIds,
+      )
 
       let tagNotice = ''
       if (complete.length) {
         try {
           const tagResult = await tagOrdersWithPapel(complete.map((o) => o.orderId))
-          const okNames = tagResult.results
-            .filter((r) => r.ok)
-            .map((r) => r.orderName)
-          const failNames = tagResult.results
-            .filter((r) => !r.ok)
-            .map((r) => r.orderName)
+          const okNames = tagResult.results.filter((r) => r.ok).map((r) => r.orderName)
+          const failNames = tagResult.results.filter((r) => !r.ok).map((r) => r.orderName)
           tagNotice =
             okNames.length > 0
               ? ` Etiqueta «Papel» en ${okNames.length} pedido${okNames.length === 1 ? '' : 's'}: ${okNames.join(', ')}.`
@@ -286,6 +310,10 @@ export function HubPersonalizadosPdfsApp({
             setWarning(
               `No se pudo etiquetar en Shopify: ${failNames.join(', ')}. Revisá el scope write_orders del token.`,
             )
+          }
+          if (okNames.length) {
+            const doneIds = new Set(complete.map((o) => o.orderId))
+            setRows((prev) => prev.filter((r) => !doneIds.has(r.orderId)))
           }
         } catch (tagErr) {
           setWarning(
@@ -300,16 +328,10 @@ export function HubPersonalizadosPdfsApp({
 
       if (partial.length) {
         const partialMsg = partial
-          .map(
-            (o) =>
-              `${o.orderName} (${o.matched} OK / ${o.skipped} sin PDF)`,
-          )
+          .map((o) => `${o.orderName} (${o.matched} OK / ${o.skipped} pendientes)`)
           .join('; ')
         setWarning((prev) =>
-          [
-            prev,
-            `Sin etiqueta «Papel» (pedido incompleto): ${partialMsg}.`,
-          ]
+          [prev, `Sin etiqueta «Papel» (pedido incompleto): ${partialMsg}.`]
             .filter(Boolean)
             .join(' '),
         )
@@ -396,40 +418,48 @@ export function HubPersonalizadosPdfsApp({
             <div
               className="hub-tasks-completion-seg"
               role="group"
-              aria-label="Filtrar por estado de match"
+              aria-label="Filtrar por estado"
             >
-              {(
-                [
-                  { value: 'all', label: 'Todos' },
-                  { value: 'matched', label: 'OK' },
-                  { value: 'skipped', label: 'Salteados' },
-                ] as const
-              ).map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  className={`hub-tasks-completion-seg__btn${
-                    statusFilter === opt.value
-                      ? ' hub-tasks-completion-seg__btn--active'
-                      : ''
-                  }`}
-                  aria-pressed={statusFilter === opt.value}
-                  onClick={() => setStatusFilter(opt.value)}
-                >
-                  {opt.label}
-                </button>
-              ))}
+              <button
+                type="button"
+                className={`hub-tasks-completion-seg__btn${
+                  statusFilter === 'all' ? ' hub-tasks-completion-seg__btn--active' : ''
+                }`}
+                aria-pressed={statusFilter === 'all'}
+                onClick={() => setStatusFilter('all')}
+              >
+                Todos ({displayMatched + displaySkipped})
+              </button>
+              <button
+                type="button"
+                className={`hub-tasks-completion-seg__btn${
+                  statusFilter === 'matched' ? ' hub-tasks-completion-seg__btn--active' : ''
+                }`}
+                aria-pressed={statusFilter === 'matched'}
+                onClick={() => setStatusFilter('matched')}
+              >
+                OK (
+                <span className="hub-pdfs-filter-num hub-pdfs-filter-num--ok">
+                  {displayMatched}
+                </span>
+                )
+              </button>
+              <button
+                type="button"
+                className={`hub-tasks-completion-seg__btn${
+                  statusFilter === 'skipped' ? ' hub-tasks-completion-seg__btn--active' : ''
+                }`}
+                aria-pressed={statusFilter === 'skipped'}
+                onClick={() => setStatusFilter('skipped')}
+              >
+                Pendientes (
+                <span className="hub-pdfs-filter-num hub-pdfs-filter-num--review">
+                  {displaySkipped}
+                </span>
+                )
+              </button>
             </div>
           </div>
-
-          <p className="hub-pdfs-counts" aria-label="Resumen de estados">
-            <span className="hub-pdfs-count hub-pdfs-count--ok">
-              OK: <strong>{displayMatched}</strong>
-            </span>
-            <span className="hub-pdfs-count hub-pdfs-count--review">
-              Revisar: <strong>{displaySkipped}</strong>
-            </span>
-          </p>
         </div>
 
         {notice ? (
@@ -447,150 +477,99 @@ export function HubPersonalizadosPdfsApp({
           <p className="nm-hub-muted">Cargando…</p>
         ) : null}
         {!loading && rows.length === 0 ? (
-          <p className="nm-hub-muted">
-            No hay líneas personalizadas pendientes.
-          </p>
+          <p className="nm-hub-muted">No hay pedidos pendientes.</p>
         ) : null}
-        {!loading && rows.length > 0 && filteredRows.length === 0 ? (
-          <p className="nm-hub-muted">Ninguna línea coincide con los filtros.</p>
+        {!loading && rows.length > 0 && ordersGrouped.length === 0 ? (
+          <p className="nm-hub-muted">Ningún pedido coincide con los filtros.</p>
         ) : null}
 
-        <div className="hub-tasks-table-wrap" aria-busy={loading}>
-          <table className="hub-tasks-table hub-pdfs-table">
-            <thead>
-              <tr>
-                <th scope="col" className="hub-tasks-table__col-title">
-                  Pedido
-                </th>
-                <th scope="col" className="hub-pdfs-table__col-line">
-                  Título
-                </th>
-                <th scope="col" className="hub-tasks-table__col-status">
-                  Estado
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredRows.map((row) => {
-                const id = rowKey(row)
-                const mobileOpen = expandedMobileIds.has(id)
-                const isManualOk = manualOkIds.has(id)
-                const ok = row.status === 'matched' || isManualOk
-                const canManualOk = canMarkManualOk(row) && !isManualOk
-                const shopifyUrl = shopifyOrderAdminUrlById(row.orderId)
-                const rowClass = `hub-tasks-table__row hub-tasks-table__row--pending${
-                  mobileOpen ? ' hub-tasks-table__row--mobile-open' : ''
-                }${isManualOk ? ' hub-pdfs-row--manual-ok' : ''}${
-                  canManualOk ? ' hub-pdfs-row--needs-review' : ''
-                }`
+        <ul className="hub-pdfs-orders" aria-busy={loading}>
+          {ordersGrouped.map((order) => {
+            const shopifyUrl = shopifyOrderAdminUrlById(order.orderId)
+            return (
+              <li key={order.orderId} className="hub-pdfs-order-card">
+                <div className="hub-pdfs-order-card__head">
+                  {shopifyUrl ? (
+                    <a
+                      className="hub-pdfs-order-card__order"
+                      href={shopifyUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {order.orderName}
+                    </a>
+                  ) : (
+                    <span className="hub-pdfs-order-card__order">{order.orderName}</span>
+                  )}
+                  <span className="hub-pdfs-order-card__meta">
+                    {order.lines.length} producto{order.lines.length === 1 ? '' : 's'}
+                  </span>
+                </div>
 
-                return (
-                  <tr key={id} className={rowClass}>
-                    <td className="hub-tasks-table__title">
-                      <div className="hub-pdfs-title-row">
-                        {shopifyUrl ? (
-                          <a
-                            className="hub-tasks-table__title-link"
-                            href={shopifyUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            title={`Abrir en Shopify (${row.orderName})`}
-                            onClick={(e) => {
-                              if (
-                                !mobileOpen &&
-                                window.matchMedia('(max-width: 1023.98px)').matches
-                              ) {
-                                e.preventDefault()
-                                toggleMobileCard(id)
-                              }
-                            }}
-                          >
-                            {row.orderName}
-                          </a>
-                        ) : (
-                          <span className="hub-tasks-table__title-text">{row.orderName}</span>
-                        )}
+                <ul className="hub-pdfs-order-lines">
+                  {order.lines.map((group) => {
+                    const ok = isGroupOk(group, manualOkIds)
+                    const statusValue: LineStatus = ok ? 'ok' : 'pendiente'
+                    const canChange = group.status === 'skipped'
+                    return (
+                      <li key={group.groupId} className="hub-pdfs-order-line">
                         <button
                           type="button"
-                          className="hub-tasks-table__mobile-chevron"
-                          onClick={() => toggleMobileCard(id)}
-                          aria-expanded={mobileOpen}
-                          aria-label={
-                            mobileOpen
-                              ? `Cerrar ${row.orderName}`
-                              : `Abrir ${row.orderName}`
+                          className={`hub-pdfs-line-title hub-pdfs-line-title--copy${
+                            copiedTitleId === group.groupId ? ' hub-pdfs-line-title--copied' : ''
+                          }`}
+                          onClick={() => void copyLineTitle(group)}
+                          title={
+                            copiedTitleId === group.groupId
+                              ? 'Título copiado'
+                              : 'Clic para copiar el título'
                           }
                         >
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                            <path
-                              d="M6 9l6 6 6-6"
-                              stroke="currentColor"
-                              strokeWidth="2.25"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        </button>
-                      </div>
-                    </td>
-                    <td className="hub-pdfs-table__line">
-                      <button
-                        type="button"
-                        className={`hub-pdfs-line-title hub-pdfs-line-title--copy${
-                          copiedTitleId === id ? ' hub-pdfs-line-title--copied' : ''
-                        }`}
-                        onClick={() => void copyLineTitle(row)}
-                        title={
-                          copiedTitleId === id
-                            ? 'Título copiado'
-                            : 'Clic para copiar el título'
-                        }
-                        aria-label={
-                          copiedTitleId === id
-                            ? `Título de ${row.orderName} copiado`
-                            : `Copiar título: ${row.lineTitle}`
-                        }
-                      >
-                        <span className="hub-pdfs-line-title__text">
-                          {row.lineTitle}
-                          {row.quantity > 1 ? (
-                            <span className="nm-hub-muted"> ×{row.quantity}</span>
+                          <span className="hub-pdfs-line-title__text">
+                            {group.lineTitle}
+                            {group.quantity > 1 ? (
+                              <span className="nm-hub-muted"> ×{group.quantity}</span>
+                            ) : null}
+                          </span>
+                          {copiedTitleId === group.groupId ? (
+                            <span className="hub-pdfs-line-title__hint">Copiado</span>
                           ) : null}
-                        </span>
-                        {copiedTitleId === id ? (
-                          <span className="hub-pdfs-line-title__hint">Copiado</span>
-                        ) : null}
-                      </button>
-                    </td>
-                    <td className="hub-tasks-table__status">
-                      {ok ? (
-                        <span
-                          className={`hub-pdfs-status hub-pdfs-status--ok${
-                            isManualOk ? ' hub-pdfs-status--ok-manual' : ''
-                          }`}
-                        >
-                          OK
-                        </span>
-                      ) : canManualOk ? (
-                        <button
-                          type="button"
-                          className={`hub-pdfs-status hub-pdfs-status--skip hub-pdfs-status--action${
-                            manualBusyId === id ? ' hub-pdfs-status--busy' : ''
-                          }`}
-                          disabled={Boolean(manualBusyId) || zipBusy}
-                          onClick={() => void onManualOk(row)}
-                          title="Clic para marcar OK"
-                        >
-                          {manualBusyId === id ? 'Aplicando…' : skipReasonLabel(row.reason)}
                         </button>
-                      ) : null}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+
+                        <div className="hub-pdfs-order-line__status">
+                          {group.status === 'matched' ? (
+                            <button
+                              type="button"
+                              className="hub-pdfs-copy-supabase"
+                              onClick={() => void copySupabaseDesignName(group)}
+                              title={
+                                group.designName
+                                  ? `Copiar de Supabase: ${group.designName}`
+                                  : 'Sin design_name en Supabase'
+                              }
+                            >
+                              {copiedDesignId === group.groupId ? 'Copiado' : 'Copiar'}
+                            </button>
+                          ) : null}
+                          <HubTasksPillSelect
+                            value={statusValue}
+                            options={LINE_STATUS_OPTIONS}
+                            aria-label={`Estado ${group.lineTitle}`}
+                            pillClassName="hub-tasks-status-select"
+                            disabled={
+                              !canChange || Boolean(statusBusyId) || zipBusy
+                            }
+                            onChange={(value) => void onGroupStatusChange(group, value)}
+                          />
+                        </div>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </li>
+            )
+          })}
+        </ul>
       </section>
     </div>
   )

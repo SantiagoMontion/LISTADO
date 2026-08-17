@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { formatHttpApiError, formatSupabaseOrError } from './errors'
 
 export type TrackedProvider = 'lethal' | 'mk'
 
@@ -12,6 +13,8 @@ export type TrackedProduct = {
   notmid_shopify_product_id?: string | null
   current_price: number | null
   in_stock: boolean | null
+  /** Min qty del último sync; <5 = rechequeo frecuente. */
+  last_known_qty?: number | null
   last_checked: string | null
   is_active: boolean
 }
@@ -43,7 +46,7 @@ export type CreatedShopifyInfo = {
 async function accessToken(): Promise<string> {
   if (!supabase) throw new Error('Supabase no está configurado')
   const { data, error } = await supabase.auth.getSession()
-  if (error) throw new Error(error.message)
+  if (error) throw new Error(formatSupabaseOrError(error))
   const token = data.session?.access_token
   if (!token) throw new Error('Tenés que iniciar sesión')
   return token
@@ -68,15 +71,17 @@ async function apiFetch<T>(
   })
   const json = (await resp.json().catch(() => ({}))) as {
     ok?: boolean
-    error?: string
+    error?: unknown
+    detail?: unknown
+    message?: unknown
     products?: TrackedProduct[]
     product?: TrackedProduct
     shopify?: CreatedShopifyInfo
-    message?: string
     quote?: { precio_contado_ars?: number; precio_cuotas_ars?: number }
   }
   if (!resp.ok || json.ok === false) {
-    throw new Error(json.error || `Error HTTP ${resp.status}`)
+    const errPayload = json.error ?? json.detail ?? json.message
+    throw new Error(formatHttpApiError(errPayload, resp.status))
   }
   return json as T
 }
@@ -228,4 +233,117 @@ export async function deleteTrackedProduct(id: string): Promise<void> {
     undefined,
     `id=${encodeURIComponent(id)}`,
   )
+}
+
+export type VariantMapHealthItem = {
+  id: string
+  handle: string | null
+  provider: string
+  status: 'complete' | 'incomplete' | 'monitor_only'
+  variantCount: number
+  reason?: string
+}
+
+export type VariantMapHealthReport = {
+  total: number
+  complete: number
+  incomplete: number
+  monitorOnly: number
+  items: VariantMapHealthItem[]
+}
+
+export async function fetchVariantMapHealth(): Promise<VariantMapHealthReport> {
+  const json = await apiFetch<{ report: VariantMapHealthReport }>(
+    '/api/importados-sync/variant-map-health',
+    'GET',
+  )
+  return json.report
+}
+
+export async function repairVariantMaps(): Promise<{
+  repaired: number
+  failed: Array<{ id: string; handle: string | null; error: string }>
+  report: VariantMapHealthReport
+}> {
+  return apiFetch('/api/importados-sync/variant-map-health', 'POST')
+}
+
+export async function syncTrackedProductStock(id: string): Promise<{
+  shopifyRestocked?: boolean
+  shopifyZeroed?: boolean
+  locations?: string[]
+  detail?: {
+    inStock: boolean
+    price: number
+    quantities?: Array<{ option: string; qty: number; notmidVariantId: string }>
+  }
+  warnings?: string[]
+  error?: string
+}> {
+  return apiFetch('/api/importados-sync/sync-product', 'POST', { id })
+}
+
+export type StockAuditVariantRow = {
+  notmidVariantId: string
+  label: string
+  sku: string | null
+  supplierQty: number | null
+  shopifyQty: number
+  status: 'ok' | 'mismatch' | 'missing_supplier' | 'repaired' | 'error'
+  detail?: string
+}
+
+export type StockAuditProductRow = {
+  id: string
+  provider: string
+  handle: string | null
+  title: string
+  url: string
+  linked: boolean
+  monitorOnly: boolean
+  dbInStock: boolean | null
+  catalogInStock: boolean | null
+  locationName: string | null
+  status: 'ok' | 'mismatch' | 'monitor_only' | 'unlinked' | 'error' | 'repaired'
+  variants: StockAuditVariantRow[]
+  error?: string
+  warnings?: string[]
+}
+
+export type StockAuditReport = {
+  at: string
+  locationName: string | null
+  total: number
+  ok: number
+  mismatch: number
+  repaired: number
+  monitorOnly: number
+  errors: number
+  products: StockAuditProductRow[]
+  durationMs: number
+}
+
+/** Audita (y repara) un lote. El front llama en loop hasta cubrir todos. */
+export async function runStockAuditBatch(input?: {
+  offset?: number
+  maxProducts?: number
+  repair?: boolean
+}): Promise<StockAuditReport> {
+  return apiFetch('/api/importados-sync/stock-audit', 'POST', {
+    offset: input?.offset ?? 0,
+    maxProducts: input?.maxProducts ?? 6,
+    repair: input?.repair !== false,
+  })
+}
+
+export async function auditTrackedProductStock(
+  id: string,
+  repair = true,
+): Promise<StockAuditProductRow> {
+  const json = await apiFetch<{ product: StockAuditProductRow }>(
+    '/api/importados-sync/stock-audit',
+    'POST',
+    { id, repair },
+  )
+  return json.product
 }

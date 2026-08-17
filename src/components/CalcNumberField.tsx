@@ -11,11 +11,28 @@ export interface CalcNumberFieldProps {
   hint?: string
 }
 
-function parseCalcNumber(raw: string): number | null {
-  const normalized = raw.trim().replace(',', '.')
-  if (normalized === '' || normalized === '.' || normalized === '-' || normalized === '-.') {
+/** Acepta 0,5 / 0.5 / 1.234,5 (último separador = decimal). */
+export function parseCalcNumber(raw: string): number | null {
+  const trimmed = raw.trim().replace(/\s/g, '')
+  if (!trimmed || trimmed === '.' || trimmed === ',' || trimmed === '-' || trimmed === '-.' || trimmed === '-,') {
     return null
   }
+
+  const lastComma = trimmed.lastIndexOf(',')
+  const lastDot = trimmed.lastIndexOf('.')
+  let normalized = trimmed
+
+  if (lastComma >= 0 && lastDot >= 0) {
+    // El que aparece último es el decimal; el otro se ignora como miles.
+    if (lastComma > lastDot) {
+      normalized = trimmed.replace(/\./g, '').replace(',', '.')
+    } else {
+      normalized = trimmed.replace(/,/g, '')
+    }
+  } else if (lastComma >= 0) {
+    normalized = trimmed.replace(',', '.')
+  }
+
   const parsed = Number.parseFloat(normalized)
   return Number.isFinite(parsed) ? parsed : null
 }

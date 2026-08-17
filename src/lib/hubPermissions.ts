@@ -80,6 +80,7 @@ export type HubAppPath =
   | '/importados'
   | '/importados-sync'
   | '/importados-pedidos'
+  | '/importados-pedidos/analitica'
   | '/pdfs-impresion'
   | '/trends'
   | '/entrar'
@@ -121,6 +122,8 @@ export function canAccessHubPath(
       return perms.viewImportadosSync
     case '/importados-pedidos':
       return perms.viewImportadosOrders
+    case '/importados-pedidos/analitica':
+      return perms.viewImportadosOrders
     case '/pdfs-impresion':
       return perms.viewPersonalizadosPdfs
     case '/trends':
@@ -147,6 +150,7 @@ export function normalizeHubPath(path: string): HubAppPath | string {
   if (p === '/importados') return '/importados'
   if (p === '/importados-sync') return '/importados-sync'
   if (p === '/importados-pedidos') return '/importados-pedidos'
+  if (p === '/importados-pedidos/analitica') return '/importados-pedidos/analitica'
   if (p === '/pdfs-impresion') return '/pdfs-impresion'
   if (p === '/trends') return '/trends'
   if (p === '' || p === '/') return '/'
@@ -191,6 +195,9 @@ export function hubPathBlockedMessage(path: string, role: HubUserRole | null | u
   if (p === '/importados-pedidos') {
     return `El perfil «${label}» no accede a los pedidos de importados.`
   }
+  if (p === '/importados-pedidos/analitica') {
+    return `El perfil «${label}» no accede a la analítica de importados.`
+  }
   if (p === '/pdfs-impresion') {
     return `El perfil «${label}» no accede a PDFs de impresión.`
   }
@@ -217,6 +224,7 @@ export function hubDashboardLinks(day: string = todayIsoLocal()) {
     importados: '/importados',
     importadosSync: '/importados-sync',
     importadosPedidos: '/importados-pedidos',
+    importadosAnalytics: '/importados-pedidos/analitica',
     personalizadosPdfs: '/pdfs-impresion',
     trends: '/trends',
   } as const
@@ -296,6 +304,7 @@ export function hubDesktopNavGroups(
     const importadosItems: HubDesktopNavItem[] = []
     if (perms.viewImportadosOrders) {
       importadosItems.push({ href: links.importadosPedidos, label: 'Pedidos' })
+      importadosItems.push({ href: links.importadosAnalytics, label: 'Analítica' })
     }
     if (perms.viewImportadosCalculator) {
       importadosItems.push({ href: links.importados, label: 'Calculadora' })

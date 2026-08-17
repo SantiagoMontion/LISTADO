@@ -78,9 +78,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       }
 
       const selectWithTitle =
-        'id, provider, product_url, shopify_handle, product_title, notmid_shopify_variant_id, notmid_shopify_product_id, current_price, in_stock, last_checked, is_active'
+        'id, provider, product_url, shopify_handle, product_title, notmid_shopify_variant_id, notmid_shopify_product_id, current_price, in_stock, last_known_qty, last_checked, is_active'
       const selectFull =
-        'id, provider, product_url, shopify_handle, notmid_shopify_variant_id, notmid_shopify_product_id, current_price, in_stock, last_checked, is_active'
+        'id, provider, product_url, shopify_handle, notmid_shopify_variant_id, notmid_shopify_product_id, current_price, in_stock, last_known_qty, last_checked, is_active'
+      const selectNoQty =
+        'id, provider, product_url, shopify_handle, product_title, notmid_shopify_variant_id, notmid_shopify_product_id, current_price, in_stock, last_checked, is_active'
       const selectBasic =
         'id, provider, product_url, shopify_handle, notmid_shopify_variant_id, current_price, in_stock, last_checked, is_active'
 
@@ -94,12 +96,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         data = withTitle.data
         error = withTitle.error
       }
+      if (error && /last_known_qty|column/i.test(error.message)) {
+        const noQty = await sb.from('tracked_products').select(selectNoQty).order('created_at', {
+          ascending: false,
+        })
+        data = (noQty.data ?? []).map((row) => ({ ...row, last_known_qty: null }))
+        error = noQty.error
+      }
       if (error && /product_title|column/i.test(error.message)) {
         const full = await sb.from('tracked_products').select(selectFull).order('created_at', {
           ascending: false,
         })
         data = full.data
         error = full.error
+      }
+      if (error && /last_known_qty|column/i.test(error.message)) {
+        const fullNoQty = await sb
+          .from('tracked_products')
+          .select(
+            'id, provider, product_url, shopify_handle, notmid_shopify_variant_id, notmid_shopify_product_id, current_price, in_stock, last_checked, is_active',
+          )
+          .order('created_at', { ascending: false })
+        data = (fullNoQty.data ?? []).map((row) => ({ ...row, last_known_qty: null }))
+        error = fullNoQty.error
       }
       if (error && /notmid_shopify_product_id|column/i.test(error.message)) {
         const basic = await sb.from('tracked_products').select(selectBasic).order('created_at', {
@@ -109,6 +128,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
           ...row,
           notmid_shopify_product_id: null,
           product_title: null,
+          last_known_qty: null,
         }))
         error = basic.error
       }

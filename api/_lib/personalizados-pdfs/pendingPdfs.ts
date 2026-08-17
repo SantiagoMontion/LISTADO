@@ -166,6 +166,137 @@ function lineTitleOf(line: ShopifyLineItem): string {
   return (line.title || line.name || 'Producto').trim()
 }
 
+/** Hints del “código” de la línea Shopify (properties) para no adivinar el print. */
+export type LineMatchHints = {
+  material: string | null
+  /** Ej. "90x32" parseado de "90x32 cm". */
+  measurement: string | null
+}
+
+/** Tokens de versión (v2, v3…) que no deben ganar si el título de la orden no los trae. */
+const VERSION_TOKEN_RE = /(?:^|[\s|_-])v(\d+)(?=$|[\s|_-])/i
+
+export function parseMeasurementCm(raw: string | null | undefined): string | null {
+  const text = String(raw || '').trim()
+  if (!text) return null
+  const match = text.match(/(\d+)\s*[x×]\s*(\d+)/i)
+  if (!match) return null
+  return `${match[1]}x${match[2]}`
+}
+
+export function extractLineMatchHints(line: ShopifyLineItem): LineMatchHints {
+  const material = readAttributeValue(line.properties, ['material', 'Material'])
+  const measurement = parseMeasurementCm(
+    readAttributeValue(line.properties, [
+      'measurement_cm',
+      'measurement',
+      'medida',
+      'size',
+      'dimensions',
+    ]),
+  )
+  return {
+    material: material ? material.trim() : null,
+    measurement,
+  }
+}
+
+export function designNameMatchesProductTitle(
+  designName: string | null | undefined,
+  productTitle: string,
+): boolean {
+  const name = typeof designName === 'string' ? designName.trim() : ''
+  const trimmed = normalizeShopifyLineTitle(productTitle)
+  if (!name || !trimmed) return false
+  return (
+    name === trimmed ||
+    name.startsWith(`${trimmed} |`) ||
+    name.startsWith(`${trimmed}|`)
+  )
+}
+
+function versionTokensIn(text: string): string[] {
+  const found: string[] = []
+  const re = new RegExp(VERSION_TOKEN_RE.source, 'gi')
+  let m: RegExpExecArray | null
+  while ((m = re.exec(text)) !== null) {
+    found.push(`v${m[1]}`.toLowerCase())
+  }
+  return found
+}
+
+/** true si el design agrega un vN que el título de la orden no tiene. */
+export function designHasExtraVersionToken(
+  designName: string | null | undefined,
+  productTitle: string,
+): boolean {
+  const name = typeof designName === 'string' ? designName.trim() : ''
+  if (!name) return false
+  const titleTokens = new Set(versionTokensIn(normalizeShopifyLineTitle(productTitle)))
+  return versionTokensIn(name).some((token) => !titleTokens.has(token))
+}
+
+function designContainsMaterial(designName: string, material: string): boolean {
+  const name = designName.toLowerCase()
+  const mat = material.trim().toLowerCase()
+  if (!mat) return true
+  // En design_name suele ir como “… 90x32 PRO | …”
+  return new RegExp(`(?:^|[\\s|_-])${mat.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=$|[\\s|_-])`, 'i').test(
+    name,
+  )
+}
+
+function designContainsMeasurement(designName: string, measurement: string): boolean {
+  const name = designName.toLowerCase().replace(/\s+/g, '')
+  const measure = measurement.toLowerCase().replace(/\s+/g, '')
+  if (!measure) return true
+  return name.includes(measure)
+}
+
+/**
+ * Elige un print único usando título + properties de la orden (material/medida)
+ * y rechazando “v2” (u otras versiones) que la orden no pide.
+ * Nunca elige “el más nuevo” a ciegas.
+ */
+export function pickBestPrintMatch<T extends { design_name?: string | null }>(
+  rows: T[],
+  productTitle: string,
+  hints: LineMatchHints = { material: null, measurement: null },
+): { status: 'unique'; row: T } | { status: 'ambiguous'; count: number } | { status: 'none' } {
+  const trimmed = normalizeShopifyLineTitle(productTitle)
+  if (!trimmed || rows.length === 0) return { status: 'none' }
+
+  let candidates = rows.filter((row) => designNameMatchesProductTitle(row.design_name, trimmed))
+
+  // Si ninguno respeta el título exacto, no forzar match por prefix suelto.
+  if (candidates.length === 0) return { status: 'none' }
+
+  const withoutExtraVersion = candidates.filter(
+    (row) => !designHasExtraVersionToken(row.design_name, trimmed),
+  )
+  if (withoutExtraVersion.length > 0) {
+    candidates = withoutExtraVersion
+  }
+
+  if (hints.material) {
+    const withMaterial = candidates.filter((row) =>
+      designContainsMaterial(String(row.design_name || ''), hints.material!),
+    )
+    if (withMaterial.length > 0) candidates = withMaterial
+  }
+
+  if (hints.measurement) {
+    const withMeasure = candidates.filter((row) =>
+      designContainsMeasurement(String(row.design_name || ''), hints.measurement!),
+    )
+    if (withMeasure.length > 0) candidates = withMeasure
+  }
+
+  if (candidates.length === 1) return { status: 'unique', row: candidates[0] }
+  if (candidates.length > 1) return { status: 'ambiguous', count: candidates.length }
+  return { status: 'none' }
+}
+
 /** Personalizado: property _app_source=custom o título “… | Custom/NOTMID”. */
 export function isPersonalizadosLine(line: ShopifyLineItem): boolean {
   const source = readAttributeValue(line.properties, ['_app_source', 'app_source'])
@@ -226,19 +357,21 @@ function mapPrintRow(row: Record<string, unknown> | null | undefined): PrintRow 
   }
 }
 
-async function fetchPrintByJobId(jobId: string): Promise<PrintRow | null> {
+async function fetchPrintsByJobId(jobId: string): Promise<PrintRow[]> {
   const supabase = getSupabase()
   const { data, error } = await supabase
     .from('prints')
     .select('id, job_id, bucket, file_path, file_name, design_name, created_at')
     .eq('job_id', jobId)
     .order('created_at', { ascending: false })
-    .limit(1)
+    .limit(50)
 
   if (error) {
     throw new Error(`Supabase prints lookup failed: ${error.message}`)
   }
-  return mapPrintRow(Array.isArray(data) ? data[0] : null)
+  return (Array.isArray(data) ? data : [])
+    .map((row) => mapPrintRow(row as Record<string, unknown>))
+    .filter((row): row is PrintRow => Boolean(row))
 }
 
 /** Quita el sufijo “| Custom” / “| NOTMID” del título de línea de Shopify. */
@@ -247,30 +380,15 @@ export function normalizeShopifyLineTitle(title: string): string {
 }
 
 /**
- * Match por título solo si hay exactamente 1 print.
- * Nombres repetidos (ej. “Minecraft 90x40”) → ambiguous, no adivinar.
- * En prints, design_name suele ser `${productTitle} | ${designNameRaw}`.
+ * Match por título solo si hay exactamente 1 print compatible.
+ * Delega a pickBestPrintMatch (título + material/medida + anti-v2).
  */
 export function pickUniqueDesignNameMatch<T extends { design_name?: string | null }>(
   rows: T[],
   title: string,
+  hints: LineMatchHints = { material: null, measurement: null },
 ): { status: 'unique'; row: T } | { status: 'ambiguous'; count: number } | { status: 'none' } {
-  const trimmed = normalizeShopifyLineTitle(title)
-  if (!trimmed) return { status: 'none' }
-
-  const matches = rows.filter((row) => {
-    const designName = typeof row.design_name === 'string' ? row.design_name.trim() : ''
-    if (!designName) return false
-    return (
-      designName === trimmed ||
-      designName.startsWith(`${trimmed} |`) ||
-      designName.startsWith(`${trimmed}|`)
-    )
-  })
-
-  if (matches.length === 1) return { status: 'unique', row: matches[0] }
-  if (matches.length > 1) return { status: 'ambiguous', count: matches.length }
-  return { status: 'none' }
+  return pickBestPrintMatch(rows, title, hints)
 }
 
 type DesignTitleLookup =
@@ -278,7 +396,10 @@ type DesignTitleLookup =
   | { status: 'ambiguous'; count: number }
   | { status: 'none' }
 
-async function fetchPrintByDesignTitle(title: string): Promise<DesignTitleLookup> {
+async function fetchPrintByDesignTitle(
+  title: string,
+  hints: LineMatchHints = { material: null, measurement: null },
+): Promise<DesignTitleLookup> {
   const trimmed = normalizeShopifyLineTitle(title)
   if (!trimmed) return { status: 'none' }
   const supabase = getSupabase()
@@ -295,7 +416,7 @@ async function fetchPrintByDesignTitle(title: string): Promise<DesignTitleLookup
     throw new Error(`Supabase prints title lookup failed: ${error.message}`)
   }
 
-  const picked = pickUniqueDesignNameMatch(Array.isArray(data) ? data : [], trimmed)
+  const picked = pickBestPrintMatch(Array.isArray(data) ? data : [], trimmed, hints)
   if (picked.status === 'unique') {
     const print = mapPrintRow(picked.row as Record<string, unknown>)
     return print ? { status: 'unique', print } : { status: 'none' }
@@ -374,19 +495,41 @@ export async function listPendingPersonalizadosPdfs(): Promise<{
       }
 
       const jobId = extractLineJobId(line, orderJobId)
+      const hints = extractLineMatchHints(line)
+      const titleKey = normalizeShopifyLineTitle(lineTitle).toLowerCase()
+      const hintsKey = `m:${(hints.material || '').toLowerCase()}|s:${hints.measurement || ''}`
       const cacheKey = jobId
-        ? `job:${jobId}`
-        : `title:${normalizeShopifyLineTitle(lineTitle).toLowerCase()}`
+        ? `job:${jobId}|t:${titleKey}|${hintsKey}`
+        : `title:${titleKey}|${hintsKey}`
 
       let resolved = printCache.get(cacheKey)
       if (!resolved) {
         if (jobId) {
-          const byJob = await fetchPrintByJobId(jobId)
-          if (byJob) {
-            resolved = { kind: 'print', print: byJob, method: 'job_id' }
+          const byJobRows = await fetchPrintsByJobId(jobId)
+          if (byJobRows.length === 1) {
+            resolved = { kind: 'print', print: byJobRows[0], method: 'job_id' }
+          } else if (byJobRows.length > 1) {
+            // Mismo job_id con varios prints (ej. republish “v2”): desambiguar
+            // con título + material/medida de la orden. Nunca el más nuevo a ciegas.
+            const picked = pickBestPrintMatch(byJobRows, lineTitle, hints)
+            if (picked.status === 'unique') {
+              resolved = { kind: 'print', print: picked.row, method: 'job_id' }
+            } else if (picked.status === 'ambiguous') {
+              resolved = { kind: 'skip', reason: 'ambiguous_job_id' }
+            } else {
+              // job_id existe pero ningún print calza con el título/código → probar título
+              const byTitle = await fetchPrintByDesignTitle(lineTitle, hints)
+              if (byTitle.status === 'unique') {
+                resolved = { kind: 'print', print: byTitle.print, method: 'design_name' }
+              } else if (byTitle.status === 'ambiguous') {
+                resolved = { kind: 'skip', reason: 'ambiguous_design_name' }
+              } else {
+                resolved = { kind: 'skip', reason: 'print_not_found' }
+              }
+            }
           } else {
             // job_id ausente en prints: título solo si es único (nunca adivinar)
-            const byTitle = await fetchPrintByDesignTitle(lineTitle)
+            const byTitle = await fetchPrintByDesignTitle(lineTitle, hints)
             if (byTitle.status === 'unique') {
               resolved = { kind: 'print', print: byTitle.print, method: 'design_name' }
             } else if (byTitle.status === 'ambiguous') {
@@ -396,7 +539,7 @@ export async function listPendingPersonalizadosPdfs(): Promise<{
             }
           }
         } else {
-          const byTitle = await fetchPrintByDesignTitle(lineTitle)
+          const byTitle = await fetchPrintByDesignTitle(lineTitle, hints)
           if (byTitle.status === 'unique') {
             resolved = { kind: 'print', print: byTitle.print, method: 'design_name' }
           } else if (byTitle.status === 'ambiguous') {

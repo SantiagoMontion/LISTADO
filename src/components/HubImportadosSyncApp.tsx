@@ -1,18 +1,21 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { CalcNumberField } from './CalcNumberField'
 import { HubBrandBar } from './HubBrandBar'
 import { HubDesktopNav } from './HubDesktopNav'
 import { formatSupabaseOrError } from '../lib/errors'
 import {
   createNotmidAndTrack,
-  createTrackedProduct,
   deleteTrackedProduct,
   detectProviderFromUrl,
-  extractLethalHandle,
+  fetchVariantMapHealth,
   listTrackedProducts,
   productLinkLabel,
+  repairVariantMaps,
   resolveTrackedShopifyAdminUrl,
+  syncTrackedProductStock,
   updateTrackedProductRow,
   type TrackedProduct,
+  type VariantMapHealthReport,
 } from '../lib/trackedProductsApi'
 import type { HubUserRole } from '../lib/types'
 
@@ -23,7 +26,7 @@ interface HubImportadosSyncAppProps {
 
 const emptyForm = {
   product_url: '',
-  peso_kg: '',
+  peso_kg: 0,
 }
 
 function formatPrice(value: number | null): string {
@@ -46,6 +49,13 @@ function formatChecked(iso: string | null): string {
   }
 }
 
+/** Cadencia automática: <5 unidades ~cada 5 min; >=5 ~30 min. */
+function formatCheckCadence(qty: number | null | undefined): string {
+  if (qty === null || qty === undefined) return 'Cadencia: pendiente primer snapshot'
+  if (qty < 5) return `Cadencia: ~5 min (qty min ${qty})`
+  return `Cadencia: ~30 min (qty min ${qty})`
+}
+
 export function HubImportadosSyncApp({
   profileRole,
   adminSignOut = false,
@@ -56,22 +66,64 @@ export function HubImportadosSyncApp({
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [form, setForm] = useState(emptyForm)
+  const [mapHealth, setMapHealth] = useState<VariantMapHealthReport | null>(null)
+  const [mapHealthBusy, setMapHealthBusy] = useState(false)
+  const [mapHealthNote, setMapHealthNote] = useState<string | null>(null)
+  const [syncingId, setSyncingId] = useState<string | null>(null)
 
-  const reload = useCallback(async () => {
-    setLoading(true)
-    setError(null)
+  const refreshMapHealth = useCallback(async (opts?: { autoRepair?: boolean }) => {
+    setMapHealthBusy(true)
+    setMapHealthNote(null)
     try {
-      const rows = await listTrackedProducts()
-      setProducts(rows)
+      let report = await fetchVariantMapHealth()
+      if (opts?.autoRepair && report.incomplete > 0) {
+        setMapHealthNote(
+          `Reparando ${report.incomplete} mapa${report.incomplete === 1 ? '' : 's'} incompleto${report.incomplete === 1 ? '' : 's'}…`,
+        )
+        const result = await repairVariantMaps()
+        report = result.report
+        const failN = result.failed.length
+        setMapHealthNote(
+          failN === 0
+            ? `Listo: reparé ${result.repaired} mapa${result.repaired === 1 ? '' : 's'}.`
+            : `Reparé ${result.repaired}; ${failN} fallaron. Revisá los incompletos.`,
+        )
+        if (failN > 0) {
+          setError(
+            result.failed
+              .slice(0, 3)
+              .map((f) => `${f.handle || f.id}: ${f.error}`)
+              .join(' · '),
+          )
+        }
+      }
+      setMapHealth(report)
     } catch (e) {
-      setError(formatSupabaseOrError(e))
+      setMapHealthNote(formatSupabaseOrError(e))
     } finally {
-      setLoading(false)
+      setMapHealthBusy(false)
     }
   }, [])
 
+  const reload = useCallback(
+    async (opts?: { autoRepairMaps?: boolean }) => {
+      setLoading(true)
+      setError(null)
+      try {
+        const rows = await listTrackedProducts()
+        setProducts(rows)
+        await refreshMapHealth({ autoRepair: opts?.autoRepairMaps ?? true })
+      } catch (e) {
+        setError(formatSupabaseOrError(e))
+      } finally {
+        setLoading(false)
+      }
+    },
+    [refreshMapHealth],
+  )
+
   useEffect(() => {
-    void reload()
+    void reload({ autoRepairMaps: true })
   }, [reload])
 
   async function onCreateAndTrack(e: FormEvent) {
@@ -90,51 +142,18 @@ export function HubImportadosSyncApp({
           'El link tiene que ser de lethal.gg o mechanicalkeyboards.com',
         )
       }
-      const pesoKg = Number(String(form.peso_kg).replace(',', '.'))
+      const pesoKg = form.peso_kg
       if (!Number.isFinite(pesoKg) || pesoKg <= 0) {
-        throw new Error('Ingresá el peso del paquete en kg (ejemplo: 0.8)')
+        throw new Error('Ingresá el peso del paquete en kg (ejemplo: 0,5 o 0.5)')
       }
-      await createNotmidAndTrack({
+      const created = await createNotmidAndTrack({
         provider,
         product_url: url,
         peso_kg: pesoKg,
       })
       setForm(emptyForm)
-      setSuccess('Producto creado con éxito')
-      await reload()
-    } catch (err) {
-      setError(formatSupabaseOrError(err))
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  async function onTrackOnly() {
-    setSaving(true)
-    setError(null)
-    setSuccess(null)
-    try {
-      const url = form.product_url.trim()
-      if (!/^https?:\/\//i.test(url)) {
-        throw new Error('Pegá el link completo del producto (https://...)')
-      }
-      const provider = detectProviderFromUrl(url)
-      if (!provider) {
-        throw new Error(
-          'El link tiene que ser de lethal.gg o mechanicalkeyboards.com',
-        )
-      }
-      const handle = provider === 'lethal' ? extractLethalHandle(url) : null
-      await createTrackedProduct({
-        provider,
-        product_url: url,
-        shopify_handle: handle,
-      })
-      setForm(emptyForm)
-      setSuccess(
-        'Agregado al seguimiento. Sin producto NotMid vinculado: solo guarda precio/stock (no puede poner stock 0 en Shopify).',
-      )
-      await reload()
+      setSuccess(created.message || 'Producto creado y stock sincronizado')
+      await reload({ autoRepairMaps: false })
     } catch (err) {
       setError(formatSupabaseOrError(err))
     } finally {
@@ -160,6 +179,35 @@ export function HubImportadosSyncApp({
       await reload()
     } catch (err) {
       setError(formatSupabaseOrError(err))
+    }
+  }
+
+  async function syncNow(product: TrackedProduct) {
+    setError(null)
+    setSuccess(null)
+    setSyncingId(product.id)
+    try {
+      const result = await syncTrackedProductStock(product.id)
+      if (result.error) throw new Error(result.error)
+      const qtys = result.detail?.quantities?.filter((q) => q.qty > 0) ?? []
+      const preview = qtys
+        .slice(0, 5)
+        .map((q) => `${q.option} × ${q.qty}`)
+        .join(', ')
+      setSuccess(
+        qtys.length
+          ? `Stock actualizado: ${preview}${qtys.length > 5 ? ` +${qtys.length - 5}` : ''}`
+          : result.shopifyRestocked
+            ? 'Stock escrito en Shopify.'
+            : result.shopifyZeroed
+              ? 'Sincronizado (sin stock o en 0).'
+              : 'Sincronizado. El proveedor no cambió qty.',
+      )
+      await reload({ autoRepairMaps: false })
+    } catch (err) {
+      setError(formatSupabaseOrError(err))
+    } finally {
+      setSyncingId(null)
     }
   }
 
@@ -190,9 +238,8 @@ export function HubImportadosSyncApp({
           <h1 className="printing3d-page__title">Productos a sincronizar</h1>
           <p className="printing3d-page__lead importados-page__lead">
             Pegá el link de Lethal o MechanicalKeyboards y el peso del paquete. Creamos el
-            producto en <strong>borrador</strong> en NotMid con el precio de tu calculadora
-            (Aerobox $20/kg, envío AR $15, flete interno $0, dólar MEP $1530). Si se agota en el
-            proveedor, el stock en NotMid pasa a 0.
+            producto en <strong>borrador</strong> en NotMid y leemos el stock del proveedor
+            al toque. El cron sigue corrigiendo después.
           </p>
         </header>
 
@@ -221,50 +268,57 @@ export function HubImportadosSyncApp({
             />
           </label>
 
-          <label className="printing3d-field">
-            <span>Peso del paquete (kg)</span>
-            <input
-              type="number"
-              required
-              min="0.01"
-              step="0.01"
-              inputMode="decimal"
-              placeholder="Ej: 0.8"
-              value={form.peso_kg}
-              onChange={(e) => setForm((f) => ({ ...f, peso_kg: e.target.value }))}
-            />
-            <span className="importados-field-hint">
-              Se usa para Aerobox ($20/kg). El resto de la cotización es fijo: envío AR $15, flete
-              interno $0, dólar MEP $1530.
-            </span>
-          </label>
+          <CalcNumberField
+            id="importados-sync-peso"
+            label="Peso del paquete"
+            suffix="kg"
+            min={0}
+            value={form.peso_kg}
+            onChange={(peso_kg) => setForm((f) => ({ ...f, peso_kg }))}
+          />
 
           <div className="importados-sync-actions">
             <button type="submit" className="nm-hub-btn nm-hub-btn-primary" disabled={saving}>
-              {saving ? 'Creando…' : 'Crear en NotMid + sincronizar'}
-            </button>
-            <button
-              type="button"
-              className="nm-hub-btn nm-hub-btn-ghost"
-              disabled={saving}
-              onClick={() => void onTrackOnly()}
-            >
-              Solo sincronizar (sin crear)
+              {saving ? 'Creando y leyendo stock…' : 'Crear en NotMid + sincronizar'}
             </button>
           </div>
-          <span className="importados-field-hint">
-            Siempre se crea en <strong>borrador</strong>. El precio de Shopify es el contado ARS
-            de la calculadora de importados.
-          </span>
         </form>
 
         <section className="printing3d-panel importados-sync-list">
           <div className="importados-sync-list__head">
             <h2 className="printing3d-output-block__title">Lista ({products.length})</h2>
-            <button type="button" className="nm-hub-btn" onClick={() => void reload()} disabled={loading}>
+            <button
+              type="button"
+              className="nm-hub-btn"
+              onClick={() => void reload()}
+              disabled={loading || mapHealthBusy}
+            >
               Actualizar
             </button>
           </div>
+
+          {mapHealth && mapHealth.incomplete > 0 ? (
+            <p className="importados-sync-map-health is-warn" role="status">
+              {mapHealth.total} productos · {mapHealth.complete} con mapa completo ·{' '}
+              {mapHealth.incomplete} incompletos
+              {mapHealth.monitorOnly > 0
+                ? ` · ${mapHealth.monitorOnly} solo sync (sin NotMid)`
+                : ''}{' '}
+              <button
+                type="button"
+                className="nm-hub-btn nm-hub-btn-primary"
+                disabled={mapHealthBusy}
+                onClick={() => void refreshMapHealth({ autoRepair: true })}
+              >
+                {mapHealthBusy ? 'Reparando…' : 'Reparar incompletos'}
+              </button>
+            </p>
+          ) : null}
+          {mapHealthNote ? (
+            <p className="nm-hub-muted" role="status">
+              {mapHealthNote}
+            </p>
+          ) : null}
 
           {loading ? (
             <p className="nm-hub-muted">Cargando…</p>
@@ -278,6 +332,25 @@ export function HubImportadosSyncApp({
                     <span className="importados-sync-card__provider">
                       {p.provider === 'lethal' ? 'Lethal' : 'MK'}
                     </span>
+                    {(() => {
+                      const mapStatus = mapHealth?.items.find((i) => i.id === p.id)?.status
+                      if (!mapStatus) return null
+                      const label =
+                        mapStatus === 'complete'
+                          ? 'Mapa OK'
+                          : mapStatus === 'incomplete'
+                            ? 'Mapa incompleto'
+                            : 'Solo sync'
+                      const cls =
+                        mapStatus === 'complete'
+                          ? 'is-ok'
+                          : mapStatus === 'incomplete'
+                            ? 'is-warn'
+                            : 'is-muted'
+                      return (
+                        <span className={`importados-sync-card__map ${cls}`}>{label}</span>
+                      )
+                    })()}
                     <span
                       className={`importados-sync-card__stock${
                         p.in_stock === false ? ' is-oos' : p.in_stock ? ' is-ok' : ''
@@ -298,12 +371,23 @@ export function HubImportadosSyncApp({
                   <div className="importados-sync-card__meta">
                     <span>Precio proveedor: {formatPrice(p.current_price)}</span>
                     <span>Último check: {formatChecked(p.last_checked)}</span>
+                    <span>{formatCheckCadence(p.last_known_qty)}</span>
                     <span>
                       Vinculado a NotMid:{' '}
                       {p.notmid_shopify_variant_id ? 'Sí' : 'No (solo monitoreo)'}
                     </span>
                   </div>
                   <div className="importados-sync-card__actions">
+                    {p.notmid_shopify_variant_id || p.notmid_shopify_product_id ? (
+                      <button
+                        type="button"
+                        className="nm-hub-btn nm-hub-btn-primary"
+                        disabled={syncingId === p.id || saving}
+                        onClick={() => void syncNow(p)}
+                      >
+                        {syncingId === p.id ? 'Sincronizando…' : 'Sincronizar ahora'}
+                      </button>
+                    ) : null}
                     <button type="button" className="nm-hub-btn" onClick={() => void toggleActive(p)}>
                       {p.is_active ? 'Pausar' : 'Activar'}
                     </button>
@@ -317,7 +401,7 @@ export function HubImportadosSyncApp({
                     {p.notmid_shopify_variant_id || p.notmid_shopify_product_id ? (
                       <button
                         type="button"
-                        className="nm-hub-btn nm-hub-btn-primary"
+                        className="nm-hub-btn nm-hub-btn-ghost"
                         onClick={() => void openInShopify(p)}
                       >
                         Ver en Shopify
