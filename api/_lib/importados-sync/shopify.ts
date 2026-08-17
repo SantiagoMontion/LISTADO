@@ -293,6 +293,44 @@ export function shopifyAdminProductUrl(productId: string): string {
   return `https://admin.shopify.com/store/${storeHandle}/products/${productId}`
 }
 
+export async function setNotmidProductStatus(
+  productId: string | null | undefined,
+  status: 'active' | 'draft',
+): Promise<{ ok: boolean; skipped: boolean; error?: string }> {
+  // Nunca auto-publicar: Active lo pone Santiago a mano en Shopify.
+  if (status !== 'draft') return { ok: true, skipped: true }
+  const id = extractNumericId(productId)
+  if (!id) return { ok: true, skipped: true }
+  return withShopifyPace(async () => {
+    const { ok, status: http, text } = await shopifyFetch(`products/${id}.json`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        product: { id: Number(id), status: 'draft' },
+      }),
+    })
+    if (!ok) {
+      return {
+        ok: false,
+        skipped: false,
+        error: `Shopify product status draft failed (${http}): ${text.slice(0, 220)}`,
+      }
+    }
+    return { ok: true, skipped: false }
+  })
+}
+
+export async function getNotmidProductStatus(
+  productId: string | null | undefined,
+): Promise<'active' | 'draft' | 'archived' | null> {
+  const id = extractNumericId(productId)
+  if (!id) return null
+  const { ok, json } = await shopifyFetch(`products/${id}.json?fields=id,status`)
+  if (!ok) return null
+  const status = (json?.product as { status?: unknown } | undefined)?.status
+  if (status === 'active' || status === 'draft' || status === 'archived') return status
+  return null
+}
+
 async function ensureInventoryItemTracked(inventoryItemId: string): Promise<void> {
   const { ok, status, text } = await shopifyFetch(`inventory_items/${inventoryItemId}.json`, {
     method: 'PUT',

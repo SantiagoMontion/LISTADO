@@ -4,8 +4,11 @@ import {
   getVariantInventoryAtPrimaryLocation,
   setVariantInventoryAvailable,
   updateVariantPrice,
+  setNotmidProductStatus,
+  getNotmidProductStatus,
   type NotmidVariantRow,
 } from './shopify.js'
+import { nextShopifyCatalogWrite } from './shopifyProductStatus.js'
 import {
   fetchActiveTrackedProducts,
   pesoKgForNotmidVariant,
@@ -156,6 +159,26 @@ async function resolveNotmidProductId(product: TrackedProduct): Promise<string |
   const variantId = (product.notmid_shopify_variant_id || '').trim()
   if (!variantId) return null
   return getProductIdFromVariant(variantId)
+}
+
+async function alignShopifyVisibility(
+  product: TrackedProduct,
+  inStock: boolean,
+  warnings: string[],
+): Promise<void> {
+  // Stock no des-oculta: un Draft queda Draft aunque tenga unidades.
+  if (inStock) return
+  try {
+    const productId = await resolveNotmidProductId(product)
+    if (!productId) return
+    const current = await getNotmidProductStatus(productId)
+    const next = nextShopifyCatalogWrite(inStock, current)
+    if (!next) return
+    const result = await setNotmidProductStatus(productId, next)
+    if (!result.ok && result.error) warnings.push(result.error)
+  } catch (err) {
+    warnings.push(err instanceof Error ? err.message : String(err))
+  }
 }
 
 async function scrapeProduct(product: TrackedProduct): Promise<ProviderResult> {
@@ -592,6 +615,8 @@ export async function processOne(
                 ? false
                 : catalog.inStock
 
+        await alignShopifyVisibility(product, inStockEffective, syncWarnings)
+
         const priceChanged = !pricesEqual(product.current_price, catalog.price)
         const stockChanged = product.in_stock !== inStockEffective
         const qtyChanged = product.last_known_qty !== lastKnownQty
@@ -667,6 +692,7 @@ export async function processOne(
       quantities && quantities.length > 0
         ? quantities.some((q) => q.qty > 0)
         : snapshot.inStock
+    await alignShopifyVisibility(product, inStockEffective, syncWarnings)
     const priceChanged = !pricesEqual(product.current_price, snapshot.price)
     const stockChanged = product.in_stock !== inStockEffective
     const qtyChanged = product.last_known_qty !== lastKnownQty

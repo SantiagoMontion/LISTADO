@@ -228,18 +228,25 @@ async function translateHtmlPreservingMarkup(html: string): Promise<string> {
   if (!rootEl) return html
 
   const textNodes = collectTranslatableTextNodes(rootEl)
-  // Cap de llamadas al traductor por producto
   const limit = Math.min(textNodes.length, 48)
+  const started = Date.now()
+  const budgetMs = 14_000
+  const batchSize = 4
 
-  for (let i = 0; i < limit; i += 1) {
-    const node = textNodes[i]
-    const original = node.data ?? ''
-    const leading = original.match(/^\s*/)?.[0] ?? ''
-    const trailing = original.match(/\s*$/)?.[0] ?? ''
-    const core = original.trim()
-    if (!core) continue
-    const translated = await translateChunkEnToEs(core)
-    node.data = `${leading}${translated}${trailing}`
+  for (let i = 0; i < limit; i += batchSize) {
+    if (Date.now() - started > budgetMs) break
+    const batch = textNodes.slice(i, Math.min(i + batchSize, limit))
+    await Promise.all(
+      batch.map(async (node) => {
+        const original = node.data ?? ''
+        const leading = original.match(/^\s*/)?.[0] ?? ''
+        const trailing = original.match(/\s*$/)?.[0] ?? ''
+        const core = original.trim()
+        if (!core) return
+        const translated = await translateChunkEnToEs(core)
+        node.data = `${leading}${translated}${trailing}`
+      }),
+    )
   }
 
   return $('#nm-root').html() || html

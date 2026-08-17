@@ -199,6 +199,7 @@ export async function updateTrackedProduct(
     oos_pending?: OosPendingMap
     /** Omitir para no avanzar TTL (p.ej. heal fallido / needs_restock). */
     last_checked?: string
+    is_active?: boolean
   },
 ): Promise<void> {
   const supabase = getSupabase()

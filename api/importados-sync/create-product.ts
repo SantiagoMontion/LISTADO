@@ -257,9 +257,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       dolarArs: dolarMep.venta,
     })
     const shopifyPriceArs = shopifyPriceFromQuote(quote)
-    const bodyHtml = await publicProductDescriptionHtml(catalog.bodyHtml, {
-      skipTranslation: true,
-    })
+    const bodyHtml = await publicProductDescriptionHtml(catalog.bodyHtml)
 
     const variantRows = catalog.variants.map((v) => {
       const variantArs = shopifyPriceFromQuote(
