@@ -113,7 +113,13 @@ export function argentinaMonthKey(iso: string | null | undefined): string {
 
 async function shopifyFetch(
   path: string,
-): Promise<{ ok: boolean; status: number; json: ShopifyJson | null; text: string }> {
+): Promise<{
+  ok: boolean
+  status: number
+  json: ShopifyJson | null
+  text: string
+  link: string | null
+}> {
   const { domain, apiVersion, token } = getShopifyEnv()
   const url = `https://${domain}/admin/api/${apiVersion}/${path.replace(/^\//, '')}`
   const controller = new AbortController()
@@ -134,9 +140,29 @@ async function shopifyFetch(
     } catch {
       json = null
     }
-    return { ok: resp.ok, status: resp.status, json, text }
+    return {
+      ok: resp.ok,
+      status: resp.status,
+      json,
+      text,
+      link: resp.headers.get('link') || resp.headers.get('Link'),
+    }
   } finally {
     clearTimeout(timer)
+  }
+}
+
+/** Cursor de la página siguiente en el header Link de Shopify. */
+export function shopifyNextPagePath(linkHeader: string | null | undefined): string | null {
+  if (!linkHeader) return null
+  const match = linkHeader.match(/<([^>]+)>\s*;\s*rel="next"/i)
+  if (!match?.[1]) return null
+  try {
+    const u = new URL(match[1])
+    const apiPath = u.pathname.replace(/^\/admin\/api\/[^/]+\//, '')
+    return `${apiPath}${u.search}`
+  } catch {
+    return null
   }
 }
 
@@ -379,11 +405,18 @@ async function fetchPaidUnfulfilledOrders(): Promise<ShopifyOrder[]> {
 }
 
 export async function fetchPaidOrdersSince(isoSince: string): Promise<ShopifyOrder[]> {
-  const { ok, status, json, text } = await shopifyFetch(
-    `orders.json?status=any&financial_status=paid&limit=250&order=created_at+desc&created_at_min=${encodeURIComponent(isoSince)}&fields=${SHOPIFY_ORDER_FIELDS}`,
-  )
-  if (!ok) throwIfShopifyDenied(status, text)
-  return (json?.orders as ShopifyOrder[] | undefined) ?? []
+  const orders: ShopifyOrder[] = []
+  let path: string | null =
+    `orders.json?status=any&financial_status=paid&limit=250&order=created_at+desc&created_at_min=${encodeURIComponent(isoSince)}&fields=${SHOPIFY_ORDER_FIELDS}`
+  let pages = 0
+  while (path && pages < 20) {
+    pages += 1
+    const { ok, status, json, text, link } = await shopifyFetch(path)
+    if (!ok) throwIfShopifyDenied(status, text)
+    orders.push(...((json?.orders as ShopifyOrder[] | undefined) ?? []))
+    path = shopifyNextPagePath(link)
+  }
+  return orders
 }
 
 export function mapShopifyOrdersToImportados(

@@ -32,7 +32,7 @@
       "maxDuration": 60
     },
     "api/importados-sync/sales.ts": {
-      "maxDuration": 60
+      "maxDuration": 90
     },
     "api/personalizados-pdfs/pending.ts": {
       "maxDuration": 60
