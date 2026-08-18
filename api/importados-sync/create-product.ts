@@ -8,7 +8,7 @@ export const config = {
 import {
   quoteImportadosForSync,
   shopifyPriceFromQuote,
-  SYNC_IMPORTADOS_DEFAULTS,
+  syncImportadosQuoteInputs,
 } from '../_lib/importados-sync/importadosPricing.js'
 import { fetchDolarMepQuote } from '../_lib/importados-sync/dolarMep.js'
 import { publicProductDescriptionHtml } from '../_lib/importados-sync/productDescription.js'
@@ -250,23 +250,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return
     }
 
-    const quote = quoteImportadosForSync({
-      ...SYNC_IMPORTADOS_DEFAULTS,
-      costoProductoUsd: catalog.price,
-      pesoKg,
-      dolarArs: dolarMep.venta,
-    })
+    const quote = quoteImportadosForSync(
+      syncImportadosQuoteInputs({
+        costoProductoUsd: catalog.price,
+        pesoKg,
+        dolarArs: dolarMep.venta,
+        handle: catalog.shopifyHandle,
+        title: catalog.title,
+      }),
+    )
     const shopifyPriceArs = shopifyPriceFromQuote(quote)
     const bodyHtml = await publicProductDescriptionHtml(catalog.bodyHtml)
 
     const variantRows = catalog.variants.map((v) => {
       const variantArs = shopifyPriceFromQuote(
-        quoteImportadosForSync({
-          ...SYNC_IMPORTADOS_DEFAULTS,
-          costoProductoUsd: v.priceUsd,
-          pesoKg,
-          dolarArs: dolarMep.venta,
-        }),
+        quoteImportadosForSync(
+          syncImportadosQuoteInputs({
+            costoProductoUsd: v.priceUsd,
+            pesoKg,
+            dolarArs: dolarMep.venta,
+            handle: catalog.shopifyHandle,
+            title: catalog.title,
+          }),
+        ),
       )
       return {
         option1: v.option1 || v.title,
