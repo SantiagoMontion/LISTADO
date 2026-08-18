@@ -51,12 +51,16 @@ describe('importados monthly profits', () => {
     expect(currentArgentinaMonth(new Date('2026-08-17T18:00:00.000Z'))).toBe('2026-08')
   })
 
-  it('costs a unit with the same landed+friction formula as sync', () => {
+  it('costs a unit with the same landed formula as sync (3% CIF × MEP)', () => {
     const cost = unitCostWithFrictionArs({
       costoProductoUsd: 50,
       pesoKg: 1,
       dolarArs: 1500,
     })
-    expect(cost).toBeCloseTo(147_791.115, 1)
+    const flete = 1 * 19
+    const handling = 1.5 / 15
+    const cif = 50 + flete
+    const landed = 50 + flete + handling + cif * 0.03
+    expect(cost).toBeCloseTo(landed * 1500, 1)
   })
 })

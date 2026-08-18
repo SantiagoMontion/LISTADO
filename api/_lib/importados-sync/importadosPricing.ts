@@ -1,15 +1,22 @@
 /**
- * Pricing for sync → Shopify (mirrors src/lib/importadosCalc.ts).
- * Modo ola: Aerobox 19 USD/kg (20 kg ref), handling + guía AR prorrateados entre 15 u.
- * MEP +2% buffer; cuotas = contado / 0.7797 (peor caso MP 6 cuotas).
+ * Pricing for sync → Shopify (misma fórmula que src/lib/importadosCalc.ts).
+ * Ola: Aerobox 19 USD/kg, handling y guía AR prorrateados entre 15 u.
+ * Landed = FOB + flete + handling + 3% estadística. MEP puro.
+ * Lista Shopify = 6 cuotas: subtotal/(1−0.2203) + envío nacional.
  */
 
-export const GASTOS_NO_RECUPERABLES_RATE = 0.06
-export const BUFFER_FINANCIERO_RATE = 0.075
+export const TASA_ESTADISTICA_RATE = 0.03
+/** @deprecated El 6% SAS ya no entra al costo; se usa TASA_ESTADISTICA_RATE. */
+export const GASTOS_NO_RECUPERABLES_RATE = TASA_ESTADISTICA_RATE
 export const HANDLING_AEROBOX_USD = 1.5
-export const IMPUESTOS_TRANSACCIONALES_RATE = 0.065
-export const DOLAR_MEP_BUFFER_RATE = 0.02
+/** @deprecated Ya no se aplica fricción 6.5%. */
+export const IMPUESTOS_TRANSACCIONALES_RATE = 0
+/** @deprecated Percepciones son crédito fiscal. */
+export const BUFFER_FINANCIERO_RATE = 0
+/** @deprecated Conversión con MEP de mercado, sin +2%. */
+export const DOLAR_MEP_BUFFER_RATE = 0
 export const CUOTAS_MP_NET_FACTOR = 0.7797
+export const CUOTAS_MP_COEFFICIENT = 1 - CUOTAS_MP_NET_FACTOR
 
 /** Ola de referencia: ~20 kg @ 19 USD/kg, ~15 unidades compartiendo fijos. */
 export const OLA_REF_UNITS = 15
@@ -45,18 +52,18 @@ export type SyncImportadosInputs = {
 }
 
 export type SyncImportadosQuote = {
-  /** Contado / transferencia (ARS) — precio Shopify */
+  /** Contado / transferencia (ARS) */
   precioContadoArs: number
   precioContadoUsd: number
-  /** Tarjeta / cuotas (ARS), blindado MP 6 cuotas */
+  /** Tarjeta / 6 cuotas (ARS) — precio Shopify */
   precioCuotasArs: number
   dolarMepConvertido: number
   fleteAeroboxUsd: number
   envioDomicilioUsd: number
   marginLabel: string
-  /** Costo operativo unitario con fricción (USD), sin margen de venta */
+  /** Costo landed unitario (USD), sin envío nacional */
   costoConFriccionUsd: number
-  /** Mismo costo convertido con MEP +2% */
+  /** Landed ARS = landed USD × MEP */
   costoConFriccionArs: number
 }
 
@@ -134,13 +141,14 @@ export function normalizeStorePriceArs(raw: number): number {
   return Math.round(raw / 500) * 500
 }
 
-export function precioCuotasFromContadoArs(precioContadoArs: number): number {
-  if (!Number.isFinite(precioContadoArs) || precioContadoArs <= 0) return 0
-  return Math.round(precioContadoArs / CUOTAS_MP_NET_FACTOR)
+/** Subtotal con margen ARS → 6 cuotas (sin envío nacional). */
+export function precioCuotasFromContadoArs(subtotalConMargenArs: number): number {
+  if (!Number.isFinite(subtotalConMargenArs) || subtotalConMargenArs <= 0) return 0
+  return Math.round(subtotalConMargenArs / CUOTAS_MP_NET_FACTOR)
 }
 
 export function quoteImportadosForSync(inputs: SyncImportadosInputs): SyncImportadosQuote {
-  const costoProductoUsd = Number(inputs.costoProductoUsd)
+  const costoFobUsd = Number(inputs.costoProductoUsd)
   const pesoKg = Number(inputs.pesoKg)
   const aeroboxUsdPorKg = Number(inputs.aeroboxUsdPorKg ?? SYNC_IMPORTADOS_DEFAULTS.aeroboxUsdPorKg)
   const fleteInternoUsd = Number(inputs.fleteInternoUsd ?? SYNC_IMPORTADOS_DEFAULTS.fleteInternoUsd)
@@ -152,7 +160,7 @@ export function quoteImportadosForSync(inputs: SyncImportadosInputs): SyncImport
   )
   const dolarArs = Number(inputs.dolarArs ?? SYNC_IMPORTADOS_DEFAULTS.dolarArs)
 
-  if (!Number.isFinite(costoProductoUsd) || costoProductoUsd <= 0) {
+  if (!Number.isFinite(costoFobUsd) || costoFobUsd <= 0) {
     throw new Error('Costo del producto USD inválido')
   }
   if (!Number.isFinite(pesoKg) || pesoKg <= 0) {
@@ -165,35 +173,37 @@ export function quoteImportadosForSync(inputs: SyncImportadosInputs): SyncImport
     throw new Error('Envío a domicilio inválido')
   }
 
-  const fleteAeroboxUsd = pesoKg * aeroboxUsdPorKg
-  const baseImponibleUsd = costoProductoUsd + fleteInternoUsd + fleteAeroboxUsd
-  const gastosNoRecuperablesUsd = baseImponibleUsd * GASTOS_NO_RECUPERABLES_RATE
-  const costoLandedUsd =
-    baseImponibleUsd + handlingAeroboxUsd + gastosNoRecuperablesUsd + envioDomicilioUsd
-  const costoConFriccionUsd = costoLandedUsd * (1 + IMPUESTOS_TRANSACCIONALES_RATE)
-  const margin = resolveMargin(costoProductoUsd)
-  const subtotalConMargenUsd =
-    costoConFriccionUsd * (1 + margin.marginRate) + margin.fixedUsd
-  const bufferFinancieroUsd = baseImponibleUsd * BUFFER_FINANCIERO_RATE
-  const precioContadoUsd = subtotalConMargenUsd + bufferFinancieroUsd
-  const dolarMepConvertido = dolarArs * (1 + DOLAR_MEP_BUFFER_RATE)
-  const precioContadoArs = normalizeStorePriceArs(precioContadoUsd * dolarMepConvertido)
-  const precioCuotasArs = precioCuotasFromContadoArs(precioContadoArs)
+  const fleteUnitarioUsd = pesoKg * aeroboxUsdPorKg + fleteInternoUsd
+  const baseCifUsd = costoFobUsd + fleteUnitarioUsd
+  const tasaEstadisticaUsd = baseCifUsd * TASA_ESTADISTICA_RATE
+  const costoLandedUsd = costoFobUsd + fleteUnitarioUsd + handlingAeroboxUsd + tasaEstadisticaUsd
+  const costoLandedArs = costoLandedUsd * dolarArs
+
+  const margin = resolveMargin(costoFobUsd)
+  const denom = 1 - margin.marginRate
+  const subtotalConMargenArs = denom > 0 ? costoLandedArs / denom : costoLandedArs
+  const envioNacionalArs = envioDomicilioUsd * dolarArs
+
+  const precioContadoArs = normalizeStorePriceArs(subtotalConMargenArs + envioNacionalArs)
+  const precioCuotasArs = normalizeStorePriceArs(
+    subtotalConMargenArs / CUOTAS_MP_NET_FACTOR + envioNacionalArs,
+  )
+  const precioContadoUsd = dolarArs > 0 ? precioContadoArs / dolarArs : 0
 
   return {
     precioContadoArs,
     precioContadoUsd,
     precioCuotasArs,
-    dolarMepConvertido,
-    fleteAeroboxUsd,
+    dolarMepConvertido: dolarArs,
+    fleteAeroboxUsd: pesoKg * aeroboxUsdPorKg,
     envioDomicilioUsd,
     marginLabel: margin.label,
-    costoConFriccionUsd,
-    costoConFriccionArs: costoConFriccionUsd * dolarMepConvertido,
+    costoConFriccionUsd: costoLandedUsd,
+    costoConFriccionArs: costoLandedArs,
   }
 }
 
-/** Costo unitario ARS (Aerobox + handling + SAS + fricción + MEP). Null si falta input. */
+/** Costo landed ARS (FOB + flete + handling + 3% estadística × MEP). Null si falta input. */
 export function unitCostWithFrictionArs(inputs: {
   costoProductoUsd: number | null | undefined
   pesoKg: number | null | undefined
@@ -224,12 +234,12 @@ export function unitCostWithFrictionArs(inputs: {
   }
 }
 
-/** Precio Shopify: cuotas / tarjeta (ARS), blindado MP 6 cuotas. */
+/** Precio Shopify: 6 cuotas (ARS). */
 export function shopifyPriceFromQuote(quote: SyncImportadosQuote): number {
   return normalizeStorePriceArs(quote.precioCuotasArs)
 }
 
-/** ARS de venta NotMid a partir de costo USD proveedor + peso + MEP (precio ola). */
+/** ARS de venta NotMid (lista cuotas) a partir de FOB + peso + MEP. */
 export function shopifyArsFromSupplierUsd(opts: {
   costoProductoUsd: number
   pesoKg: number

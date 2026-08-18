@@ -33,7 +33,7 @@ describe('importadosPricing ola', () => {
     expect(resolveImportadosKind('superglide-glass-mousepad-1', 'Superglide')).toBe('mousepad')
   })
 
-  it('precio ola Dragonfly baja vs unitario legacy', () => {
+  it('precio Shopify Dragonfly usa 6 cuotas de la fórmula nueva', () => {
     const dolarArs = 1521.6
     const ola = shopifyArsFromSupplierUsd({
       costoProductoUsd: 24.99,
@@ -41,7 +41,7 @@ describe('importadosPricing ola', () => {
       dolarArs,
       kind: 'mouse',
     })
-    expect(ola).toBeGreaterThan(90000)
-    expect(ola).toBeLessThan(110000)
+    expect(ola).toBeGreaterThan(80000)
+    expect(ola).toBeLessThan(95000)
   })
 })
