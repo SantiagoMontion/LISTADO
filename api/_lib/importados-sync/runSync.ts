@@ -307,8 +307,8 @@ async function applyVariantInventories(
           costoProductoUsd: supplier.priceUsd,
           pesoKg,
           dolarArs: opts.dolarArs,
-          handle: product.shopify_handle,
-          title: notmid.title || product.shopify_handle,
+          handle: product.shopify_handle ?? undefined,
+          title: (notmid.title || product.shopify_handle) ?? undefined,
         })
         if (!pricesArsEqual(notmid.price, targetArs)) {
           await updateVariantPrice(notmid.id, targetArs)

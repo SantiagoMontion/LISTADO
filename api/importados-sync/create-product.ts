@@ -255,8 +255,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         costoProductoUsd: catalog.price,
         pesoKg,
         dolarArs: dolarMep.venta,
-        handle: catalog.shopifyHandle,
-        title: catalog.title,
+        handle: catalog.shopifyHandle ?? undefined,
+        title: catalog.title ?? undefined,
       }),
     )
     const shopifyPriceArs = shopifyPriceFromQuote(quote)
@@ -269,8 +269,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
             costoProductoUsd: v.priceUsd,
             pesoKg,
             dolarArs: dolarMep.venta,
-            handle: catalog.shopifyHandle,
-            title: catalog.title,
+            handle: catalog.shopifyHandle ?? undefined,
+            title: catalog.title ?? undefined,
           }),
         ),
       )
