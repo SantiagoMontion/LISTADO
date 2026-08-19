@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   envioDomicilioOlaUsd,
+  ENVIO_NACIONAL_ARS,
   handlingOlaUsd,
   OLA_AEROBOX_USD_KG,
   OLA_REF_UNITS,
@@ -16,7 +17,7 @@ describe('importadosPricing ola', () => {
     expect(envioDomicilioOlaUsd('teclado')).toBeCloseTo(15 / OLA_REF_UNITS + 7, 6)
   })
 
-  it('usa Aerobox 19 USD/kg en sync defaults', () => {
+  it('usa envío nacional fijo en ARS para sync', () => {
     const inputs = syncImportadosQuoteInputs({
       costoProductoUsd: 24.99,
       pesoKg: 0.4,
@@ -24,7 +25,15 @@ describe('importadosPricing ola', () => {
       kind: 'mouse',
     })
     expect(inputs.aeroboxUsdPorKg).toBe(OLA_AEROBOX_USD_KG)
-    expect(inputs.envioDomicilioUsd).toBe(envioDomicilioOlaUsd('mouse'))
+    const quote = shopifyArsFromSupplierUsd({
+      costoProductoUsd: 24.99,
+      pesoKg: 0.4,
+      dolarArs: 1521.6,
+      kind: 'mouse',
+    })
+    expect(ENVIO_NACIONAL_ARS).toBe(10_500)
+    expect(quote).toBeGreaterThan(85000)
+    expect(quote).toBeLessThan(98000)
   })
 
   it('clasifica kind por handle/título', () => {
@@ -41,7 +50,7 @@ describe('importadosPricing ola', () => {
       dolarArs,
       kind: 'mouse',
     })
-    expect(ola).toBeGreaterThan(80000)
-    expect(ola).toBeLessThan(95000)
+    expect(ola).toBeGreaterThan(85000)
+    expect(ola).toBeLessThan(98000)
   })
 })

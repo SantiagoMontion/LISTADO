@@ -1,7 +1,7 @@
-/** Calculadora de nacionalización / importados (USD → ARS). Modelo volumen/escala. */
+/** Calculadora de nacionalización / importados (USD → ARS). Lote prorrateado + 3% estadística. */
 
 export interface ImportadosInputs {
-  /** Costo del producto en EE. UU. (USD) — siempre unitario */
+  /** Costo FOB del producto (USD) — siempre unitario */
   costoProductoUsd: number
   /** Peso del paquete (kg). En modo cantidad = peso total del envío. */
   pesoKg: number
@@ -9,16 +9,16 @@ export interface ImportadosInputs {
   aeroboxUsdPorKg: number
   /** Flete interno en EE. UU. (USD). En modo cantidad = total del pedido. */
   fleteInternoUsd: number
-  /** Envío a domicilio en Argentina (USD). En modo cantidad = una guía, se prorratea. */
+  /** Envío nacional a domicilio (USD). En modo cantidad = una guía, se prorratea. */
   envioDomicilioUsd: number
-  /** Cotización dólar financiero / MEP / CCL (ARS) — se aplica buffer +2% al convertir */
+  /** Cotización dólar MEP (ARS) */
   dolarArs: number
   /** Cotizar varias unidades del mismo producto en un solo envío */
   cotizarEnCantidad: boolean
   /** Unidades del lote (solo si cotizarEnCantidad). Mínimo 2. */
   cantidad: number
   /**
-   * @deprecated Ya no se usa: cuotas se blindan con divisor MP 0.7797.
+   * @deprecated Ya no se usa: cuotas usan coeficiente MP 6 cuotas.
    * Se mantiene opcional por prefs legacy en localStorage.
    */
   recargoCuotasPct?: number
@@ -34,69 +34,61 @@ export interface ImportadosMarginBand {
 
 export interface ImportadosResults {
   valid: true
-  /** Unidades efectivas usadas en el cálculo (1 si no hay modo cantidad) */
   cantidad: number
   cotizarEnCantidad: boolean
-  /** Totales del lote (igual a unitarios si cantidad = 1) */
-  baseImponibleUsd: number
+  /** Flete courier del lote (Aerobox + flete interno EE. UU.) */
   fleteAeroboxUsd: number
-  /** Handling Aerobox del lote (fijo $1.50 por consolidación, no × cantidad) */
+  /** Flete courier prorrateado por unidad */
+  fleteUnitarioUsd: number
   handlingAeroboxUsd: number
-  /** Handling prorrateado por unidad */
   handlingAeroboxUnitUsd: number
-  /** Gastos aduaneros no recuperables (~6% de la base del lote) */
+  /** Base CIF unitaria = FOB + flete unitario */
+  baseCifUsd: number
+  /** Alias lote: CIF unitario × cantidad */
+  baseImponibleUsd: number
+  /** Tasa de estadística 3% sobre CIF (lote) */
   gastosNoRecuperablesUsd: number
-  /** Buffer financiero por percepciones: 7.5% de la base imponible del lote */
-  bufferFinancieroUsd: number
-  /** Envío AR del lote (una guía) */
+  gastosNoRecuperablesUnitUsd: number
   envioDomicilioUsd: number
-  /** Envío AR prorrateado por unidad */
   envioDomicilioUnitUsd: number
-  /** Base + handling + no recuperables + envío AR (lote) */
+  /** Landed unitario (sin envío nacional) */
   costoLandedUsd: number
-  /** Alias de costoLanded (compat UI) */
+  costoLandedUnitUsd: number
   costoRealOperativoUsd: number
-  /** Impuestos transaccionales 6.5% sobre landed (IIBB, cheque, pasarela) */
   impuestosTransaccionalesUsd: number
-  /** Landed × (1 + 6.5%) */
   costoConFriccionUsd: number
-  /** Costo con fricción × (1 + margen) */
-  subtotalConMargenUsd: number
+  bufferFinancieroUsd: number
   margin: ImportadosMarginBand
-  /** Precio contado por unidad (USD) */
+  /** Subtotal con margen unitario (ARS) = landed ARS / (1 − margen) */
+  subtotalConMargenArs: number
+  subtotalConMargenUsd: number
   precioContadoUsd: number
-  /** Precio contado del lote (USD) */
   precioContadoLoteUsd: number
-  /** Solo el bloque de margen del lote (subtotal − costo con fricción) */
   gananciaNetaUsd: number
-  /** Ganancia neta por unidad */
   gananciaNetaUnitUsd: number
-  /** MEP × 1.02 usado para convertir a ARS */
+  /** MEP usado para convertir (sin buffer) */
   dolarMepConvertido: number
-  /** Contado / transferencia por unidad (ARS), redondeo góndola */
   precioContadoArs: number
-  /** Contado del lote (ARS) = unitario góndola × cantidad */
   precioContadoLoteArs: number
-  /** Tarjeta / cuotas por unidad (ARS), blindado peor caso MP 6 cuotas */
   precioCuotasArs: number
-  /** Cuotas del lote (ARS) */
   precioCuotasLoteArs: number
   gananciaNetaArs: number
   gananciaNetaUnitArs: number
-  /** Desglose ARS del lote */
   costoProductoArs: number
   fleteInternoArs: number
   fleteAeroboxArs: number
   handlingAeroboxArs: number
   baseImponibleArs: number
+  baseCifArs: number
   gastosNoRecuperablesArs: number
   bufferFinancieroArs: number
   envioDomicilioArs: number
+  envioNacionalUnitArs: number
   costoLandedArs: number
+  costoLandedUnitArs: number
   costoRealOperativoArs: number
   impuestosTransaccionalesArs: number
   costoConFriccionArs: number
-  subtotalConMargenArs: number
 }
 
 export interface ImportadosInvalidResults {
@@ -109,21 +101,30 @@ export type ImportadosCalcOutput = ImportadosResults | ImportadosInvalidResults
 export const AEROBOX_USD_PER_KG = 20
 /** Handling consolidado Aerobox por guía / consolidación (USD), no por unidad. */
 export const HANDLING_AEROBOX_USD = 1.5
-/** Envío AR por defecto. */
+/** Envío nacional a domicilio (ARS), mismo monto para todos los importados. */
+export const ENVIO_NACIONAL_ARS = 10_500
+/** @deprecated Usar ENVIO_NACIONAL_ARS; se mantiene para prefs legacy. */
 export const DEFAULT_ENVIO_DOMICILIO_USD = 15
-/** Gastos aduaneros / S.A.S. no recuperables (sobre base imponible). */
-export const GASTOS_NO_RECUPERABLES_RATE = 0.06
-/** IIBB + impuesto al cheque + pasarela (sobre costo landed). */
-export const IMPUESTOS_TRANSACCIONALES_RATE = 0.065
-/** Costo de liquidez por percepciones hasta descontar el crédito fiscal. */
-export const BUFFER_FINANCIERO_RATE = 0.075
-/** Buffer de protección cambiaria sobre dólar MEP. */
-export const DOLAR_MEP_BUFFER_RATE = 0.02
+/** Tasa de estadística: único gasto aduanero no recuperable (sobre CIF). */
+export const TASA_ESTADISTICA_RATE = 0.03
 /**
- * Divisor Mercado Pago peor caso 6 cuotas:
- * 100% − (3.34% base + 18.69% cuotas) = 77.97% → 1/0.7797 ≈ +28.25% sobre contado.
+ * @deprecated El 6% SAS ya no entra al costo: IVA/percepciones son crédito fiscal.
+ * Se mantiene el nombre para no romper imports; el cálculo usa TASA_ESTADISTICA_RATE.
+ */
+export const GASTOS_NO_RECUPERABLES_RATE = TASA_ESTADISTICA_RATE
+/** @deprecated Ya no se aplica fricción transaccional en la calculadora. */
+export const IMPUESTOS_TRANSACCIONALES_RATE = 0
+/** @deprecated Percepciones son crédito fiscal; no se bufferizan. */
+export const BUFFER_FINANCIERO_RATE = 0
+/** @deprecated La conversión usa MEP de mercado, sin +2%. */
+export const DOLAR_MEP_BUFFER_RATE = 0
+/**
+ * Divisor Mercado Pago 6 cuotas (comisión sobre el subtotal, no sobre el envío):
+ * 100% − (3.34% base + 18.69% cuotas) = 77.97%.
  */
 export const CUOTAS_MP_NET_FACTOR = 0.7797
+/** Coeficiente MP 6 cuotas = 1 − 0.7797 = 22.03%. */
+export const CUOTAS_MP_COEFFICIENT = 1 - CUOTAS_MP_NET_FACTOR
 
 /**
  * Precio de góndola ARS: redondeo al múltiplo de 500 más cercano
@@ -136,10 +137,10 @@ export function normalizeStorePriceArs(raw: number): number {
   return Math.round(raw / 500) * 500
 }
 
-/** Contado ARS → precio tarjeta blindado (peor caso MP 6 cuotas). */
-export function precioCuotasFromContadoArs(precioContadoArs: number): number {
-  if (!Number.isFinite(precioContadoArs) || precioContadoArs <= 0) return 0
-  return Math.round(precioContadoArs / CUOTAS_MP_NET_FACTOR)
+/** Subtotal ARS → precio 6 cuotas (sin envío nacional). */
+export function precioCuotasFromContadoArs(subtotalConMargenArs: number): number {
+  if (!Number.isFinite(subtotalConMargenArs) || subtotalConMargenArs <= 0) return 0
+  return Math.round(subtotalConMargenArs / (1 - CUOTAS_MP_COEFFICIENT))
 }
 
 export const DEFAULT_IMPORTADOS_INPUTS: ImportadosInputs = {
@@ -177,7 +178,7 @@ export function resolveImportadosCantidad(
   return Math.max(2, Math.floor(cantidad))
 }
 
-/** Margen neto variable por volumen (según costo unitario del producto USD). */
+/** Margen neto variable por volumen (según costo FOB unitario). */
 export function resolveImportadosMargin(costoProductoUsd: number): ImportadosMarginBand {
   if (costoProductoUsd < 50) {
     return { label: '< $50 · 18%', marginRate: 0.18, fixedUsd: 0 }
@@ -190,11 +191,10 @@ export function resolveImportadosMargin(costoProductoUsd: number): ImportadosMar
 
 export function computeImportados(inputs: ImportadosInputs): ImportadosCalcOutput {
   const errors: string[] = []
-  const costoProductoUsd = nonNegative(inputs.costoProductoUsd, 'Costo del producto', errors)
+  const costoFobUsd = nonNegative(inputs.costoProductoUsd, 'Costo del producto', errors)
   const pesoKg = nonNegative(inputs.pesoKg, 'Peso', errors)
   const aeroboxUsdPorKg = nonNegative(inputs.aeroboxUsdPorKg, 'Tarifa Aerobox', errors)
   const fleteInternoUsd = nonNegative(inputs.fleteInternoUsd, 'Flete interno', errors)
-  const envioDomicilioUsd = nonNegative(inputs.envioDomicilioUsd, 'Envío a domicilio', errors)
   const dolarArs = nonNegative(inputs.dolarArs, 'Cotización dólar', errors)
   const cotizarEnCantidad = Boolean(inputs.cotizarEnCantidad)
   const cantidad = resolveImportadosCantidad(cotizarEnCantidad, inputs.cantidad)
@@ -210,90 +210,108 @@ export function computeImportados(inputs: ImportadosInputs): ImportadosCalcOutpu
   if (aeroboxUsdPorKg <= 0) {
     return { valid: false, errors: ['La tarifa Aerobox debe ser mayor a 0.'] }
   }
-  if (costoProductoUsd <= 0) {
+  if (costoFobUsd <= 0) {
     return { valid: false, errors: ['Ingresá el costo del producto en USD.'] }
   }
+  if (cantidad <= 0) {
+    return { valid: false, errors: ['La cantidad debe ser mayor a 0.'] }
+  }
 
-  // Lote: producto unitario × N. Peso / flete EE.UU. / envío AR son del envío completo.
-  const costoProductoLoteUsd = costoProductoUsd * cantidad
   const fleteAeroboxUsd = pesoKg * aeroboxUsdPorKg
-  const baseImponibleUsd = costoProductoLoteUsd + fleteInternoUsd + fleteAeroboxUsd
-
-  // Handling y envío AR: una sola vez por consolidación / guía → se prorratean al mostrar c/u.
+  const fleteCourierLoteUsd = fleteAeroboxUsd + fleteInternoUsd
+  const fleteUnitarioUsd = fleteCourierLoteUsd / cantidad
   const handlingAeroboxUsd = HANDLING_AEROBOX_USD
   const handlingAeroboxUnitUsd = handlingAeroboxUsd / cantidad
+
+  const baseCifUsd = costoFobUsd + fleteUnitarioUsd
+  const gastosNoRecuperablesUnitUsd = baseCifUsd * TASA_ESTADISTICA_RATE
+  const gastosNoRecuperablesUsd = gastosNoRecuperablesUnitUsd * cantidad
+
+  const costoLandedUnitUsd =
+    costoFobUsd + fleteUnitarioUsd + handlingAeroboxUnitUsd + gastosNoRecuperablesUnitUsd
+  const costoLandedUsd = costoLandedUnitUsd * cantidad
+  const costoLandedUnitArs = costoLandedUnitUsd * dolarArs
+  const costoLandedArs = costoLandedUsd * dolarArs
+
+  const margin = resolveImportadosMargin(costoFobUsd)
+  const denom = 1 - margin.marginRate
+  const subtotalConMargenUnitArs = denom > 0 ? costoLandedUnitArs / denom : costoLandedUnitArs
+  const subtotalConMargenArs = subtotalConMargenUnitArs * cantidad
+  const subtotalConMargenUsd = subtotalConMargenArs / dolarArs
+
+  const envioDomicilioArs = ENVIO_NACIONAL_ARS
+  const envioNacionalUnitArs = ENVIO_NACIONAL_ARS / cantidad
+  const envioDomicilioUsd = dolarArs > 0 ? envioDomicilioArs / dolarArs : 0
   const envioDomicilioUnitUsd = envioDomicilioUsd / cantidad
 
-  const gastosNoRecuperablesUsd = baseImponibleUsd * GASTOS_NO_RECUPERABLES_RATE
-  const costoLandedUsd =
-    baseImponibleUsd + handlingAeroboxUsd + gastosNoRecuperablesUsd + envioDomicilioUsd
-  const costoRealOperativoUsd = costoLandedUsd
+  const precioContadoUnitArsRaw = subtotalConMargenUnitArs + envioNacionalUnitArs
+  const precioCuotasUnitArsRaw =
+    subtotalConMargenUnitArs / (1 - CUOTAS_MP_COEFFICIENT) + envioNacionalUnitArs
 
-  const impuestosTransaccionalesUsd = costoLandedUsd * IMPUESTOS_TRANSACCIONALES_RATE
-  const costoConFriccionUsd = costoLandedUsd * (1 + IMPUESTOS_TRANSACCIONALES_RATE)
-
-  // Margen según costo UNITARIO (no el total del lote).
-  const margin = resolveImportadosMargin(costoProductoUsd)
-  const subtotalConMargenUsd =
-    costoConFriccionUsd * (1 + margin.marginRate) + margin.fixedUsd
-
-  const bufferFinancieroUsd = baseImponibleUsd * BUFFER_FINANCIERO_RATE
-
-  const precioContadoLoteUsd = subtotalConMargenUsd + bufferFinancieroUsd
-  const precioContadoUsd = precioContadoLoteUsd / cantidad
-  const gananciaNetaUsd = subtotalConMargenUsd - costoConFriccionUsd
-  const gananciaNetaUnitUsd = gananciaNetaUsd / cantidad
-  const dolarMepConvertido = dolarArs * (1 + DOLAR_MEP_BUFFER_RATE)
-
-  const precioContadoArs = normalizeStorePriceArs(precioContadoUsd * dolarMepConvertido)
+  const precioContadoArs = normalizeStorePriceArs(precioContadoUnitArsRaw)
+  const precioCuotasArs = normalizeStorePriceArs(precioCuotasUnitArsRaw)
   const precioContadoLoteArs = precioContadoArs * cantidad
-  const precioCuotasArs = precioCuotasFromContadoArs(precioContadoArs)
   const precioCuotasLoteArs = precioCuotasArs * cantidad
-  const gananciaNetaArs = gananciaNetaUsd * dolarMepConvertido
-  const gananciaNetaUnitArs = gananciaNetaUnitUsd * dolarMepConvertido
+  const precioContadoUsd = precioContadoArs / dolarArs
+  const precioContadoLoteUsd = precioContadoUsd * cantidad
+
+  const gananciaNetaUnitArs = subtotalConMargenUnitArs - costoLandedUnitArs
+  const gananciaNetaArs = gananciaNetaUnitArs * cantidad
+  const gananciaNetaUnitUsd = gananciaNetaUnitArs / dolarArs
+  const gananciaNetaUsd = gananciaNetaArs / dolarArs
+
+  const costoProductoLoteUsd = costoFobUsd * cantidad
+  const baseImponibleUsd = baseCifUsd * cantidad
 
   return {
     valid: true,
     cantidad,
     cotizarEnCantidad: cantidad > 1,
-    baseImponibleUsd,
     fleteAeroboxUsd,
+    fleteUnitarioUsd,
     handlingAeroboxUsd,
     handlingAeroboxUnitUsd,
+    baseCifUsd,
+    baseImponibleUsd,
     gastosNoRecuperablesUsd,
-    bufferFinancieroUsd,
+    gastosNoRecuperablesUnitUsd,
     envioDomicilioUsd,
     envioDomicilioUnitUsd,
     costoLandedUsd,
-    costoRealOperativoUsd,
-    impuestosTransaccionalesUsd,
-    costoConFriccionUsd,
-    subtotalConMargenUsd,
+    costoLandedUnitUsd,
+    costoRealOperativoUsd: costoLandedUsd,
+    impuestosTransaccionalesUsd: 0,
+    costoConFriccionUsd: costoLandedUsd,
+    bufferFinancieroUsd: 0,
     margin,
+    subtotalConMargenArs,
+    subtotalConMargenUsd,
     precioContadoUsd,
     precioContadoLoteUsd,
     gananciaNetaUsd,
     gananciaNetaUnitUsd,
-    dolarMepConvertido,
+    dolarMepConvertido: dolarArs,
     precioContadoArs,
     precioContadoLoteArs,
     precioCuotasArs,
     precioCuotasLoteArs,
     gananciaNetaArs,
     gananciaNetaUnitArs,
-    costoProductoArs: costoProductoLoteUsd * dolarMepConvertido,
-    fleteInternoArs: fleteInternoUsd * dolarMepConvertido,
-    fleteAeroboxArs: fleteAeroboxUsd * dolarMepConvertido,
-    handlingAeroboxArs: handlingAeroboxUsd * dolarMepConvertido,
-    baseImponibleArs: baseImponibleUsd * dolarMepConvertido,
-    gastosNoRecuperablesArs: gastosNoRecuperablesUsd * dolarMepConvertido,
-    bufferFinancieroArs: bufferFinancieroUsd * dolarMepConvertido,
-    envioDomicilioArs: envioDomicilioUsd * dolarMepConvertido,
-    costoLandedArs: costoLandedUsd * dolarMepConvertido,
-    costoRealOperativoArs: costoRealOperativoUsd * dolarMepConvertido,
-    impuestosTransaccionalesArs: impuestosTransaccionalesUsd * dolarMepConvertido,
-    costoConFriccionArs: costoConFriccionUsd * dolarMepConvertido,
-    subtotalConMargenArs: subtotalConMargenUsd * dolarMepConvertido,
+    costoProductoArs: costoProductoLoteUsd * dolarArs,
+    fleteInternoArs: fleteInternoUsd * dolarArs,
+    fleteAeroboxArs: fleteAeroboxUsd * dolarArs,
+    handlingAeroboxArs: handlingAeroboxUsd * dolarArs,
+    baseImponibleArs: baseImponibleUsd * dolarArs,
+    baseCifArs: baseCifUsd * dolarArs,
+    gastosNoRecuperablesArs: gastosNoRecuperablesUsd * dolarArs,
+    bufferFinancieroArs: 0,
+    envioDomicilioArs,
+    envioNacionalUnitArs,
+    costoLandedArs,
+    costoLandedUnitArs,
+    costoRealOperativoArs: costoLandedArs,
+    impuestosTransaccionalesArs: 0,
+    costoConFriccionArs: costoLandedArs,
   }
 }
 

@@ -90,7 +90,7 @@ function isImportadosCollection(collection: ShopifyCollection): boolean {
   )
 }
 
-async function resolveImportadosManualCollectionId(): Promise<string> {
+async function findImportadosManualCollectionId(): Promise<string | null> {
   if (cachedImportadosCollectionId) return cachedImportadosCollectionId
 
   const custom = await shopifyFetch(
@@ -111,26 +111,13 @@ async function resolveImportadosManualCollectionId(): Promise<string> {
     return id
   }
 
-  // Una colección automatizada no acepta altas manuales con /collects. Damos un
-  // error explícito para no dejar un producto creado fuera de IMPORTADOS.
-  const smart = await shopifyFetch(
-    'smart_collections.json?limit=250&fields=id,title,handle',
-  )
-  const smartCollections =
-    (smart.json?.smart_collections as ShopifyCollection[] | undefined) ?? []
-  if (smart.ok && smartCollections.some(isImportadosCollection)) {
-    throw new Error(
-      'La colección IMPORTADOS es automatizada. Convertíla en manual o configurá su regla para la etiqueta IMPORTADOS.',
-    )
-  }
-
-  throw new Error(
-    'No encontré una colección manual llamada IMPORTADOS en Shopify.',
-  )
+  return null
 }
 
+/** Solo colecciones manuales aceptan /collects. Smart collections entran solas por reglas. */
 async function addProductToImportadosCollection(productId: string): Promise<void> {
-  const collectionId = await resolveImportadosManualCollectionId()
+  const collectionId = await findImportadosManualCollectionId()
+  if (!collectionId) return
   const result = await shopifyFetch('collects.json', {
     method: 'POST',
     body: JSON.stringify({

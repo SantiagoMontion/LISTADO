@@ -22,6 +22,8 @@ export const CUOTAS_MP_COEFFICIENT = 1 - CUOTAS_MP_NET_FACTOR
 export const OLA_REF_UNITS = 15
 export const OLA_GUIA_AR_USD = 15
 export const OLA_AEROBOX_USD_KG = 19
+/** Envío nacional a domicilio (ARS), mismo monto para todos los importados. */
+export const ENVIO_NACIONAL_ARS = 10_500
 
 export type ImportadosProductKind =
   | 'teclado'
@@ -182,7 +184,7 @@ export function quoteImportadosForSync(inputs: SyncImportadosInputs): SyncImport
   const margin = resolveMargin(costoFobUsd)
   const denom = 1 - margin.marginRate
   const subtotalConMargenArs = denom > 0 ? costoLandedArs / denom : costoLandedArs
-  const envioNacionalArs = envioDomicilioUsd * dolarArs
+  const envioNacionalArs = ENVIO_NACIONAL_ARS
 
   const precioContadoArs = normalizeStorePriceArs(subtotalConMargenArs + envioNacionalArs)
   const precioCuotasArs = normalizeStorePriceArs(
@@ -196,7 +198,7 @@ export function quoteImportadosForSync(inputs: SyncImportadosInputs): SyncImport
     precioCuotasArs,
     dolarMepConvertido: dolarArs,
     fleteAeroboxUsd: pesoKg * aeroboxUsdPorKg,
-    envioDomicilioUsd,
+    envioDomicilioUsd: dolarArs > 0 ? envioNacionalArs / dolarArs : 0,
     marginLabel: margin.label,
     costoConFriccionUsd: costoLandedUsd,
     costoConFriccionArs: costoLandedArs,

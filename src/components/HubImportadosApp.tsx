@@ -99,7 +99,7 @@ function CostBreakdown({
           <span>ARS</span>
         </div>
         <BreakdownRow
-          label={multi ? `Costo producto (${result.cantidad} × ${formatUsd(costoProductoUsd)})` : 'Costo producto'}
+          label={multi ? `Costo FOB (${result.cantidad} × ${formatUsd(costoProductoUsd)})` : 'Costo FOB'}
           usd={formatUsd(costoProductoUsd * result.cantidad)}
           ars={formatArs(result.costoProductoArs, true)}
         />
@@ -112,17 +112,19 @@ function CostBreakdown({
           />
         ) : null}
         <BreakdownRow
-          label="Flete Miami (Aerobox)"
+          label="Flete courier (lote)"
           usd={formatUsd(result.fleteAeroboxUsd)}
           ars={formatArs(result.fleteAeroboxArs, true)}
+          hint={multi ? `${formatUsd(result.fleteUnitarioUsd)} c/u (courier + interno)` : undefined}
         />
         <BreakdownRow
-          label="Base imponible"
+          label="Base CIF"
           usd={formatUsd(result.baseImponibleUsd)}
           ars={formatArs(result.baseImponibleArs, true)}
+          hint={multi ? `${formatUsd(result.baseCifUsd)} c/u` : 'FOB + flete unitario'}
         />
         <BreakdownRow
-          label="Handling Aerobox"
+          label="Handling courier"
           usd={formatUsd(result.handlingAeroboxUsd)}
           ars={formatArs(result.handlingAeroboxArs, true)}
           hint={
@@ -132,53 +134,50 @@ function CostBreakdown({
           }
         />
         <BreakdownRow
-          label="Gastos aduana no recuperables (6%)"
+          label="Tasa estadística (3%)"
           usd={formatUsd(result.gastosNoRecuperablesUsd)}
           ars={formatArs(result.gastosNoRecuperablesArs, true)}
+          hint="Único gasto aduana no recuperable"
         />
         <BreakdownRow
-          label="Envío domicilio (AR)"
-          usd={formatUsd(result.envioDomicilioUsd)}
-          ars={formatArs(result.envioDomicilioArs, true)}
-          hint={
-            multi ? `1 guía · ${formatUsd(result.envioDomicilioUnitUsd)} c/u` : undefined
-          }
-        />
-        <BreakdownRow
-          label="Costo landed"
+          label={multi ? 'Costo landed (lote)' : 'Costo landed'}
           usd={formatUsd(result.costoLandedUsd)}
           ars={formatArs(result.costoLandedArs, true)}
           strong
+          hint="Sin envío nacional"
         />
-        <BreakdownRow
-          label="Impuestos transaccionales (6.5%)"
-          usd={formatUsd(result.impuestosTransaccionalesUsd)}
-          ars={formatArs(result.impuestosTransaccionalesArs, true)}
-        />
-        <BreakdownRow
-          label="Costo con fricción"
-          usd={formatUsd(result.costoConFriccionUsd)}
-          ars={formatArs(result.costoConFriccionArs, true)}
-        />
+        {multi ? (
+          <BreakdownRow
+            label="Costo landed c/u"
+            usd={formatUsd(result.costoLandedUnitUsd)}
+            ars={formatArs(result.costoLandedUnitArs, true)}
+          />
+        ) : null}
         <BreakdownRow
           label="Subtotal con margen"
           usd={formatUsd(result.subtotalConMargenUsd)}
           ars={formatArs(result.subtotalConMargenArs, true)}
+          hint={`Landed ARS / (1 − ${formatPct(result.margin.marginRate)})`}
         />
         <BreakdownRow
-          label="Buffer financiero percepciones (7.5%)"
-          usd={formatUsd(result.bufferFinancieroUsd)}
-          ars={formatArs(result.bufferFinancieroArs, true)}
+          label="Envío nacional (AR)"
+          usd={formatUsd(result.envioDomicilioUsd)}
+          ars={formatArs(result.envioDomicilioArs, true)}
+          hint={
+            multi
+              ? `1 guía · ${formatUsd(result.envioDomicilioUnitUsd)} c/u · se suma al final`
+              : 'Se suma al final, sin recargo de cuotas'
+          }
         />
         <BreakdownRow
-          label={multi ? 'Precio final del lote' : 'Precio final'}
+          label={multi ? 'Precio contado del lote' : 'Precio contado / transfer'}
           usd={formatUsd(result.precioContadoLoteUsd)}
           ars={formatArs(result.precioContadoLoteArs)}
           strong
         />
         {multi ? (
           <BreakdownRow
-            label="Precio final por unidad"
+            label="Precio contado por unidad"
             usd={formatUsd(result.precioContadoUsd)}
             ars={formatArs(result.precioContadoArs)}
             strong
@@ -303,7 +302,8 @@ export function HubImportadosApp({
             <h1 className="printing3d-page__title">Importados</h1>
           </div>
           <p className="printing3d-page__lead importados-page__lead">
-            Contado (MEP +2%) y cuotas blindadas al peor caso Mercado Pago 6 cuotas.
+            Landed real (CIF + 3% estadística) × MEP. Envío nacional se suma al
+            final; 6 cuotas con coeficiente MP sobre el subtotal con margen.
           </p>
         </header>
 
@@ -319,7 +319,7 @@ export function HubImportadosApp({
                   onChange={(v) => patch({ costoProductoUsd: v })}
                   step={0.01}
                   suffix="USD"
-                  hint="Precio unitario B2B en EE. UU. (el margen usa este valor)"
+                  hint="Precio unitario FOB en EE. UU. (el margen usa este valor)"
                 />
 
                 <div className="printing3d-field printing3d-field--full">
@@ -340,7 +340,7 @@ export function HubImportadosApp({
                     <span className="importados-qty-toggle__text">
                       <strong>Cotizar en cantidad</strong>
                       <span>
-                        Prorratea handling y envío AR en el lote; el margen sigue el costo
+                        Prorratea flete courier y handling del lote; el margen sigue el FOB
                         unitario.
                       </span>
                     </span>
@@ -391,19 +391,19 @@ export function HubImportadosApp({
                   suffix="USD"
                   hint={multi ? 'Costo de llevar todo el pedido a Miami' : undefined}
                 />
-                <CalcNumberField
-                  id="imp-envio"
-                  label={multi ? 'Envío domicilio AR (1 guía)' : 'Envío a domicilio (AR)'}
-                  value={inputs.envioDomicilioUsd}
-                  onChange={(v) => patch({ envioDomicilioUsd: v })}
-                  step={0.5}
-                  suffix="USD"
-                  hint={
-                    multi
-                      ? 'Una sola guía; se divide entre las unidades'
-                      : 'Monto fijo por guía en Argentina (editable)'
-                  }
-                />
+                <div className="printing3d-field">
+                  <label className="printing3d-field__label" htmlFor="imp-envio">
+                    {multi ? 'Envío domicilio AR (1 guía)' : 'Envío a domicilio (AR)'}
+                  </label>
+                  <p id="imp-envio" className="printing3d-field__value">
+                    $10.500 ARS
+                  </p>
+                  <p className="printing3d-field__hint">
+                    {multi
+                      ? 'Fijo por guía; se prorratea entre unidades y se suma al precio final'
+                      : 'Fijo en todos los importados; se suma al precio final, fuera del landed'}
+                  </p>
+                </div>
                 <CalcNumberField
                   id="imp-dolar"
                   label="Dólar MEP"
@@ -415,8 +415,8 @@ export function HubImportadosApp({
                     mepStatus === 'loading'
                       ? 'Consultando DólarAPI…'
                       : mepStatus === 'live'
-                        ? 'Cotización automática de DólarAPI; se aplica +2%'
-                        : 'Fallback manual: DólarAPI no disponible; se aplica +2%'
+                        ? 'Cotización automática de DólarAPI (sin recargo)'
+                        : 'Fallback manual: DólarAPI no disponible'
                   }
                 />
               </div>
@@ -453,7 +453,7 @@ export function HubImportadosApp({
                       </strong>
                       <span className="importados-hero__sub">
                         {formatUsd(result.precioContadoUsd)} · MEP{' '}
-                        {formatArs(result.dolarMepConvertido, true)} (+2%)
+                        {formatArs(result.dolarMepConvertido, true)}
                       </span>
                     </div>
                     <div className="importados-hero__side">
@@ -463,7 +463,7 @@ export function HubImportadosApp({
                       <strong className="importados-hero__cuotas">
                         {formatArs(result.precioCuotasArs)}
                       </strong>
-                      <span className="importados-hero__sub">Blindado MP 6 cuotas</span>
+                      <span className="importados-hero__sub">MP 6 cuotas (envío sin recargo)</span>
                     </div>
                   </div>
                   {result.cantidad > 1 ? (
