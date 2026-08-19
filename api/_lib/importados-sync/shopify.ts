@@ -4,7 +4,6 @@ type ShopifyJson = Record<string, unknown>
 
 let cachedLocationId: string | null = null
 let cachedPrimaryLocation: { id: string; name: string } | null = null
-let cachedImportadosCollectionId: string | null = null
 let shopifyWriteChain: Promise<void> = Promise.resolve()
 
 /** Serializa writes a Shopify y deja un gap mínimo (plan: 2 req/s). */
@@ -20,8 +19,6 @@ async function withShopifyPace<T>(fn: () => Promise<T>, gapMs = 550): Promise<T>
   )
   return run
 }
-
-const IMPORTADOS_COLLECTION_TITLE = 'IMPORTADOS'
 
 function adminBaseUrl(): string {
   const { domain, apiVersion } = getShopifyEnv()
@@ -75,64 +72,6 @@ function extractNumericId(value: unknown): string | null {
   if (gidMatch) return gidMatch[1]
   if (/^\d+$/.test(trimmed)) return trimmed
   return null
-}
-
-type ShopifyCollection = {
-  id?: number | string
-  title?: string
-  handle?: string
-}
-
-function isImportadosCollection(collection: ShopifyCollection): boolean {
-  return (
-    collection.title?.trim().toLocaleUpperCase() === IMPORTADOS_COLLECTION_TITLE ||
-    collection.handle?.trim().toLowerCase() === 'importados'
-  )
-}
-
-async function findImportadosManualCollectionId(): Promise<string | null> {
-  if (cachedImportadosCollectionId) return cachedImportadosCollectionId
-
-  const custom = await shopifyFetch(
-    'custom_collections.json?limit=250&fields=id,title,handle',
-  )
-  if (!custom.ok) {
-    throw new Error(
-      `No pude buscar la colección IMPORTADOS (${custom.status}): ${custom.text.slice(0, 200)}`,
-    )
-  }
-
-  const customCollections =
-    (custom.json?.custom_collections as ShopifyCollection[] | undefined) ?? []
-  const match = customCollections.find(isImportadosCollection)
-  const id = extractNumericId(match?.id)
-  if (id) {
-    cachedImportadosCollectionId = id
-    return id
-  }
-
-  return null
-}
-
-/** Solo colecciones manuales aceptan /collects. Smart collections entran solas por reglas. */
-async function addProductToImportadosCollection(productId: string): Promise<void> {
-  const collectionId = await findImportadosManualCollectionId()
-  if (!collectionId) return
-  const result = await shopifyFetch('collects.json', {
-    method: 'POST',
-    body: JSON.stringify({
-      collect: {
-        product_id: Number(productId),
-        collection_id: Number(collectionId),
-      },
-    }),
-  })
-
-  if (!result.ok) {
-    throw new Error(
-      `No pude agregar el producto a la colección IMPORTADOS (${result.status}): ${result.text.slice(0, 200)}`,
-    )
-  }
 }
 
 type ShopifyLocation = {
@@ -1013,18 +952,6 @@ export async function createNotmidProductFromCatalog(
 
   const productId = extractNumericId(product?.id)
   if (!productId) throw new Error('Shopify creó el producto pero no devolvió product id')
-
-  try {
-    await addProductToImportadosCollection(productId)
-  } catch (error) {
-    const removed = await deleteNotmidProduct(productId)
-    const detail = error instanceof Error ? error.message : String(error)
-    throw new Error(
-      removed
-        ? `${detail} Se canceló la creación en Shopify.`
-        : `${detail} No pude borrar el borrador creado; hay que eliminarlo manualmente.`,
-    )
-  }
 
   const createdVariants = product?.variants ?? []
   const variantMap: CreatedVariantMapEntry[] = []
