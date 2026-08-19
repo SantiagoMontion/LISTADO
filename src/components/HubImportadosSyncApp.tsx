@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { CalcNumberField } from './CalcNumberField'
 import { HubBrandBar } from './HubBrandBar'
 import { HubDesktopNav } from './HubDesktopNav'
 import { formatSupabaseOrError } from '../lib/errors'
 import {
-  createNotmidAndTrack,
+  createNotmidAndTrackResilient,
   deleteTrackedProduct,
   detectProviderFromUrl,
+  isImportadosAlreadyTrackedError,
+  parseImportadosProductUrls,
   fetchVariantMapHealth,
   listTrackedProducts,
   productLinkLabel,
@@ -70,6 +72,18 @@ export function HubImportadosSyncApp({
   const [mapHealthBusy, setMapHealthBusy] = useState(false)
   const [mapHealthNote, setMapHealthNote] = useState<string | null>(null)
   const [syncingId, setSyncingId] = useState<string | null>(null)
+  const [batchProgress, setBatchProgress] = useState<{
+    current: number
+    total: number
+    url: string
+    retryAttempt?: number
+    startedAt: number
+  } | null>(null)
+
+  const parsedUrls = useMemo(
+    () => parseImportadosProductUrls(form.product_url),
+    [form.product_url],
+  )
 
   const refreshMapHealth = useCallback(async (opts?: { autoRepair?: boolean }) => {
     setMapHealthBusy(true)
@@ -126,38 +140,134 @@ export function HubImportadosSyncApp({
     void reload({ autoRepairMaps: true })
   }, [reload])
 
+  useEffect(() => {
+    if (!saving) return
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [saving])
+
+  function formatBatchElapsed(startedAt: number): string {
+    const sec = Math.max(0, Math.floor((Date.now() - startedAt) / 1000))
+    const min = Math.floor(sec / 60)
+    const rem = sec % 60
+    return min > 0 ? `${min} min ${rem} s` : `${rem} s`
+  }
+
   async function onCreateAndTrack(e: FormEvent) {
     e.preventDefault()
     setSaving(true)
     setError(null)
     setSuccess(null)
+    setBatchProgress(null)
     try {
-      const url = form.product_url.trim()
-      if (!/^https?:\/\//i.test(url)) {
-        throw new Error('Pegá el link completo del producto (https://...)')
-      }
-      const provider = detectProviderFromUrl(url)
-      if (!provider) {
+      const urls = parseImportadosProductUrls(form.product_url)
+      if (!urls.length) {
         throw new Error(
-          'El link tiene que ser de lethal.gg o mechanicalkeyboards.com',
+          'Pegá uno o más links completos (https://…), uno por línea o separados por espacio/coma',
         )
       }
       const pesoKg = form.peso_kg
       if (!Number.isFinite(pesoKg) || pesoKg <= 0) {
         throw new Error('Ingresá el peso del paquete en kg (ejemplo: 0,5 o 0.5)')
       }
-      const created = await createNotmidAndTrack({
-        provider,
-        product_url: url,
-        peso_kg: pesoKg,
-      })
-      setForm(emptyForm)
-      setSuccess(created.message || 'Producto creado y stock sincronizado')
-      await reload({ autoRepairMaps: false })
+
+      const batchStartedAt = Date.now()
+      const results: {
+        url: string
+        status: 'created' | 'skipped' | 'failed'
+        message?: string
+        error?: string
+      }[] = []
+      for (let i = 0; i < urls.length; i++) {
+        const url = urls[i]
+        setBatchProgress({
+          current: i + 1,
+          total: urls.length,
+          url,
+          startedAt: batchStartedAt,
+        })
+        try {
+          const provider = detectProviderFromUrl(url)
+          if (!provider) {
+            throw new Error('Tiene que ser lethal.gg o mechanicalkeyboards.com')
+          }
+          const created = await createNotmidAndTrackResilient(
+            {
+              provider,
+              product_url: url,
+              peso_kg: pesoKg,
+            },
+            (retryAttempt) => {
+              setBatchProgress({
+                current: i + 1,
+                total: urls.length,
+                url,
+                retryAttempt,
+                startedAt: batchStartedAt,
+              })
+            },
+          )
+          results.push({ url, status: 'created', message: created.message })
+        } catch (err) {
+          const error = formatSupabaseOrError(err)
+          if (isImportadosAlreadyTrackedError(error)) {
+            results.push({ url, status: 'skipped', message: error })
+          } else {
+            results.push({ url, status: 'failed', error })
+          }
+        }
+      }
+
+      const createdN = results.filter((r) => r.status === 'created').length
+      const skippedN = results.filter((r) => r.status === 'skipped').length
+      const failedN = results.filter((r) => r.status === 'failed').length
+      const failedUrls = results.filter((r) => r.status === 'failed').map((r) => r.url)
+
+      if (createdN > 0 || skippedN > 0) {
+        const parts: string[] = []
+        if (createdN === 1 && failedN === 0 && skippedN === 0) {
+          parts.push(results.find((r) => r.status === 'created')?.message || 'Producto creado')
+        } else {
+          if (createdN > 0) {
+            parts.push(`${createdN} creado${createdN === 1 ? '' : 's'}`)
+          }
+          if (skippedN > 0) {
+            parts.push(
+              `${skippedN} ya cargado${skippedN === 1 ? '' : 's'} (salteado${skippedN === 1 ? '' : 's'})`,
+            )
+          }
+        }
+        parts.push(`Tiempo total: ${formatBatchElapsed(batchStartedAt)}`)
+        if (failedUrls.length === 0) {
+          setForm(emptyForm)
+        } else {
+          setForm((f) => ({ ...f, product_url: failedUrls.join('\n') }))
+        }
+        setSuccess(parts.join(' · '))
+        if (createdN > 0) {
+          await reload({ autoRepairMaps: false })
+        }
+      } else if (failedN > 0) {
+        setForm((f) => ({ ...f, product_url: failedUrls.join('\n') }))
+      }
+
+      if (failedN > 0) {
+        setError(
+          results
+            .filter((r) => r.status === 'failed')
+            .map((r) => `${productLinkLabel({ product_url: r.url })}: ${r.error}`)
+            .join('\n'),
+        )
+      }
     } catch (err) {
       setError(formatSupabaseOrError(err))
     } finally {
       setSaving(false)
+      setBatchProgress(null)
     }
   }
 
@@ -237,9 +347,9 @@ export function HubImportadosSyncApp({
         <header className="printing3d-page__head">
           <h1 className="printing3d-page__title">Productos a sincronizar</h1>
           <p className="printing3d-page__lead importados-page__lead">
-            Pegá el link de Lethal o MechanicalKeyboards y el peso del paquete. Creamos el
-            producto en <strong>borrador</strong> en NotMid y leemos el stock del proveedor
-            al toque. El cron sigue corrigiendo después.
+            Pegá uno o varios links de Lethal o MechanicalKeyboards y el peso del paquete (uno
+            solo para todos). Creamos cada producto en <strong>borrador</strong> en NotMid y
+            leemos el stock del proveedor al toque. El cron sigue corrigiendo después.
           </p>
         </header>
 
@@ -258,11 +368,17 @@ export function HubImportadosSyncApp({
           <h2 className="printing3d-output-block__title">Agregar producto</h2>
 
           <label className="printing3d-field">
-            <span>Link del producto (Lethal o MechanicalKeyboards)</span>
-            <input
-              type="url"
-              required
-              placeholder="https://lethal.gg/products/... o https://mechanicalkeyboards.com/..."
+            <span>
+              Links de productos (Lethal o MechanicalKeyboards)
+              {parsedUrls.length > 1 ? ` · ${parsedUrls.length} detectados` : ''}
+            </span>
+            <textarea
+              rows={4}
+              placeholder={
+                'Un link por línea (o separados por espacio/coma)\n' +
+                'https://lethal.gg/products/...\n' +
+                'https://mechanicalkeyboards.com/...'
+              }
               value={form.product_url}
               onChange={(e) => setForm((f) => ({ ...f, product_url: e.target.value }))}
             />
@@ -277,9 +393,34 @@ export function HubImportadosSyncApp({
             onChange={(peso_kg) => setForm((f) => ({ ...f, peso_kg }))}
           />
 
+          {parsedUrls.length > 1 ? (
+            <p className="nm-hub-muted importados-sync-batch-hint" role="note">
+              Lote de {parsedUrls.length} links detectados (uno por línea recomendado). Se procesan
+              de a uno; no cierres esta pestaña. Si uno falla, el resto sigue.
+            </p>
+          ) : null}
+
+          {batchProgress ? (
+            <p className="nm-hub-muted" role="status">
+              {batchProgress.current}/{batchProgress.total} —{' '}
+              {productLinkLabel({ product_url: batchProgress.url })}
+              {batchProgress.retryAttempt
+                ? ` · reintento ${batchProgress.retryAttempt}/3`
+                : ''}
+              {' · '}
+              {formatBatchElapsed(batchProgress.startedAt)}
+            </p>
+          ) : null}
+
           <div className="importados-sync-actions">
             <button type="submit" className="nm-hub-btn nm-hub-btn-primary" disabled={saving}>
-              {saving ? 'Creando y leyendo stock…' : 'Crear en NotMid + sincronizar'}
+              {saving
+                ? batchProgress
+                  ? `Creando ${batchProgress.current}/${batchProgress.total}…`
+                  : 'Creando y leyendo stock…'
+                : parsedUrls.length > 1
+                  ? `Crear ${parsedUrls.length} en NotMid + sincronizar`
+                  : 'Crear en NotMid + sincronizar'}
             </button>
           </div>
         </form>

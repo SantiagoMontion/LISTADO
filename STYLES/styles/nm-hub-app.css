@@ -10298,6 +10298,7 @@ body:has(.nm-hub-app--logistica-andreani) {
 }
 
 .importados-sync-form input,
+.importados-sync-form textarea,
 .importados-sync-form select {
   width: 100%;
   border: 1px solid rgba(15, 23, 42, 0.12);
@@ -10306,6 +10307,12 @@ body:has(.nm-hub-app--logistica-andreani) {
   font: inherit;
   background: #fff;
   color: #0f172a;
+}
+
+.importados-sync-form textarea {
+  resize: vertical;
+  min-height: 6rem;
+  line-height: 1.45;
 }
 
 .importados-sync-audit {

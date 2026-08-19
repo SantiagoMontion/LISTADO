@@ -47,9 +47,20 @@ async function accessToken(): Promise<string> {
   if (!supabase) throw new Error('Supabase no está configurado')
   const { data, error } = await supabase.auth.getSession()
   if (error) throw new Error(formatSupabaseOrError(error))
-  const token = data.session?.access_token
-  if (!token) throw new Error('Tenés que iniciar sesión')
-  return token
+  const session = data.session
+  if (!session?.access_token) throw new Error('Tenés que iniciar sesión')
+
+  const expiresAt = session.expires_at ?? 0
+  const nowSec = Math.floor(Date.now() / 1000)
+  if (expiresAt - nowSec < 300) {
+    const refreshed = await supabase.auth.refreshSession()
+    if (refreshed.error) throw new Error(formatSupabaseOrError(refreshed.error))
+    const next = refreshed.data.session?.access_token
+    if (!next) throw new Error('Tenés que iniciar sesión')
+    return next
+  }
+
+  return session.access_token
 }
 
 async function apiFetch<T>(
@@ -120,6 +131,54 @@ export function productLinkLabel(product: {
   }
 
   return product.product_url
+}
+
+/** Timeout/red caída — conviene reintentar en lotes grandes. */
+export function isImportadosTransientError(message: string): boolean {
+  const m = message.toLowerCase()
+  return (
+    m.includes('se agotó el tiempo') ||
+    m.includes('error http 504') ||
+    m.includes('error http 408') ||
+    m.includes('error http 502') ||
+    m.includes('error http 503') ||
+    m.includes('failed to fetch') ||
+    m.includes('networkerror') ||
+    m.includes('load failed')
+  )
+}
+
+/** Error de API cuando el link o producto ya está en seguimiento (409). */
+export function isImportadosAlreadyTrackedError(message: string): boolean {
+  const m = message.toLowerCase()
+  return (
+    m.includes('ya está en seguimiento') ||
+    m.includes('ya está en la lista de seguimiento') ||
+    m.includes('ya existe un producto con esa url')
+  )
+}
+
+/** Extrae URLs de producto (una o varias) desde texto pegado. */
+export function parseImportadosProductUrls(raw: string): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  const normalized = raw
+    .replace(/\u00A0/g, ' ')
+    .replace(/\u202F/g, ' ')
+    .replace(/\r\n?/g, '\n')
+
+  const urlRe =
+    /https?:\/\/(?:[a-z0-9-]+\.)?(?:lethal\.gg|mechanicalkeyboards\.com)\/[^\s<>"')\]]+/gi
+
+  for (const match of normalized.matchAll(urlRe)) {
+    let url = match[0].replace(/[)\].,;]+$/, '')
+    const key = url.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(url)
+  }
+
+  return out
 }
 
 /** Detecta proveedor desde el link pegado. */
@@ -217,6 +276,36 @@ export async function createNotmidAndTrack(input: {
     product_url: input.product_url.trim(),
     peso_kg: input.peso_kg,
   })
+}
+
+const CREATE_RETRY_ATTEMPTS = 3
+const CREATE_RETRY_DELAY_MS = 5000
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, ms))
+}
+
+/** Igual que createNotmidAndTrack, con reintentos ante timeout/red (lotes grandes). */
+export async function createNotmidAndTrackResilient(
+  input: Parameters<typeof createNotmidAndTrack>[0],
+  onRetry?: (attempt: number, error: string) => void,
+): Promise<Awaited<ReturnType<typeof createNotmidAndTrack>>> {
+  let lastError = 'Error desconocido'
+  for (let attempt = 1; attempt <= CREATE_RETRY_ATTEMPTS; attempt++) {
+    try {
+      return await createNotmidAndTrack(input)
+    } catch (err) {
+      lastError = formatSupabaseOrError(err)
+      if (isImportadosAlreadyTrackedError(lastError)) throw err
+      if (attempt < CREATE_RETRY_ATTEMPTS && isImportadosTransientError(lastError)) {
+        onRetry?.(attempt + 1, lastError)
+        await sleep(CREATE_RETRY_DELAY_MS * attempt)
+        continue
+      }
+      throw err
+    }
+  }
+  throw new Error(lastError)
 }
 
 export async function updateTrackedProductRow(
